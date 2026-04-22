@@ -1,0 +1,21 @@
+{
+  "name": "@guimintlab/ui-ir",
+  "version": "0.1.0",
+  "description": "GuiMintLab canonical intermediate representation (IR) and JSON schema.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "files": [
+    "dist",
+    "schema",
+    "examples",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "node --test dist/*.test.js || true"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}

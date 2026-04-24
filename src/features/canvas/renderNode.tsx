@@ -26,8 +26,6 @@ export function PreviewNode({
 }) {
   const { node, rect, children } = layoutNode;
   if (node.visible === false) return null;
-
-  const isSelected = ctx.selectedId === node.id;
   const style: React.CSSProperties = {
     left: rect.x,
     top: rect.y,
@@ -50,17 +48,6 @@ export function PreviewNode({
       {children.map((child) => (
         <PreviewNode key={child.node.id} layoutNode={child} ctx={ctx} />
       ))}
-      {isSelected ? (
-        <div
-          className="selection-overlay"
-          style={{
-            left: rect.x,
-            top: rect.y,
-            width: rect.width,
-            height: rect.height,
-          }}
-        />
-      ) : null}
     </>
   );
 }

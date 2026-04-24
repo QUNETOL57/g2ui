@@ -299,6 +299,18 @@ textarea {
   background-size: 6px 1px;
 }
 
+.canvas-selection-handle {
+  position: absolute;
+  z-index: 4;
+  width: 14px;
+  height: 14px;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(227, 232, 240, 0.75);
+  background: rgba(11, 14, 19, 0.96);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  pointer-events: none;
+}
+
 .canvas-scaled-content {
   position: absolute;
   left: 0;
@@ -309,13 +321,6 @@ textarea {
 .preview-node {
   position: absolute;
   overflow: hidden;
-}
-
-.selection-overlay {
-  position: absolute;
-  border: 1.5px solid var(--accent);
-  pointer-events: none;
-  box-shadow: 0 0 0 1px #000 inset;
 }
 
 .prop-group {

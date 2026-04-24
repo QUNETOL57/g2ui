@@ -426,6 +426,22 @@ export function CanvasWorkspace() {
                     className="canvas-guide horizontal"
                     style={{ top: Math.round((selectedRect.y + selectedRect.height) * renderZoom), left: 0, width: scaledW }}
                   />
+                  <div
+                    className="canvas-selection-handle"
+                    style={{ left: Math.round(selectedRect.x * renderZoom), top: Math.round(selectedRect.y * renderZoom) }}
+                  />
+                  <div
+                    className="canvas-selection-handle"
+                    style={{ left: Math.round((selectedRect.x + selectedRect.width) * renderZoom), top: Math.round(selectedRect.y * renderZoom) }}
+                  />
+                  <div
+                    className="canvas-selection-handle"
+                    style={{ left: Math.round(selectedRect.x * renderZoom), top: Math.round((selectedRect.y + selectedRect.height) * renderZoom) }}
+                  />
+                  <div
+                    className="canvas-selection-handle"
+                    style={{ left: Math.round((selectedRect.x + selectedRect.width) * renderZoom), top: Math.round((selectedRect.y + selectedRect.height) * renderZoom) }}
+                  />
                 </>
               ) : null}
 

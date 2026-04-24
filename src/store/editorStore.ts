@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { UiProject, WidgetNode, WidgetType, ScreenNode } from "../ui-ir";
 import { makeWidget, nextId, validateProject } from "../ui-ir";
+import { getIconDefinition } from "../features/icons/iconLibrary";
 
 import { blankProject, helloSample } from "../samples/hello";
 
@@ -152,6 +153,17 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const node = findNode(next, id);
       if (!node) return state;
       node.props = { ...(node.props ?? {}), ...patch } as WidgetNode["props"];
+      if (node.type === "icon" && typeof patch.iconId === "string") {
+        const icon = getIconDefinition(patch.iconId);
+        if (icon) {
+          node.frame = {
+            x: node.frame?.x ?? 0,
+            y: node.frame?.y ?? 0,
+            width: icon.width,
+            height: icon.height,
+          };
+        }
+      }
       return { project: next };
     }),
 

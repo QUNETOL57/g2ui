@@ -5,7 +5,7 @@ import type {
   LabelProps,
   LayoutMode,
   WidgetNode,
-} from "@guimintlab/ui-ir";
+} from "../../ui-ir";
 
 import { useEditorStore, findNode } from "../../store/editorStore";
 import { ICON_GROUPS, IconGlyph, getIconDefinition } from "../icons/iconLibrary";

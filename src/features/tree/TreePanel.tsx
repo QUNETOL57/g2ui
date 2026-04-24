@@ -1,4 +1,4 @@
-import type { WidgetNode, WidgetType } from "@guimintlab/ui-ir";
+import type { WidgetNode, WidgetType } from "../../ui-ir";
 import { useEditorStore } from "../../store/editorStore";
 
 const ADD_TYPES: WidgetType[] = ["panel", "label", "button", "icon", "rect", "line"];

@@ -5,7 +5,7 @@ import type {
   LineProps,
   PaletteEntry,
   WidgetNode,
-} from "@guimintlab/ui-ir";
+} from "../../ui-ir";
 
 import type { LayoutNode } from "../../layout/layoutEngine";
 import { resolveColor } from "../../layout/color";

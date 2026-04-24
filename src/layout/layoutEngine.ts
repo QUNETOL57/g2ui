@@ -1,4 +1,4 @@
-import type { Frame, LayoutSpec, WidgetNode } from "@guimintlab/ui-ir";
+import type { Frame, LayoutSpec, WidgetNode } from "../ui-ir";
 
 /**
  * Layout engine v1.

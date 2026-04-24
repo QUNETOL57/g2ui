@@ -1,6 +1,6 @@
 import { create } from "zustand";
-import type { UiProject, WidgetNode, WidgetType, ScreenNode } from "@guimintlab/ui-ir";
-import { makeWidget, nextId, validateProject } from "@guimintlab/ui-ir";
+import type { UiProject, WidgetNode, WidgetType, ScreenNode } from "../ui-ir";
+import { makeWidget, nextId, validateProject } from "../ui-ir";
 
 import { blankProject, helloSample } from "../samples/hello";
 

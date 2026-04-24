@@ -1,4 +1,4 @@
-import type { ColorRef, PaletteEntry } from "@guimintlab/ui-ir";
+import type { ColorRef, PaletteEntry } from "../ui-ir";
 
 const DEFAULTS: Record<string, string> = {
   bg: "#000000",

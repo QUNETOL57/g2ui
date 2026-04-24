@@ -3,7 +3,7 @@
 Visual editor for GuiMintLab UI projects. React + TypeScript + Vite.
 
 Studio operates on the canonical IR defined in
-[`guimintlab-core/packages/ui-ir`](../guimintlab-core/packages/ui-ir).
+`src/ui-ir/`.
 There is **no separate editor model**: the editor store is a direct view
 over the `UiProject → ScreenNode → WidgetNode` tree.
 

@@ -1,6 +1,6 @@
-import type { UiProject } from "@guimintlab/ui-ir";
-import { emptyProject } from "@guimintlab/ui-ir";
-import helloJson from "../../packages/ui-ir/examples/hello.project.json";
+import type { UiProject } from "../ui-ir";
+import { emptyProject } from "../ui-ir";
+import helloJson from "../ui-ir/examples/hello.project.json";
 
 import { DISPLAY_PRESETS, DEFAULT_PRESET_ID } from "../layout/displayPresets";
 

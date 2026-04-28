@@ -27,6 +27,12 @@ interface ActiveCanvasInteraction {
   parentMode: LayoutMode;
   siblingCenters?: { id: string; center: number }[];
   handle?: ResizeHandle;
+  latestFrame?: Frame;
+}
+
+interface DragPreview {
+  nodeId: string;
+  rect: Frame;
 }
 
 function clampZoom(value: number): number {
@@ -43,6 +49,10 @@ function normalizeZoom(value: number): number {
     return Math.round(clamped);
   }
   return Math.round(clamped * 4) / 4;
+}
+
+function sameFrame(a: Frame, b: Frame): boolean {
+  return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
 }
 
 function nextWheelZoom(currentZoom: number, direction: 1 | -1): number {
@@ -87,6 +97,8 @@ export function CanvasWorkspace() {
   const stageRef = useRef<HTMLDivElement | null>(null);
   const centeredViewKeyRef = useRef<string | null>(null);
   const activeInteractionRef = useRef<ActiveCanvasInteraction | null>(null);
+  const pendingDragPreviewRef = useRef<DragPreview | null>(null);
+  const dragPreviewRafRef = useRef<number | null>(null);
   const pendingWheelFocusRef = useRef<
     | {
         type: "frame";
@@ -107,6 +119,7 @@ export function CanvasWorkspace() {
 
   const [zoom, setZoom] = useState(2);
   const [stageViewport, setStageViewport] = useState({ width: 0, height: 0 });
+  const [dragPreview, setDragPreview] = useState<DragPreview | null>(null);
 
   const screen = project.screens.find((s) => s.id === activeScreenId);
   const layout = useMemo(() => {
@@ -126,8 +139,6 @@ export function CanvasWorkspace() {
     offset: Math.round(index * renderZoom),
     major: index % 8 === 0,
   }));
-  const horizontalGridTicks = horizontalTicks.slice(1, -1);
-  const verticalGridTicks = verticalTicks.slice(1, -1);
 
   const selectedLayoutNode = useMemo(() => {
     if (!layout || !selectedNodeId) return null;
@@ -161,6 +172,8 @@ export function CanvasWorkspace() {
   const showPixelGrid = renderZoom >= PIXEL_GRID_VISIBLE_ZOOM;
   const showGuides = !!selectedLayoutNode && selectedLayoutNode.node.id !== screen.id;
   const selectedRect = selectedLayoutNode?.rect ?? null;
+  const displayedSelectedRect =
+    dragPreview && dragPreview.nodeId === selectedNodeId ? dragPreview.rect : selectedRect;
   const selectedParentMode: LayoutMode = selectedParentNode?.layout?.mode ?? "absolute";
   const selectionHasFrame = !!selectedNode?.frame && !!selectedParentLayoutNode;
   const canMoveSelection =
@@ -301,9 +314,26 @@ export function CanvasWorkspace() {
   useEffect(() => {
     return () => {
       activeInteractionRef.current = null;
+      pendingDragPreviewRef.current = null;
+      if (dragPreviewRafRef.current !== null) {
+        window.cancelAnimationFrame(dragPreviewRafRef.current);
+        dragPreviewRafRef.current = null;
+      }
       document.body.style.userSelect = "";
     };
   }, []);
+
+  const scheduleDragPreview = (preview: DragPreview) => {
+    pendingDragPreviewRef.current = preview;
+    if (dragPreviewRafRef.current !== null) return;
+
+    dragPreviewRafRef.current = window.requestAnimationFrame(() => {
+      dragPreviewRafRef.current = null;
+      const next = pendingDragPreviewRef.current;
+      pendingDragPreviewRef.current = null;
+      if (next) setDragPreview(next);
+    });
+  };
 
   const startInteraction = (interaction: ActiveCanvasInteraction) => {
     activeInteractionRef.current = interaction;
@@ -321,9 +351,22 @@ export function CanvasWorkspace() {
         if (active.parentMode === "absolute") {
           const maxX = Math.max(0, active.parentRect.width - active.startFrame.width);
           const maxY = Math.max(0, active.parentRect.height - active.startFrame.height);
-          updateFrame(active.nodeId, {
+          const nextFrame = {
             x: clamp(active.startFrame.x + deltaX, 0, maxX),
             y: clamp(active.startFrame.y + deltaY, 0, maxY),
+            width: active.startFrame.width,
+            height: active.startFrame.height,
+          };
+          if (sameFrame(active.latestFrame ?? active.startFrame, nextFrame)) return;
+          active.latestFrame = nextFrame;
+          scheduleDragPreview({
+            nodeId: active.nodeId,
+            rect: {
+              x: active.parentRect.x + nextFrame.x,
+              y: active.parentRect.y + nextFrame.y,
+              width: nextFrame.width,
+              height: nextFrame.height,
+            },
           });
           return;
         }
@@ -379,19 +422,40 @@ export function CanvasWorkspace() {
         }
       }
 
-      updateFrame(active.nodeId, {
+      const nextFrame = {
         x: nextLeft,
         y: nextTop,
         width: nextRight - nextLeft,
         height: nextBottom - nextTop,
+      };
+      if (sameFrame(active.latestFrame ?? active.startFrame, nextFrame)) return;
+      active.latestFrame = nextFrame;
+      scheduleDragPreview({
+        nodeId: active.nodeId,
+        rect: {
+          x: active.parentRect.x + nextFrame.x,
+          y: active.parentRect.y + nextFrame.y,
+          width: nextFrame.width,
+          height: nextFrame.height,
+        },
       });
     };
 
     const handleMouseUp = () => {
+      const active = activeInteractionRef.current;
       activeInteractionRef.current = null;
+      pendingDragPreviewRef.current = null;
+      if (dragPreviewRafRef.current !== null) {
+        window.cancelAnimationFrame(dragPreviewRafRef.current);
+        dragPreviewRafRef.current = null;
+      }
+      setDragPreview(null);
       document.body.style.userSelect = previousUserSelect;
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
+      if (active?.latestFrame) {
+        updateFrame(active.nodeId, active.latestFrame);
+      }
     };
 
     window.addEventListener("mousemove", handleMouseMove);
@@ -540,16 +604,16 @@ export function CanvasWorkspace() {
                   style={{ left: tick.offset }}
                 />
               ))}
-              {showGuides && selectedRect ? (
+              {showGuides && displayedSelectedRect ? (
                 <>
-                  <div className="canvas-ruler-label horizontal" style={{ left: Math.round(selectedRect.x * renderZoom) }}>
-                    {selectedRect.x}
+                  <div className="canvas-ruler-label horizontal" style={{ left: Math.round(displayedSelectedRect.x * renderZoom) }}>
+                    {displayedSelectedRect.x}
                   </div>
                   <div
                     className="canvas-ruler-label horizontal"
-                    style={{ left: Math.round((selectedRect.x + selectedRect.width) * renderZoom) }}
+                    style={{ left: Math.round((displayedSelectedRect.x + displayedSelectedRect.width) * renderZoom) }}
                   >
-                    {selectedRect.x + selectedRect.width}
+                    {displayedSelectedRect.x + displayedSelectedRect.width}
                   </div>
                 </>
               ) : null}
@@ -566,6 +630,22 @@ export function CanvasWorkspace() {
                   style={{ left: tick.offset }}
                 />
               ))}
+              {showGuides && displayedSelectedRect ? (
+                <>
+                  <div
+                    className="canvas-ruler-label horizontal bottom"
+                    style={{ left: Math.round(displayedSelectedRect.x * renderZoom) }}
+                  >
+                    {displayedSelectedRect.x}
+                  </div>
+                  <div
+                    className="canvas-ruler-label horizontal bottom"
+                    style={{ left: Math.round((displayedSelectedRect.x + displayedSelectedRect.width) * renderZoom) }}
+                  >
+                    {displayedSelectedRect.x + displayedSelectedRect.width}
+                  </div>
+                </>
+              ) : null}
             </div>
 
             <div
@@ -579,16 +659,16 @@ export function CanvasWorkspace() {
                   style={{ top: tick.offset }}
                 />
               ))}
-              {showGuides && selectedRect ? (
+              {showGuides && displayedSelectedRect ? (
                 <>
-                  <div className="canvas-ruler-label vertical left" style={{ top: Math.round(selectedRect.y * renderZoom) }}>
-                    {selectedRect.y}
+                  <div className="canvas-ruler-label vertical left" style={{ top: Math.round(displayedSelectedRect.y * renderZoom) }}>
+                    {displayedSelectedRect.y}
                   </div>
                   <div
                     className="canvas-ruler-label vertical left"
-                    style={{ top: Math.round((selectedRect.y + selectedRect.height) * renderZoom) }}
+                    style={{ top: Math.round((displayedSelectedRect.y + displayedSelectedRect.height) * renderZoom) }}
                   >
-                    {selectedRect.y + selectedRect.height}
+                    {displayedSelectedRect.y + displayedSelectedRect.height}
                   </div>
                 </>
               ) : null}
@@ -605,16 +685,16 @@ export function CanvasWorkspace() {
                   style={{ top: tick.offset }}
                 />
               ))}
-              {showGuides && selectedRect ? (
+              {showGuides && displayedSelectedRect ? (
                 <>
-                  <div className="canvas-ruler-label vertical right" style={{ top: Math.round(selectedRect.y * renderZoom) }}>
-                    {selectedRect.y}
+                  <div className="canvas-ruler-label vertical right" style={{ top: Math.round(displayedSelectedRect.y * renderZoom) }}>
+                    {displayedSelectedRect.y}
                   </div>
                   <div
                     className="canvas-ruler-label vertical right"
-                    style={{ top: Math.round((selectedRect.y + selectedRect.height) * renderZoom) }}
+                    style={{ top: Math.round((displayedSelectedRect.y + displayedSelectedRect.height) * renderZoom) }}
                   >
-                    {selectedRect.y + selectedRect.height}
+                    {displayedSelectedRect.y + displayedSelectedRect.height}
                   </div>
                 </>
               ) : null}
@@ -634,62 +714,54 @@ export function CanvasWorkspace() {
               {showPixelGrid ? (
                 <div
                   className="canvas-pixel-grid"
+                  style={{
+                    backgroundImage:
+                      "linear-gradient(#171717 1px, transparent 1px), linear-gradient(90deg, #171717 1px, transparent 1px)",
+                    backgroundPosition: `${renderZoom}px ${renderZoom}px`,
+                    backgroundSize: `${renderZoom}px ${renderZoom}px`,
+                  }}
                 >
                   <div className="canvas-pixel-grid-frame" />
-                {verticalGridTicks.map((tick) => (
-                    <div
-                      key={`grid-h-${tick.value}`}
-                      className="canvas-pixel-grid-line horizontal"
-                      style={{ top: tick.offset }}
-                    />
-                  ))}
-                {horizontalGridTicks.map((tick) => (
-                    <div
-                      key={`grid-v-${tick.value}`}
-                      className="canvas-pixel-grid-line vertical"
-                      style={{ left: tick.offset }}
-                    />
-                  ))}
                 </div>
               ) : null}
-              {showGuides && selectedRect ? (
+              {showGuides && displayedSelectedRect ? (
                 <>
                   <div
                     className="canvas-guide vertical"
-                    style={{ left: Math.round(selectedRect.x * renderZoom), top: 0, height: scaledH }}
+                    style={{ left: Math.round(displayedSelectedRect.x * renderZoom), top: 0, height: scaledH }}
                   />
                   <div
                     className="canvas-guide vertical"
-                    style={{ left: Math.round((selectedRect.x + selectedRect.width) * renderZoom), top: 0, height: scaledH }}
+                    style={{ left: Math.round((displayedSelectedRect.x + displayedSelectedRect.width) * renderZoom), top: 0, height: scaledH }}
                   />
                   <div
                     className="canvas-guide horizontal"
-                    style={{ top: Math.round(selectedRect.y * renderZoom), left: 0, width: scaledW }}
+                    style={{ top: Math.round(displayedSelectedRect.y * renderZoom), left: 0, width: scaledW }}
                   />
                   <div
                     className="canvas-guide horizontal"
-                    style={{ top: Math.round((selectedRect.y + selectedRect.height) * renderZoom), left: 0, width: scaledW }}
+                    style={{ top: Math.round((displayedSelectedRect.y + displayedSelectedRect.height) * renderZoom), left: 0, width: scaledW }}
                   />
                   {canResizeSelection ? (
                     <>
                       <div
                         className="canvas-selection-handle nw"
-                        style={{ left: Math.round(selectedRect.x * renderZoom), top: Math.round(selectedRect.y * renderZoom) }}
+                        style={{ left: Math.round(displayedSelectedRect.x * renderZoom), top: Math.round(displayedSelectedRect.y * renderZoom) }}
                         onMouseDown={handleResizeMouseDown("nw")}
                       />
                       <div
                         className="canvas-selection-handle ne"
-                        style={{ left: Math.round((selectedRect.x + selectedRect.width) * renderZoom), top: Math.round(selectedRect.y * renderZoom) }}
+                        style={{ left: Math.round((displayedSelectedRect.x + displayedSelectedRect.width) * renderZoom), top: Math.round(displayedSelectedRect.y * renderZoom) }}
                         onMouseDown={handleResizeMouseDown("ne")}
                       />
                       <div
                         className="canvas-selection-handle sw"
-                        style={{ left: Math.round(selectedRect.x * renderZoom), top: Math.round((selectedRect.y + selectedRect.height) * renderZoom) }}
+                        style={{ left: Math.round(displayedSelectedRect.x * renderZoom), top: Math.round((displayedSelectedRect.y + displayedSelectedRect.height) * renderZoom) }}
                         onMouseDown={handleResizeMouseDown("sw")}
                       />
                       <div
                         className="canvas-selection-handle se"
-                        style={{ left: Math.round((selectedRect.x + selectedRect.width) * renderZoom), top: Math.round((selectedRect.y + selectedRect.height) * renderZoom) }}
+                        style={{ left: Math.round((displayedSelectedRect.x + displayedSelectedRect.width) * renderZoom), top: Math.round((displayedSelectedRect.y + displayedSelectedRect.height) * renderZoom) }}
                         onMouseDown={handleResizeMouseDown("se")}
                       />
                     </>
@@ -713,6 +785,7 @@ export function CanvasWorkspace() {
                     palette: project.palette,
                     selectedId: selectedNodeId,
                     movableId: canMoveSelection ? selectedNodeId : null,
+                    dragPreview,
                     onSelect: selectNode,
                     onNodeMouseDown: handleNodeMouseDown,
                   }}

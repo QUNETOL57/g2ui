@@ -228,16 +228,20 @@ textarea {
   transform: translateX(-50%);
 }
 
+.canvas-ruler-label.horizontal.bottom {
+  top: 13px;
+}
+
 .canvas-ruler-label.vertical {
   transform: translateY(-50%);
 }
 
 .canvas-ruler-label.vertical.left {
-  right: 3px;
+  right: 10px;
 }
 
 .canvas-ruler-label.vertical.right {
-  left: 3px;
+  left: 10px;
 }
 
 .device-frame {
@@ -256,23 +260,6 @@ textarea {
   position: absolute;
   inset: 0;
   border: 1px solid #171717;
-}
-
-.canvas-pixel-grid-line {
-  position: absolute;
-  background: #171717;
-}
-
-.canvas-pixel-grid-line.horizontal {
-  left: 0;
-  right: 0;
-  height: 1px;
-}
-
-.canvas-pixel-grid-line.vertical {
-  top: 0;
-  bottom: 0;
-  width: 1px;
 }
 
 .canvas-guide {

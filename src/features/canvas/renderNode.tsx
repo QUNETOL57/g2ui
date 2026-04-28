@@ -1,5 +1,6 @@
 import type {
   ButtonProps,
+  Frame,
   IconProps,
   LabelProps,
   LineProps,
@@ -15,6 +16,7 @@ interface RenderCtx {
   palette: PaletteEntry[] | undefined;
   selectedId: string | null;
   movableId: string | null;
+  dragPreview: { nodeId: string; rect: Frame } | null;
   onSelect: (id: string) => void;
   onNodeMouseDown?: (nodeId: string, event: React.MouseEvent<HTMLDivElement>) => void;
 }
@@ -22,17 +24,23 @@ interface RenderCtx {
 export function PreviewNode({
   layoutNode,
   ctx,
+  dragOffset = { x: 0, y: 0 },
 }: {
   layoutNode: LayoutNode;
   ctx: RenderCtx;
+  dragOffset?: { x: number; y: number };
 }) {
   const { node, rect, children } = layoutNode;
   if (node.visible === false) return null;
+  const previewRect = ctx.dragPreview?.nodeId === node.id ? ctx.dragPreview.rect : null;
+  const nextDragOffset = previewRect
+    ? { x: previewRect.x - rect.x, y: previewRect.y - rect.y }
+    : dragOffset;
   const style: React.CSSProperties = {
-    left: rect.x,
-    top: rect.y,
-    width: rect.width,
-    height: rect.height,
+    left: rect.x + nextDragOffset.x,
+    top: rect.y + nextDragOffset.y,
+    width: previewRect?.width ?? rect.width,
+    height: previewRect?.height ?? rect.height,
     cursor: node.id === ctx.movableId ? "move" : undefined,
   };
 
@@ -50,7 +58,7 @@ export function PreviewNode({
         <NodeVisual node={node} ctx={ctx} />
       </div>
       {children.map((child) => (
-        <PreviewNode key={child.node.id} layoutNode={child} ctx={ctx} />
+        <PreviewNode key={child.node.id} layoutNode={child} ctx={ctx} dragOffset={nextDragOffset} />
       ))}
     </>
   );

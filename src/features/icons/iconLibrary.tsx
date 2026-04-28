@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import { memo, type CSSProperties } from "react";
 import { ICON_GROUPS, ICON_LIBRARY, type IconDefinition } from "./iconLibraryData";
 
 const ICON_LIBRARY_BY_ID = new Map(ICON_LIBRARY.map((icon) => [icon.id, icon] as const));
@@ -10,7 +10,7 @@ export function getIconDefinition(iconId: string | undefined | null): IconDefini
   return ICON_LIBRARY_BY_ID.get(iconId);
 }
 
-export function IconGlyph({
+export const IconGlyph = memo(function IconGlyph({
   iconId,
   color = "currentColor",
   title,
@@ -53,4 +53,4 @@ export function IconGlyph({
       {pixels}
     </svg>
   );
-}
+});

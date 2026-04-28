@@ -1,6 +1,7 @@
 import { create } from "zustand";
-import type { UiProject, WidgetNode, WidgetType, ScreenNode } from "../ui-ir";
+import type { Frame, UiProject, WidgetNode, WidgetType, ScreenNode } from "../ui-ir";
 import { makeWidget, nextId, validateProject } from "../ui-ir";
+import { getIconDefinition } from "../features/icons/iconLibrary";
 
 import { blankProject, helloSample } from "../samples/hello";
 
@@ -19,6 +20,8 @@ interface EditorState {
   addWidget: (parentId: string, type: WidgetType) => string | null;
   deleteNode: (id: string) => void;
   moveNode: (id: string, direction: "up" | "down") => void;
+  moveNodeToIndex: (id: string, index: number) => void;
+  absolutizeLayout: (parentId: string, childFrames: Array<{ id: string; frame: Frame }>) => void;
   reparentNode: (id: string, newParentId: string) => void;
 
   updateNode: (id: string, patch: Partial<WidgetNode>) => void;
@@ -112,6 +115,40 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       return { project: next };
     }),
 
+  moveNodeToIndex: (id, index) =>
+    set((state) => {
+      const next = cloneProject(state.project);
+      const parent = findParent(next, id);
+      if (!parent?.children) return state;
+      const currentIndex = parent.children.findIndex((c) => c.id === id);
+      if (currentIndex < 0) return state;
+      const clampedIndex = clampIndex(index, parent.children.length - 1);
+      if (clampedIndex === currentIndex) return state;
+      const [node] = parent.children.splice(currentIndex, 1);
+      parent.children.splice(clampedIndex, 0, node);
+      return { project: next };
+    }),
+
+  absolutizeLayout: (parentId, childFrames) =>
+    set((state) => {
+      const next = cloneProject(state.project);
+      const parent = findNode(next, parentId);
+      if (!parent) return state;
+
+      parent.layout = {
+        ...(parent.layout ?? {}),
+        mode: "absolute",
+      };
+
+      for (const childPatch of childFrames) {
+        const child = findNode(next, childPatch.id);
+        if (!child) continue;
+        child.frame = { ...childPatch.frame };
+      }
+
+      return { project: next };
+    }),
+
   reparentNode: (id, newParentId) =>
     set((state) => {
       if (id === newParentId) return state;
@@ -152,6 +189,17 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const node = findNode(next, id);
       if (!node) return state;
       node.props = { ...(node.props ?? {}), ...patch } as WidgetNode["props"];
+      if (node.type === "icon" && typeof patch.iconId === "string") {
+        const icon = getIconDefinition(patch.iconId);
+        if (icon) {
+          node.frame = {
+            x: node.frame?.x ?? 0,
+            y: node.frame?.y ?? 0,
+            width: icon.width,
+            height: icon.height,
+          };
+        }
+      }
       return { project: next };
     }),
 
@@ -285,6 +333,10 @@ function isAncestor(p: UiProject, ancestorId: string, nodeId: string): boolean {
   const ancestor = findNode(p, ancestorId);
   if (!ancestor) return false;
   return containsId(ancestor, nodeId);
+}
+
+function clampIndex(value: number, max: number): number {
+  return Math.min(Math.max(0, value), max);
 }
 
 function defaultFrameFor(type: WidgetType, parentId: string, p: UiProject) {

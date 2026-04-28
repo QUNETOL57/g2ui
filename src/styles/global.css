@@ -228,24 +228,25 @@ textarea {
   transform: translateX(-50%);
 }
 
+.canvas-ruler-label.horizontal.bottom {
+  top: 13px;
+}
+
 .canvas-ruler-label.vertical {
   transform: translateY(-50%);
 }
 
 .canvas-ruler-label.vertical.left {
-  right: 3px;
+  right: 10px;
 }
 
 .canvas-ruler-label.vertical.right {
-  left: 3px;
+  left: 10px;
 }
 
 .device-frame {
   background: #121212;
   position: absolute;
-  box-shadow:
-    inset 0 0 0 1px var(--border),
-    0 12px 40px rgba(0, 0, 0, 0.6);
 }
 
 .canvas-pixel-grid {
@@ -258,24 +259,7 @@ textarea {
 .canvas-pixel-grid-frame {
   position: absolute;
   inset: 0;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-}
-
-.canvas-pixel-grid-line {
-  position: absolute;
-  background: #171717;
-}
-
-.canvas-pixel-grid-line.horizontal {
-  left: 0;
-  right: 0;
-  height: 1px;
-}
-
-.canvas-pixel-grid-line.vertical {
-  top: 0;
-  bottom: 0;
-  width: 1px;
+  border: 1px solid #171717;
 }
 
 .canvas-guide {
@@ -299,6 +283,28 @@ textarea {
   background-size: 6px 1px;
 }
 
+.canvas-selection-handle {
+  position: absolute;
+  z-index: 4;
+  width: 10px;
+  height: 10px;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(227, 232, 240, 0.75);
+  background: rgba(11, 14, 19, 0.96);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  pointer-events: auto;
+}
+
+.canvas-selection-handle.nw,
+.canvas-selection-handle.se {
+  cursor: nwse-resize;
+}
+
+.canvas-selection-handle.ne,
+.canvas-selection-handle.sw {
+  cursor: nesw-resize;
+}
+
 .canvas-scaled-content {
   position: absolute;
   left: 0;
@@ -309,13 +315,6 @@ textarea {
 .preview-node {
   position: absolute;
   overflow: hidden;
-}
-
-.selection-overlay {
-  position: absolute;
-  border: 1.5px solid var(--accent);
-  pointer-events: none;
-  box-shadow: 0 0 0 1px #000 inset;
 }
 
 .prop-group {

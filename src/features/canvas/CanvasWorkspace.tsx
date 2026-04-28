@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { useEditorStore } from "../../store/editorStore";
+import type { Frame, LayoutMode } from "../../ui-ir";
+import { findNode, findParent, useEditorStore } from "../../store/editorStore";
 import { layoutTree } from "../../layout/layoutEngine";
 import type { LayoutNode } from "../../layout/layoutEngine";
 import { resolveColor } from "../../layout/color";
@@ -13,8 +14,27 @@ const WHEEL_ZOOM_STEP = 0.25;
 const PIXEL_GRID_VISIBLE_ZOOM = 5;
 const RULER_SIZE = 24;
 
+type ResizeHandle = "nw" | "ne" | "sw" | "se";
+
+interface ActiveCanvasInteraction {
+  type: "move" | "resize";
+  nodeId: string;
+  startClientX: number;
+  startClientY: number;
+  startFrame: Frame;
+  startRect: Frame;
+  parentRect: Frame;
+  parentMode: LayoutMode;
+  siblingCenters?: { id: string; center: number }[];
+  handle?: ResizeHandle;
+}
+
 function clampZoom(value: number): number {
   return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value));
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
 }
 
 function normalizeZoom(value: number): number {
@@ -47,13 +67,26 @@ function findLayoutNode(layoutNode: LayoutNode, nodeId: string | null): LayoutNo
   return null;
 }
 
+function findParentLayoutNode(layoutNode: LayoutNode, nodeId: string | null): LayoutNode | null {
+  if (!nodeId) return null;
+  for (const child of layoutNode.children) {
+    if (child.node.id === nodeId) return layoutNode;
+    const match = findParentLayoutNode(child, nodeId);
+    if (match) return match;
+  }
+  return null;
+}
+
 export function CanvasWorkspace() {
   const project = useEditorStore((s) => s.project);
   const activeScreenId = useEditorStore((s) => s.activeScreenId);
   const selectedNodeId = useEditorStore((s) => s.selectedNodeId);
   const selectNode = useEditorStore((s) => s.selectNode);
+  const absolutizeLayout = useEditorStore((s) => s.absolutizeLayout);
+  const updateFrame = useEditorStore((s) => s.updateFrame);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const centeredViewKeyRef = useRef<string | null>(null);
+  const activeInteractionRef = useRef<ActiveCanvasInteraction | null>(null);
   const pendingWheelFocusRef = useRef<
     | {
         type: "frame";
@@ -100,6 +133,18 @@ export function CanvasWorkspace() {
     if (!layout || !selectedNodeId) return null;
     return findLayoutNode(layout, selectedNodeId);
   }, [layout, selectedNodeId]);
+  const selectedParentLayoutNode = useMemo(() => {
+    if (!layout || !selectedNodeId) return null;
+    return findParentLayoutNode(layout, selectedNodeId);
+  }, [layout, selectedNodeId]);
+  const selectedNode = useMemo(
+    () => (selectedNodeId ? findNode(project, selectedNodeId) : null),
+    [project, selectedNodeId],
+  );
+  const selectedParentNode = useMemo(
+    () => (selectedNodeId ? findParent(project, selectedNodeId) : null),
+    [project, selectedNodeId],
+  );
 
   if (!screen || !layout) {
     return (
@@ -116,6 +161,17 @@ export function CanvasWorkspace() {
   const showPixelGrid = renderZoom >= PIXEL_GRID_VISIBLE_ZOOM;
   const showGuides = !!selectedLayoutNode && selectedLayoutNode.node.id !== screen.id;
   const selectedRect = selectedLayoutNode?.rect ?? null;
+  const selectedParentMode: LayoutMode = selectedParentNode?.layout?.mode ?? "absolute";
+  const selectionHasFrame = !!selectedNode?.frame && !!selectedParentLayoutNode;
+  const canMoveSelection =
+    !!selectedNode &&
+    selectedNode.id !== screen.id &&
+    selectionHasFrame;
+  const canResizeSelection =
+    !!selectedNode &&
+    selectedNode.id !== screen.id &&
+    selectionHasFrame &&
+    selectedNode?.type !== "line";
   const stageInsetX = Math.max(24, Math.round(stageViewport.width / 2));
   const stageInsetY = Math.max(24, Math.round(stageViewport.height / 2));
   const artboardWidth = scaledW + RULER_SIZE * 2;
@@ -241,6 +297,195 @@ export function CanvasWorkspace() {
 
     pendingWheelFocusRef.current = null;
   }, [artboardHeight, artboardOffsetX, artboardOffsetY, artboardWidth, frameOffsetX, frameOffsetY, renderZoom]);
+
+  useEffect(() => {
+    return () => {
+      activeInteractionRef.current = null;
+      document.body.style.userSelect = "";
+    };
+  }, []);
+
+  const startInteraction = (interaction: ActiveCanvasInteraction) => {
+    activeInteractionRef.current = interaction;
+    const previousUserSelect = document.body.style.userSelect;
+    document.body.style.userSelect = "none";
+
+    const handleMouseMove = (event: MouseEvent) => {
+      const active = activeInteractionRef.current;
+      if (!active) return;
+
+      const deltaX = Math.round((event.clientX - active.startClientX) / renderZoom);
+      const deltaY = Math.round((event.clientY - active.startClientY) / renderZoom);
+
+      if (active.type === "move") {
+        if (active.parentMode === "absolute") {
+          const maxX = Math.max(0, active.parentRect.width - active.startFrame.width);
+          const maxY = Math.max(0, active.parentRect.height - active.startFrame.height);
+          updateFrame(active.nodeId, {
+            x: clamp(active.startFrame.x + deltaX, 0, maxX),
+            y: clamp(active.startFrame.y + deltaY, 0, maxY),
+          });
+          return;
+        }
+
+        const pointerCenter =
+          active.parentMode === "row"
+            ? active.startRect.x + Math.round(deltaX) + Math.round(active.startRect.width / 2)
+            : active.startRect.y + Math.round(deltaY) + Math.round(active.startRect.height / 2);
+        const nextIndex = active.siblingCenters?.reduce((acc, sibling, index) => {
+          if (pointerCenter >= sibling.center) return index + 1;
+          return acc;
+        }, 0) ?? 0;
+        useEditorStore.getState().moveNodeToIndex(active.nodeId, nextIndex);
+        return;
+      }
+
+      const startRight = active.startFrame.x + active.startFrame.width;
+      const startBottom = active.startFrame.y + active.startFrame.height;
+      let nextLeft = active.startFrame.x;
+      let nextTop = active.startFrame.y;
+      let nextRight = startRight;
+      let nextBottom = startBottom;
+
+      if (active.parentMode === "absolute") {
+        if (active.handle?.includes("w")) {
+          nextLeft = clamp(active.startFrame.x + deltaX, 0, startRight - 1);
+        }
+        if (active.handle?.includes("e")) {
+          nextRight = clamp(startRight + deltaX, active.startFrame.x + 1, active.parentRect.width);
+        }
+        if (active.handle?.includes("n")) {
+          nextTop = clamp(active.startFrame.y + deltaY, 0, startBottom - 1);
+        }
+        if (active.handle?.includes("s")) {
+          nextBottom = clamp(startBottom + deltaY, active.startFrame.y + 1, active.parentRect.height);
+        }
+      } else {
+        if (active.handle?.includes("w") || active.handle?.includes("e")) {
+          const nextWidthDelta = active.handle?.includes("w") ? -deltaX : deltaX;
+          nextRight = clamp(
+            active.startFrame.x + active.startFrame.width + nextWidthDelta,
+            active.startFrame.x + 1,
+            active.parentRect.width,
+          );
+        }
+        if (active.handle?.includes("n") || active.handle?.includes("s")) {
+          const nextHeightDelta = active.handle?.includes("n") ? -deltaY : deltaY;
+          nextBottom = clamp(
+            active.startFrame.y + active.startFrame.height + nextHeightDelta,
+            active.startFrame.y + 1,
+            active.parentRect.height,
+          );
+        }
+      }
+
+      updateFrame(active.nodeId, {
+        x: nextLeft,
+        y: nextTop,
+        width: nextRight - nextLeft,
+        height: nextBottom - nextTop,
+      });
+    };
+
+    const handleMouseUp = () => {
+      activeInteractionRef.current = null;
+      document.body.style.userSelect = previousUserSelect;
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+  };
+
+  const makeAbsoluteChildFrames = (parentLayout: LayoutNode) =>
+    parentLayout.children.map((child) => ({
+      id: child.node.id,
+      frame: {
+        x: child.rect.x - parentLayout.rect.x,
+        y: child.rect.y - parentLayout.rect.y,
+        width: child.rect.width,
+        height: child.rect.height,
+      },
+    }));
+
+  const handleNodeMouseDown = (nodeId: string, event: React.MouseEvent<HTMLDivElement>) => {
+    const node = findNode(project, nodeId);
+    const parentNode = findParent(project, nodeId);
+    const nodeLayout = findLayoutNode(layout, nodeId);
+    const parentLayout = findParentLayoutNode(layout, nodeId);
+    if (!node || !node.frame || !nodeLayout || !parentLayout || node.id === screen.id) return;
+    if (event.button !== 0) return;
+    event.preventDefault();
+    const parentMode: LayoutMode = parentNode?.layout?.mode ?? "absolute";
+    const startFrame: Frame = {
+      x: nodeLayout.rect.x - parentLayout.rect.x,
+      y: nodeLayout.rect.y - parentLayout.rect.y,
+      width: nodeLayout.rect.width,
+      height: nodeLayout.rect.height,
+    };
+
+    if (parentNode && parentMode !== "absolute") {
+      absolutizeLayout(parentNode.id, makeAbsoluteChildFrames(parentLayout));
+    }
+
+    const siblingCenters =
+      parentMode === "absolute"
+        ? undefined
+        : parentLayout.children
+            .filter((child) => child.node.id !== nodeId)
+            .map((child) => ({
+              id: child.node.id,
+              center:
+                parentMode === "row"
+                  ? child.rect.x + Math.round(child.rect.width / 2)
+                  : child.rect.y + Math.round(child.rect.height / 2),
+            }));
+    startInteraction({
+      type: "move",
+      nodeId,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      startFrame,
+      startRect: { ...nodeLayout.rect },
+      parentRect: parentLayout.rect,
+      parentMode: "absolute",
+      siblingCenters,
+    });
+  };
+
+  const handleResizeMouseDown =
+    (handle: ResizeHandle) => (event: React.MouseEvent<HTMLDivElement>) => {
+      if (!canResizeSelection || !selectedNodeId || !selectedNode?.frame || !selectedParentLayoutNode) return;
+      if (event.button !== 0) return;
+      event.preventDefault();
+      event.stopPropagation();
+
+      const startFrame: Frame = selectedRect
+        ? {
+            x: selectedRect.x - selectedParentLayoutNode.rect.x,
+            y: selectedRect.y - selectedParentLayoutNode.rect.y,
+            width: selectedRect.width,
+            height: selectedRect.height,
+          }
+        : { ...selectedNode.frame };
+
+      if (selectedParentNode && selectedParentMode !== "absolute") {
+        absolutizeLayout(selectedParentNode.id, makeAbsoluteChildFrames(selectedParentLayoutNode));
+      }
+
+      startInteraction({
+        type: "resize",
+        nodeId: selectedNodeId,
+        startClientX: event.clientX,
+        startClientY: event.clientY,
+        startFrame,
+        startRect: { ...(selectedRect ?? selectedNode.frame) },
+        parentRect: selectedParentLayoutNode.rect,
+        parentMode: "absolute",
+        handle,
+      });
+    };
 
   return (
     <div className="canvas-wrap">
@@ -426,22 +671,30 @@ export function CanvasWorkspace() {
                     className="canvas-guide horizontal"
                     style={{ top: Math.round((selectedRect.y + selectedRect.height) * renderZoom), left: 0, width: scaledW }}
                   />
-                  <div
-                    className="canvas-selection-handle"
-                    style={{ left: Math.round(selectedRect.x * renderZoom), top: Math.round(selectedRect.y * renderZoom) }}
-                  />
-                  <div
-                    className="canvas-selection-handle"
-                    style={{ left: Math.round((selectedRect.x + selectedRect.width) * renderZoom), top: Math.round(selectedRect.y * renderZoom) }}
-                  />
-                  <div
-                    className="canvas-selection-handle"
-                    style={{ left: Math.round(selectedRect.x * renderZoom), top: Math.round((selectedRect.y + selectedRect.height) * renderZoom) }}
-                  />
-                  <div
-                    className="canvas-selection-handle"
-                    style={{ left: Math.round((selectedRect.x + selectedRect.width) * renderZoom), top: Math.round((selectedRect.y + selectedRect.height) * renderZoom) }}
-                  />
+                  {canResizeSelection ? (
+                    <>
+                      <div
+                        className="canvas-selection-handle nw"
+                        style={{ left: Math.round(selectedRect.x * renderZoom), top: Math.round(selectedRect.y * renderZoom) }}
+                        onMouseDown={handleResizeMouseDown("nw")}
+                      />
+                      <div
+                        className="canvas-selection-handle ne"
+                        style={{ left: Math.round((selectedRect.x + selectedRect.width) * renderZoom), top: Math.round(selectedRect.y * renderZoom) }}
+                        onMouseDown={handleResizeMouseDown("ne")}
+                      />
+                      <div
+                        className="canvas-selection-handle sw"
+                        style={{ left: Math.round(selectedRect.x * renderZoom), top: Math.round((selectedRect.y + selectedRect.height) * renderZoom) }}
+                        onMouseDown={handleResizeMouseDown("sw")}
+                      />
+                      <div
+                        className="canvas-selection-handle se"
+                        style={{ left: Math.round((selectedRect.x + selectedRect.width) * renderZoom), top: Math.round((selectedRect.y + selectedRect.height) * renderZoom) }}
+                        onMouseDown={handleResizeMouseDown("se")}
+                      />
+                    </>
+                  ) : null}
                 </>
               ) : null}
 
@@ -460,7 +713,9 @@ export function CanvasWorkspace() {
                   ctx={{
                     palette: project.palette,
                     selectedId: selectedNodeId,
+                    movableId: canMoveSelection ? selectedNodeId : null,
                     onSelect: selectNode,
+                    onNodeMouseDown: handleNodeMouseDown,
                   }}
                 />
               </div>

@@ -14,7 +14,9 @@ import { IconGlyph, getIconDefinition } from "../icons/iconLibrary";
 interface RenderCtx {
   palette: PaletteEntry[] | undefined;
   selectedId: string | null;
+  movableId: string | null;
   onSelect: (id: string) => void;
+  onNodeMouseDown?: (nodeId: string, event: React.MouseEvent<HTMLDivElement>) => void;
 }
 
 export function PreviewNode({
@@ -31,6 +33,7 @@ export function PreviewNode({
     top: rect.y,
     width: rect.width,
     height: rect.height,
+    cursor: node.id === ctx.movableId ? "move" : undefined,
   };
 
   return (
@@ -41,6 +44,7 @@ export function PreviewNode({
         onMouseDown={(e) => {
           e.stopPropagation();
           ctx.onSelect(node.id);
+          ctx.onNodeMouseDown?.(node.id, e);
         }}
       >
         <NodeVisual node={node} ctx={ctx} />

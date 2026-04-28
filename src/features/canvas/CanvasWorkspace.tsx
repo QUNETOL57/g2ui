@@ -628,7 +628,6 @@ export function CanvasWorkspace() {
                 background: bg,
                 left: RULER_SIZE,
                 top: RULER_SIZE,
-                boxShadow: showPixelGrid ? "0 12px 40px rgba(0, 0, 0, 0.6)" : undefined,
               }}
               onMouseDown={(e) => e.stopPropagation()}
             >

@@ -299,8 +299,8 @@ textarea {
 .canvas-selection-handle {
   position: absolute;
   z-index: 4;
-  width: 14px;
-  height: 14px;
+  width: 10px;
+  height: 10px;
   transform: translate(-50%, -50%);
   border: 1px solid rgba(227, 232, 240, 0.75);
   background: rgba(11, 14, 19, 0.96);

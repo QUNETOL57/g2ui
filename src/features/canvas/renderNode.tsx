@@ -10,7 +10,8 @@ import type {
 
 import type { LayoutNode } from "../../layout/layoutEngine";
 import { resolveColor } from "../../layout/color";
-import { IconGlyph, getIconDefinition } from "../icons/iconLibrary";
+import { IconGlyph } from "../icons/iconLibrary";
+import { DEFAULT_ICON_ID, getIconScaleForFrame, getResolvedIconDefinition } from "../icons/iconSizing";
 
 interface RenderCtx {
   palette: PaletteEntry[] | undefined;
@@ -55,7 +56,7 @@ export function PreviewNode({
           ctx.onNodeMouseDown?.(node.id, e);
         }}
       >
-        <NodeVisual node={node} ctx={ctx} />
+        <NodeVisual node={node} ctx={ctx} rect={previewRect ?? rect} />
       </div>
       {children.map((child) => (
         <PreviewNode key={child.node.id} layoutNode={child} ctx={ctx} dragOffset={nextDragOffset} />
@@ -64,7 +65,7 @@ export function PreviewNode({
   );
 }
 
-function NodeVisual({ node, ctx }: { node: WidgetNode; ctx: RenderCtx }) {
+function NodeVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; rect: Frame }) {
   switch (node.type) {
     case "screen":
     case "panel":
@@ -76,7 +77,7 @@ function NodeVisual({ node, ctx }: { node: WidgetNode; ctx: RenderCtx }) {
     case "button":
       return <ButtonVisual node={node} ctx={ctx} />;
     case "icon":
-      return <IconVisual node={node} ctx={ctx} />;
+      return <IconVisual node={node} ctx={ctx} rect={rect} />;
     case "image":
       return <ImageVisual node={node} ctx={ctx} />;
     case "line":
@@ -169,10 +170,12 @@ function ButtonVisual({ node, ctx }: { node: WidgetNode; ctx: RenderCtx }) {
   );
 }
 
-function IconVisual({ node, ctx }: { node: WidgetNode; ctx: RenderCtx }) {
+function IconVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; rect: Frame }) {
   const props = (node.props ?? {}) as IconProps;
   const color = resolveColor(node.style?.textColor, ctx.palette, "#FFF");
-  const icon = getIconDefinition(props.iconId);
+  const icon = getResolvedIconDefinition(props.iconId);
+  const iconId = props.iconId && icon.id === props.iconId ? props.iconId : DEFAULT_ICON_ID;
+  const pixelSize = getIconScaleForFrame(icon, rect);
   return (
     <div
       style={{
@@ -181,16 +184,12 @@ function IconVisual({ node, ctx }: { node: WidgetNode; ctx: RenderCtx }) {
         display: "grid",
         placeItems: "center",
         color,
-        border: icon ? "none" : "1px dashed currentColor",
         opacity: 0.9,
+        overflow: "hidden",
       }}
-      title={`icon: ${props.iconId}`}
+      title={`icon: ${iconId}`}
     >
-      {icon ? (
-        <IconGlyph iconId={props.iconId} color={color} />
-      ) : (
-        <span style={{ fontSize: props.size ?? 16 }}>◇</span>
-      )}
+      <IconGlyph iconId={iconId} color={color} pixelSize={pixelSize} />
     </div>
   );
 }

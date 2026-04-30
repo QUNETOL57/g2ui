@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from "react";
 import type {
   ButtonProps,
   ColorRef,
@@ -8,7 +9,8 @@ import type {
 } from "../../ui-ir";
 
 import { useEditorStore, findNode } from "../../store/editorStore";
-import { ICON_GROUPS, IconGlyph, getIconDefinition } from "../icons/iconLibrary";
+import { ICON_GROUPS, IconGlyph } from "../icons/iconLibrary";
+import { getResolvedIconDefinition } from "../icons/iconSizing";
 
 export function PropertiesPanel() {
   const project = useEditorStore((s) => s.project);
@@ -98,14 +100,25 @@ function FrameGroup({
   updateFrame: (id: string, patch: Partial<NonNullable<WidgetNode["frame"]>>) => void;
 }) {
   const f = node.frame ?? { x: 0, y: 0, width: 0, height: 0 };
+  const icon = node.type === "icon" ? getResolvedIconDefinition(((node.props ?? {}) as Partial<IconProps>).iconId) : null;
   return (
     <div className="prop-group">
       <h4>Frame</h4>
       <div className="inline-grid-2">
         <NumberField label="x" value={f.x} onChange={(v) => updateFrame(node.id, { x: v })} />
         <NumberField label="y" value={f.y} onChange={(v) => updateFrame(node.id, { y: v })} />
-        <NumberField label="w" value={f.width} onChange={(v) => updateFrame(node.id, { width: v })} />
-        <NumberField label="h" value={f.height} onChange={(v) => updateFrame(node.id, { height: v })} />
+        <NumberField
+          label="w"
+          value={f.width}
+          min={icon?.width}
+          onChange={(v) => updateFrame(node.id, { width: v })}
+        />
+        <NumberField
+          label="h"
+          value={f.height}
+          min={icon?.height}
+          onChange={(v) => updateFrame(node.id, { height: v })}
+        />
       </div>
     </div>
   );
@@ -176,6 +189,20 @@ function StyleGroup({
   updateStyle: (id: string, patch: Partial<NonNullable<WidgetNode["style"]>>) => void;
 }) {
   const s = node.style ?? {};
+  if (node.type === "icon") {
+    return (
+      <div className="prop-group">
+        <h4>Style</h4>
+        <ColorField
+          label="color"
+          value={s.textColor}
+          palette={palette}
+          onChange={(v) => updateStyle(node.id, { textColor: v })}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="prop-group">
       <h4>Style</h4>
@@ -306,7 +333,21 @@ function IconGroup({
   onChange: (patch: Partial<IconProps>) => void;
 }) {
   const p = (node.props ?? {}) as IconProps;
-  const selectedIcon = getIconDefinition(p.iconId);
+  const selectedGroup = useMemo(
+    () => ICON_GROUPS.find(([, icons]) => icons.some((icon) => icon.id === p.iconId))?.[0] ?? "Earth",
+    [p.iconId],
+  );
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => ({
+    [selectedGroup]: true,
+  }));
+
+  useEffect(() => {
+    setOpenGroups((current) => ({
+      ...current,
+      [selectedGroup]: true,
+    }));
+  }, [node.id, selectedGroup]);
+
   return (
     <div className="prop-group">
       <h4>Icon</h4>
@@ -318,41 +359,18 @@ function IconGroup({
           onChange={(e) => onChange({ iconId: e.target.value })}
         />
       </div>
-      <div className="prop-row" style={{ alignItems: "start" }}>
-        <label>preview</label>
-        <div
-          style={{
-            width: 72,
-            height: 48,
-            padding: 6,
-            border: "1px solid var(--border)",
-            borderRadius: 6,
-            background: "rgba(255,255,255,0.02)",
-          }}
-          title={p.iconId || "No icon selected"}
-        >
-          {selectedIcon ? (
-            <IconGlyph iconId={p.iconId} />
-          ) : (
-            <div style={{ fontSize: 11, color: "var(--muted)" }}>
-              {p.iconId ? "unknown" : "empty"}
-            </div>
-          )}
-        </div>
-      </div>
-      <div className="prop-row">
-        <label>size</label>
-        <select
-          value={String(p.size ?? 16)}
-          onChange={(e) => onChange({ size: Number(e.target.value) as IconProps["size"] })}
-        >
-          <option value="8">8</option>
-          <option value="16">16</option>
-        </select>
-      </div>
       <div style={{ display: "grid", gap: 8 }}>
         {ICON_GROUPS.map(([group, icons]) => (
-          <details key={group} open={group === "Battery"}>
+          <details
+            key={group}
+            open={Boolean(openGroups[group])}
+            onToggle={(event) => {
+              const isOpen = event.currentTarget.open;
+              setOpenGroups((current) =>
+                current[group] === isOpen ? current : { ...current, [group]: isOpen },
+              );
+            }}
+          >
             <summary style={{ cursor: "pointer", fontSize: 12 }}>{group}</summary>
             <div
               style={{
@@ -385,6 +403,9 @@ function IconGroup({
                     </div>
                     <span style={{ fontSize: 10, lineHeight: 1.2, wordBreak: "break-word" }}>
                       {icon.id}
+                    </span>
+                    <span style={{ fontSize: 10, lineHeight: 1, color: "var(--muted)" }}>
+                      {icon.width}x{icon.height}
                     </span>
                   </button>
                 );
@@ -435,7 +456,7 @@ function ColorField({
   palette: { token: string; hex: string }[] | undefined;
   onChange: (v: ColorRef | undefined) => void;
 }) {
-  const current = value ?? { kind: "hex", value: "#000000" };
+  const current = value ?? { kind: "hex", value: "#FFFFFF" };
   const mode = current.kind;
   return (
     <div className="prop-row" style={{ alignItems: "start" }}>

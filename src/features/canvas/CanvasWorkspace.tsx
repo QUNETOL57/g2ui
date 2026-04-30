@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import type { Frame, LayoutMode } from "../../ui-ir";
+import type { Frame, IconProps, LayoutMode } from "../../ui-ir";
 import { findNode, findParent, useEditorStore } from "../../store/editorStore";
 import { layoutTree } from "../../layout/layoutEngine";
 import type { LayoutNode } from "../../layout/layoutEngine";
 import { resolveColor } from "../../layout/color";
 import { PreviewNode } from "./renderNode";
+import { normalizeIconFrame } from "../icons/iconSizing";
 
 const MAX_ZOOM = 15;
 const MIN_ZOOM = 1;
@@ -27,6 +28,8 @@ interface ActiveCanvasInteraction {
   parentMode: LayoutMode;
   siblingCenters?: { id: string; center: number }[];
   handle?: ResizeHandle;
+  isIcon?: boolean;
+  iconId?: string;
   latestFrame?: Frame;
 }
 
@@ -422,12 +425,30 @@ export function CanvasWorkspace() {
         }
       }
 
-      const nextFrame = {
+      let nextFrame = {
         x: nextLeft,
         y: nextTop,
         width: nextRight - nextLeft,
         height: nextBottom - nextTop,
       };
+      if (active.isIcon) {
+        const anchorX = active.handle?.includes("w") ? "right" : "left";
+        const anchorY = active.handle?.includes("n") ? "bottom" : "top";
+        const maxWidth =
+          anchorX === "right"
+            ? active.startFrame.x + active.startFrame.width
+            : active.parentRect.width - active.startFrame.x;
+        const maxHeight =
+          anchorY === "bottom"
+            ? active.startFrame.y + active.startFrame.height
+            : active.parentRect.height - active.startFrame.y;
+        nextFrame = normalizeIconFrame(active.iconId, nextFrame, {
+          anchorX,
+          anchorY,
+          maxWidth,
+          maxHeight,
+        });
+      }
       if (sameFrame(active.latestFrame ?? active.startFrame, nextFrame)) return;
       active.latestFrame = nextFrame;
       scheduleDragPreview({
@@ -548,6 +569,8 @@ export function CanvasWorkspace() {
         parentRect: selectedParentLayoutNode.rect,
         parentMode: "absolute",
         handle,
+        isIcon: selectedNode.type === "icon",
+        iconId: selectedNode.type === "icon" ? ((selectedNode.props ?? {}) as Partial<IconProps>).iconId : undefined,
       });
     };
 

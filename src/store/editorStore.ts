@@ -1,7 +1,8 @@
 import { create } from "zustand";
-import type { Frame, UiProject, WidgetNode, WidgetType, ScreenNode } from "../ui-ir";
+import type { Frame, IconProps, UiProject, WidgetNode, WidgetType, ScreenNode } from "../ui-ir";
 import { makeWidget, nextId, validateProject } from "../ui-ir";
 import { getIconDefinition } from "../features/icons/iconLibrary";
+import { DEFAULT_ICON_ID, getResolvedIconDefinition, normalizeIconNodeFrame } from "../features/icons/iconSizing";
 
 import { blankProject, helloSample } from "../samples/hello";
 
@@ -179,7 +180,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const next = cloneProject(state.project);
       const node = findNode(next, id);
       if (!node) return state;
-      node.frame = { x: 0, y: 0, width: 0, height: 0, ...(node.frame ?? {}), ...framePatch };
+      const nextFrame = { x: 0, y: 0, width: 0, height: 0, ...(node.frame ?? {}), ...framePatch };
+      node.frame = normalizeIconNodeFrame(node, nextFrame);
       return { project: next };
     }),
 
@@ -189,6 +191,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const node = findNode(next, id);
       if (!node) return state;
       node.props = { ...(node.props ?? {}), ...patch } as WidgetNode["props"];
+      if (node.type === "icon") {
+        delete (node.props as Partial<IconProps> & { size?: unknown }).size;
+      }
       if (node.type === "icon" && typeof patch.iconId === "string") {
         const icon = getIconDefinition(patch.iconId);
         if (icon) {
@@ -348,8 +353,10 @@ function defaultFrameFor(type: WidgetType, parentId: string, p: UiProject) {
       return { x: 8, y: 8, width: Math.min(120, parentW - 16), height: 16 };
     case "button":
       return { x: 8, y: 8, width: 80, height: 24 };
-    case "icon":
-      return { x: 8, y: 8, width: 16, height: 16 };
+    case "icon": {
+      const icon = getResolvedIconDefinition(DEFAULT_ICON_ID);
+      return { x: 8, y: 8, width: icon.width, height: icon.height };
+    }
     case "panel":
       return { x: 0, y: 0, width: parentW, height: Math.min(60, parentH) };
     case "line":

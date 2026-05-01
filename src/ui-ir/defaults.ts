@@ -34,7 +34,7 @@ export function defaultProps(type: WidgetType): Record<string, unknown> {
         paddingY: 4,
       } satisfies ButtonProps;
     case "icon":
-      return { iconId: "placeholder", size: 16 } satisfies IconProps;
+      return { iconId: "earth" } satisfies IconProps;
     case "image":
       return { imageId: "placeholder" } satisfies ImageProps;
     case "line":
@@ -86,7 +86,7 @@ export function makeWidget(id: string, type: WidgetType): WidgetNode {
     visible: true,
     enabled: true,
     layout: defaultLayout(type === "panel" ? "column" : "absolute"),
-    style: {},
+    style: { textColor: { kind: "hex", value: "#FFFFFF" } },
     props: defaultProps(type),
     children: type === "panel" || type === "screen" ? [] : undefined,
   };

@@ -92,7 +92,6 @@ export interface ButtonProps {
 
 export interface IconProps {
   iconId: string;
-  size?: 8 | 16;
 }
 
 export interface ImageProps {

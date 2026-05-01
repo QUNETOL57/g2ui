@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   ButtonProps,
   ColorRef,
@@ -7,8 +8,10 @@ import type {
   WidgetNode,
 } from "../../ui-ir";
 
+import { CustomSelect } from "../../components/CustomSelect";
 import { useEditorStore, findNode } from "../../store/editorStore";
-import { ICON_GROUPS, IconGlyph, getIconDefinition } from "../icons/iconLibrary";
+import { ICON_GROUPS, IconGlyph } from "../icons/iconLibrary";
+import { getResolvedIconDefinition } from "../icons/iconSizing";
 
 export function PropertiesPanel() {
   const project = useEditorStore((s) => s.project);
@@ -23,7 +26,7 @@ export function PropertiesPanel() {
     return (
       <>
         <div className="section-title">Properties</div>
-        <div style={{ padding: 10, color: "var(--muted)", fontSize: 12 }}>
+        <div className="empty-state">
           Select a widget in the tree or canvas.
         </div>
       </>
@@ -37,39 +40,15 @@ export function PropertiesPanel() {
     <>
       <div className="section-title">Properties · {node.type}</div>
 
-      <div className="prop-group">
-        <h4>Identity</h4>
-        <div className="prop-row">
-          <label>id</label>
-          <input type="text" value={node.id} disabled />
-        </div>
-        <div className="prop-row">
-          <label>name</label>
-          <input
-            type="text"
-            value={node.name ?? ""}
-            onChange={(e) => updateNode(node.id, { name: e.target.value || undefined })}
-          />
-        </div>
-        <div className="prop-row">
-          <label>visible</label>
-          <input
-            type="checkbox"
-            checked={node.visible !== false}
-            onChange={(e) => updateNode(node.id, { visible: e.target.checked })}
-          />
-        </div>
-      </div>
+      <SelectedGroup node={node} updateNode={updateNode} />
 
       {node.type !== "screen" ? (
         <FrameGroup node={node} updateFrame={updateFrame} />
       ) : null}
 
-      {(node.type === "screen" || node.type === "panel") && (
-        <LayoutGroup node={node} updateLayout={updateLayout} />
-      )}
-
-      <StyleGroup node={node} palette={project.palette} updateStyle={updateStyle} />
+      {node.type === "icon" ? (
+        <StyleGroup node={node} palette={project.palette} updateStyle={updateStyle} />
+      ) : null}
 
       {node.type === "label" && (
         <LabelGroup
@@ -86,7 +65,51 @@ export function PropertiesPanel() {
       {node.type === "icon" && (
         <IconGroup node={node} onChange={(patch) => updateProps(node.id, patch)} />
       )}
+
+      {(node.type === "screen" || node.type === "panel") && (
+        <LayoutGroup node={node} updateLayout={updateLayout} />
+      )}
+
+      {node.type !== "icon" ? (
+        <StyleGroup node={node} palette={project.palette} updateStyle={updateStyle} />
+      ) : null}
     </>
+  );
+}
+
+function SelectedGroup({
+  node,
+  updateNode,
+}: {
+  node: WidgetNode;
+  updateNode: (id: string, patch: Partial<WidgetNode>) => void;
+}) {
+  return (
+    <div className="prop-group inspector-summary">
+      <div className="inspector-title-row">
+        <span className="type-pill">{node.type}</span>
+        <span className="inspector-id" title={node.id}>
+          {node.id}
+        </span>
+      </div>
+      <div className="prop-row">
+        <label>name</label>
+        <input
+          type="text"
+          value={node.name ?? ""}
+          placeholder={node.id}
+          onChange={(e) => updateNode(node.id, { name: e.target.value || undefined })}
+        />
+      </div>
+      <label className="visibility-toggle">
+        <input
+          type="checkbox"
+          checked={node.visible !== false}
+          onChange={(e) => updateNode(node.id, { visible: e.target.checked })}
+        />
+        Visible on canvas
+      </label>
+    </div>
   );
 }
 
@@ -98,16 +121,51 @@ function FrameGroup({
   updateFrame: (id: string, patch: Partial<NonNullable<WidgetNode["frame"]>>) => void;
 }) {
   const f = node.frame ?? { x: 0, y: 0, width: 0, height: 0 };
+  const icon = node.type === "icon" ? getResolvedIconDefinition(((node.props ?? {}) as Partial<IconProps>).iconId) : null;
   return (
     <div className="prop-group">
-      <h4>Frame</h4>
-      <div className="inline-grid-2">
-        <NumberField label="x" value={f.x} onChange={(v) => updateFrame(node.id, { x: v })} />
-        <NumberField label="y" value={f.y} onChange={(v) => updateFrame(node.id, { y: v })} />
-        <NumberField label="w" value={f.width} onChange={(v) => updateFrame(node.id, { width: v })} />
-        <NumberField label="h" value={f.height} onChange={(v) => updateFrame(node.id, { height: v })} />
+      <h4>Transform</h4>
+      <div className="transform-grid">
+        <TransformField label="X" value={f.x} onChange={(v) => updateFrame(node.id, { x: v })} />
+        <TransformField label="Y" value={f.y} onChange={(v) => updateFrame(node.id, { y: v })} />
+        <TransformField
+          label="W"
+          value={f.width}
+          min={icon?.width}
+          onChange={(v) => updateFrame(node.id, { width: v })}
+        />
+        <TransformField
+          label="H"
+          value={f.height}
+          min={icon?.height}
+          onChange={(v) => updateFrame(node.id, { height: v })}
+        />
       </div>
     </div>
+  );
+}
+
+function TransformField({
+  label,
+  value,
+  onChange,
+  min,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  min?: number;
+}) {
+  return (
+    <label className="transform-field">
+      <span>{label}</span>
+      <input
+        type="number"
+        value={value}
+        min={min}
+        onChange={(e) => onChange(Number(e.target.value))}
+      />
+    </label>
   );
 }
 
@@ -124,14 +182,16 @@ function LayoutGroup({
       <h4>Layout</h4>
       <div className="prop-row">
         <label>mode</label>
-        <select
+        <CustomSelect
+          ariaLabel="layout mode"
           value={l.mode}
-          onChange={(e) => updateLayout(node.id, { mode: e.target.value as LayoutMode })}
-        >
-          <option value="absolute">absolute</option>
-          <option value="row">row</option>
-          <option value="column">column</option>
-        </select>
+          options={[
+            { value: "absolute", label: "absolute" },
+            { value: "row", label: "row" },
+            { value: "column", label: "column" },
+          ]}
+          onChange={(value) => updateLayout(node.id, { mode: value as LayoutMode })}
+        />
       </div>
       <div className="inline-grid-2">
         <NumberField
@@ -147,21 +207,21 @@ function LayoutGroup({
       </div>
       <div className="prop-row">
         <label>align</label>
-        <select
+        <CustomSelect
+          ariaLabel="layout align"
           value={l.align ?? "start"}
-          onChange={(e) =>
+          options={["start", "center", "end", "stretch"].map((value) => ({
+            value,
+            label: value,
+          }))}
+          onChange={(value) =>
             updateLayout(node.id, {
-              align: e.target.value as NonNullable<typeof l.align>,
+              align: value as NonNullable<typeof l.align>,
             })
           }
-        >
-          {["start", "center", "end", "stretch"].map((a) => (
-            <option key={a} value={a}>
-              {a}
-            </option>
-          ))}
-        </select>
+        />
       </div>
+      <p className="field-hint">Controls how children are arranged inside this container.</p>
     </div>
   );
 }
@@ -176,48 +236,107 @@ function StyleGroup({
   updateStyle: (id: string, patch: Partial<NonNullable<WidgetNode["style"]>>) => void;
 }) {
   const s = node.style ?? {};
+  const fillColor = s.background ?? { kind: "hex", value: "#FFFFFF" } satisfies ColorRef;
+  const borderColor = s.borderColor ?? { kind: "hex", value: "#FFFFFF" } satisfies ColorRef;
+  const fillEnabled = s.drawBackground !== false;
+  const borderEnabled = Boolean(s.drawBorder);
+
+  if (node.type === "icon") {
+    return (
+      <div className="prop-group appearance-group">
+        <h4>Appearance</h4>
+        <div className="appearance-section">
+          <ColorField
+            label="Icon color"
+            value={s.textColor}
+            palette={palette}
+            onChange={(v) => updateStyle(node.id, { textColor: v })}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="prop-group">
-      <h4>Style</h4>
-      <ColorField
-        label="background"
-        value={s.background}
-        palette={palette}
-        onChange={(v) => updateStyle(node.id, { background: v })}
-      />
-      <ColorField
-        label="border"
-        value={s.borderColor}
-        palette={palette}
-        onChange={(v) => updateStyle(node.id, { borderColor: v })}
-      />
-      <ColorField
-        label="text"
-        value={s.textColor}
-        palette={palette}
-        onChange={(v) => updateStyle(node.id, { textColor: v })}
-      />
-      <NumberField
-        label="borderWidth"
-        value={s.borderWidth ?? 0}
-        onChange={(v) => updateStyle(node.id, { borderWidth: v })}
-      />
-      <div className="prop-row">
-        <label>drawBg</label>
-        <input
-          type="checkbox"
-          checked={s.drawBackground !== false}
-          onChange={(e) => updateStyle(node.id, { drawBackground: e.target.checked })}
-        />
+    <div className="prop-group appearance-group">
+      <h4>Appearance</h4>
+      <div className="appearance-section">
+        <label className="appearance-toggle">
+          <span>
+            <strong>Fill</strong>
+            <small>Background color</small>
+          </span>
+          <input
+            type="checkbox"
+            checked={fillEnabled}
+            onChange={(e) =>
+              updateStyle(node.id, {
+                drawBackground: e.target.checked,
+                background: e.target.checked ? fillColor : s.background,
+              })
+            }
+          />
+        </label>
+        {fillEnabled ? (
+          <ColorField
+            label="Color"
+            value={fillColor}
+            palette={palette}
+            onChange={(v) => updateStyle(node.id, { background: v, drawBackground: true })}
+          />
+        ) : null}
       </div>
-      <div className="prop-row">
-        <label>drawBorder</label>
-        <input
-          type="checkbox"
-          checked={Boolean(s.drawBorder)}
-          onChange={(e) => updateStyle(node.id, { drawBorder: e.target.checked })}
-        />
+      <div className="appearance-section">
+        <label className="appearance-toggle">
+          <span>
+            <strong>Border</strong>
+            <small>Stroke around the element</small>
+          </span>
+          <input
+            type="checkbox"
+            checked={borderEnabled}
+            onChange={(e) =>
+              updateStyle(node.id, {
+                drawBorder: e.target.checked,
+                borderColor: e.target.checked ? borderColor : s.borderColor,
+                borderWidth: e.target.checked ? Math.max(1, s.borderWidth ?? 1) : s.borderWidth,
+              })
+            }
+          />
+        </label>
+        {borderEnabled ? (
+          <>
+            <ColorField
+              label="Color"
+              value={borderColor}
+              palette={palette}
+              onChange={(v) => updateStyle(node.id, { borderColor: v, drawBorder: true })}
+            />
+            <NumberField
+              label="Width"
+              value={s.borderWidth ?? 1}
+              min={1}
+              onChange={(v) => updateStyle(node.id, { borderWidth: Math.max(1, v), drawBorder: true })}
+            />
+          </>
+        ) : null}
       </div>
+      {node.type !== "screen" && node.type !== "panel" ? (
+        <div className="appearance-section">
+          <div className="appearance-static-head">
+            <span>
+              <strong>Text</strong>
+              <small>Foreground color</small>
+            </span>
+          </div>
+          <ColorField
+            label="Color"
+            value={s.textColor}
+            palette={palette}
+            onChange={(v) => updateStyle(node.id, { textColor: v })}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -232,7 +351,7 @@ function LabelGroup({
   const p = (node.props ?? {}) as LabelProps;
   return (
     <div className="prop-group">
-      <h4>Label</h4>
+      <h4>Content</h4>
       <div className="prop-row">
         <label>text</label>
         <input
@@ -250,11 +369,16 @@ function LabelGroup({
       />
       <div className="prop-row">
         <label>align</label>
-        <select value={p.align ?? "left"} onChange={(e) => onChange({ align: e.target.value as LabelProps["align"] })}>
-          <option value="left">left</option>
-          <option value="center">center</option>
-          <option value="right">right</option>
-        </select>
+        <CustomSelect
+          ariaLabel="label align"
+          value={p.align ?? "left"}
+          options={[
+            { value: "left", label: "left" },
+            { value: "center", label: "center" },
+            { value: "right", label: "right" },
+          ]}
+          onChange={(value) => onChange({ align: value as LabelProps["align"] })}
+        />
       </div>
     </div>
   );
@@ -270,7 +394,7 @@ function ButtonGroup({
   const p = (node.props ?? {}) as ButtonProps;
   return (
     <div className="prop-group">
-      <h4>Button</h4>
+      <h4>Content</h4>
       <div className="prop-row">
         <label>text</label>
         <input
@@ -306,62 +430,63 @@ function IconGroup({
   onChange: (patch: Partial<IconProps>) => void;
 }) {
   const p = (node.props ?? {}) as IconProps;
-  const selectedIcon = getIconDefinition(p.iconId);
+  const iconSearch = p.iconId ?? "";
+  const normalizedIconSearch = iconSearch.trim().toLowerCase();
+  const selectedGroup = useMemo(
+    () => ICON_GROUPS.find(([, icons]) => icons.some((icon) => icon.id === p.iconId))?.[0] ?? "Transport & Places",
+    [p.iconId],
+  );
+  const filteredIconGroups = useMemo(
+    () =>
+      normalizedIconSearch
+        ? ICON_GROUPS.map(
+            ([group, icons]) =>
+              [
+                group,
+                icons.filter((icon) => icon.id.toLowerCase().includes(normalizedIconSearch)),
+              ] as const,
+          ).filter(([, icons]) => icons.length > 0)
+        : ICON_GROUPS,
+    [normalizedIconSearch],
+  );
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => ({
+    [selectedGroup]: true,
+  }));
+
+  useEffect(() => {
+    setOpenGroups((current) => ({
+      ...current,
+      [selectedGroup]: true,
+    }));
+  }, [node.id, selectedGroup]);
+
   return (
     <div className="prop-group">
-      <h4>Icon</h4>
+      <h4>Icon Library</h4>
       <div className="prop-row">
         <label>iconId</label>
         <input
-          type="text"
-          value={p.iconId ?? ""}
+          type="search"
+          placeholder="search or enter iconId"
+          value={iconSearch}
           onChange={(e) => onChange({ iconId: e.target.value })}
         />
       </div>
-      <div className="prop-row" style={{ alignItems: "start" }}>
-        <label>preview</label>
-        <div
-          style={{
-            width: 72,
-            height: 48,
-            padding: 6,
-            border: "1px solid var(--border)",
-            borderRadius: 6,
-            background: "rgba(255,255,255,0.02)",
-          }}
-          title={p.iconId || "No icon selected"}
-        >
-          {selectedIcon ? (
-            <IconGlyph iconId={p.iconId} />
-          ) : (
-            <div style={{ fontSize: 11, color: "var(--muted)" }}>
-              {p.iconId ? "unknown" : "empty"}
-            </div>
-          )}
-        </div>
-      </div>
-      <div className="prop-row">
-        <label>size</label>
-        <select
-          value={String(p.size ?? 16)}
-          onChange={(e) => onChange({ size: Number(e.target.value) as IconProps["size"] })}
-        >
-          <option value="8">8</option>
-          <option value="16">16</option>
-        </select>
-      </div>
-      <div style={{ display: "grid", gap: 8 }}>
-        {ICON_GROUPS.map(([group, icons]) => (
-          <details key={group} open={group === "Battery"}>
-            <summary style={{ cursor: "pointer", fontSize: 12 }}>{group}</summary>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-                gap: 6,
-                marginTop: 6,
-              }}
-            >
+      <div className="icon-browser">
+        {filteredIconGroups.length > 0 ? filteredIconGroups.map(([group, icons]) => (
+          <details
+            key={group}
+            className="icon-accordion"
+            open={Boolean(openGroups[group]) || Boolean(normalizedIconSearch)}
+            onToggle={(event) => {
+              const isOpen = event.currentTarget.open;
+              setOpenGroups((current) =>
+                current[group] === isOpen ? current : { ...current, [group]: isOpen },
+              );
+            }}
+          >
+            <summary>{group}</summary>
+            <div className="icon-grid">
               {icons.map((icon) => {
                 const isSelected = p.iconId === icon.id;
                 return (
@@ -370,28 +495,25 @@ function IconGroup({
                     type="button"
                     onClick={() => onChange({ iconId: icon.id })}
                     title={icon.id}
-                    style={{
-                      display: "grid",
-                      gap: 4,
-                      padding: 6,
-                      borderRadius: 6,
-                      border: isSelected ? "1px solid #6ea8fe" : "1px solid var(--border)",
-                      background: isSelected ? "rgba(110, 168, 254, 0.12)" : "transparent",
-                      cursor: "pointer",
-                    }}
+                    className={`icon-tile${isSelected ? " selected" : ""}`}
                   >
-                    <div style={{ width: "100%", height: 28 }}>
+                    <div className="icon-tile-preview">
                       <IconGlyph iconId={icon.id} />
                     </div>
-                    <span style={{ fontSize: 10, lineHeight: 1.2, wordBreak: "break-word" }}>
+                    <span className="icon-tile-name">
                       {icon.id}
+                    </span>
+                    <span className="icon-tile-size">
+                      {icon.width}x{icon.height}
                     </span>
                   </button>
                 );
               })}
             </div>
           </details>
-        ))}
+        )) : (
+          <p className="field-hint">No icons found for "{iconSearch}".</p>
+        )}
       </div>
     </div>
   );
@@ -435,48 +557,103 @@ function ColorField({
   palette: { token: string; hex: string }[] | undefined;
   onChange: (v: ColorRef | undefined) => void;
 }) {
-  const current = value ?? { kind: "hex", value: "#000000" };
+  const current = value ?? { kind: "hex", value: "#FFFFFF" };
   const mode = current.kind;
   return (
-    <div className="prop-row" style={{ alignItems: "start" }}>
+    <div className="prop-row color-field">
       <label>{label}</label>
-      <div style={{ display: "grid", gap: 4 }}>
-        <select
-          value={mode}
-          onChange={(e) => {
-            const kind = e.target.value as "hex" | "token" | "none";
-            if (kind === "none") return onChange(undefined);
-            if (kind === "hex") return onChange({ kind: "hex", value: "#FFFFFF" });
-            return onChange({
-              kind: "token",
-              token: palette?.[0]?.token ?? "fg",
-            });
-          }}
-        >
-          <option value="hex">hex</option>
-          <option value="token">token</option>
-          <option value="none">unset</option>
-        </select>
+      <div className="color-field-control">
+        <div className={`color-mode-row${mode === "hex" ? "" : " full-width"}`}>
+          <CustomSelect
+            ariaLabel={`${label} mode`}
+            value={mode}
+            options={[
+              { value: "hex", label: "hex" },
+              { value: "token", label: "palette" },
+            ]}
+            onChange={(value) => {
+              const kind = value as "hex" | "token";
+              if (kind === "hex") return onChange({ kind: "hex", value: "#FFFFFF" });
+              return onChange({
+                kind: "token",
+                token: palette?.[0]?.token ?? "fg",
+              });
+            }}
+          />
         {mode === "hex" ? (
-          <input
-            type="color"
+          <HexColorInput
             value={current.kind === "hex" ? current.value : "#FFFFFF"}
-            onChange={(e) => onChange({ kind: "hex", value: e.target.value.toUpperCase() })}
+            onChange={(nextValue) => onChange({ kind: "hex", value: nextValue })}
           />
         ) : null}
+        </div>
         {mode === "token" ? (
-          <select
+          <CustomSelect
+            ariaLabel={`${label} token`}
             value={current.kind === "token" ? current.token : ""}
-            onChange={(e) => onChange({ kind: "token", token: e.target.value })}
-          >
-            {(palette ?? []).map((p) => (
-              <option key={p.token} value={p.token}>
-                {p.token} ({p.hex})
-              </option>
-            ))}
-          </select>
+            options={(palette ?? []).map((p) => ({
+              value: p.token,
+              label: `${p.token} (${p.hex})`,
+              color: p.hex,
+            }))}
+            onChange={(value) => onChange({ kind: "token", token: value })}
+          />
         ) : null}
       </div>
     </div>
+  );
+}
+
+function HexColorInput({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const [draft, setDraft] = useState(value);
+  const latestRef = useRef(value);
+  const timeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    setDraft(value);
+    latestRef.current = value;
+  }, [value]);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current !== null) {
+        window.clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
+  const commitLatest = () => {
+    if (timeoutRef.current !== null) {
+      window.clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    onChange(latestRef.current);
+  };
+
+  const scheduleChange = (nextValue: string) => {
+    const normalized = nextValue.toUpperCase();
+    setDraft(normalized);
+    latestRef.current = normalized;
+
+    if (timeoutRef.current !== null) return;
+    timeoutRef.current = window.setTimeout(() => {
+      timeoutRef.current = null;
+      onChange(latestRef.current);
+    }, 80);
+  };
+
+  return (
+    <input
+      type="color"
+      value={draft}
+      onChange={(event) => scheduleChange(event.target.value)}
+      onBlur={commitLatest}
+    />
   );
 }

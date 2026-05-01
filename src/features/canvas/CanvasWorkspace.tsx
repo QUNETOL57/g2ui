@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 
-import type { Frame, LayoutMode } from "../../ui-ir";
+import type { Frame, IconProps, LayoutMode } from "../../ui-ir";
 import { findNode, findParent, useEditorStore } from "../../store/editorStore";
 import { layoutTree } from "../../layout/layoutEngine";
 import type { LayoutNode } from "../../layout/layoutEngine";
 import { resolveColor } from "../../layout/color";
 import { PreviewNode } from "./renderNode";
+import { normalizeIconFrame } from "../icons/iconSizing";
 
 const MAX_ZOOM = 15;
 const MIN_ZOOM = 1;
@@ -27,6 +29,8 @@ interface ActiveCanvasInteraction {
   parentMode: LayoutMode;
   siblingCenters?: { id: string; center: number }[];
   handle?: ResizeHandle;
+  isIcon?: boolean;
+  iconId?: string;
   latestFrame?: Frame;
 }
 
@@ -129,6 +133,7 @@ export function CanvasWorkspace() {
   const w = project.display.width;
   const h = project.display.height;
   const renderZoom = zoom >= PIXEL_GRID_VISIBLE_ZOOM ? Math.round(zoom) : zoom;
+  const zoomProgress = ((zoom - MIN_ZOOM) / (MAX_ZOOM - MIN_ZOOM)) * 100;
   const horizontalTicks = Array.from({ length: w + 1 }, (_, index) => ({
     value: index,
     offset: Math.round(index * renderZoom),
@@ -166,7 +171,10 @@ export function CanvasWorkspace() {
     );
   }
 
-  const bg = resolveColor(screen.style?.background, project.palette, "#121212");
+  const bg =
+    screen.style?.drawBackground === false
+      ? "#000000"
+      : resolveColor(screen.style?.background, project.palette, "#121212");
   const scaledW = Math.round(w * renderZoom);
   const scaledH = Math.round(h * renderZoom);
   const showPixelGrid = renderZoom >= PIXEL_GRID_VISIBLE_ZOOM;
@@ -422,12 +430,30 @@ export function CanvasWorkspace() {
         }
       }
 
-      const nextFrame = {
+      let nextFrame = {
         x: nextLeft,
         y: nextTop,
         width: nextRight - nextLeft,
         height: nextBottom - nextTop,
       };
+      if (active.isIcon) {
+        const anchorX = active.handle?.includes("w") ? "right" : "left";
+        const anchorY = active.handle?.includes("n") ? "bottom" : "top";
+        const maxWidth =
+          anchorX === "right"
+            ? active.startFrame.x + active.startFrame.width
+            : active.parentRect.width - active.startFrame.x;
+        const maxHeight =
+          anchorY === "bottom"
+            ? active.startFrame.y + active.startFrame.height
+            : active.parentRect.height - active.startFrame.y;
+        nextFrame = normalizeIconFrame(active.iconId, nextFrame, {
+          anchorX,
+          anchorY,
+          maxWidth,
+          maxHeight,
+        });
+      }
       if (sameFrame(active.latestFrame ?? active.startFrame, nextFrame)) return;
       active.latestFrame = nextFrame;
       scheduleDragPreview({
@@ -548,26 +574,30 @@ export function CanvasWorkspace() {
         parentRect: selectedParentLayoutNode.rect,
         parentMode: "absolute",
         handle,
+        isIcon: selectedNode.type === "icon",
+        iconId: selectedNode.type === "icon" ? ((selectedNode.props ?? {}) as Partial<IconProps>).iconId : undefined,
       });
     };
 
   return (
     <div className="canvas-wrap">
       <div className="canvas-toolbar">
-        <span style={{ fontSize: 12, color: "var(--muted)" }}>
-          {w} × {h} · rgb565
-        </span>
-        <div style={{ marginLeft: "auto", display: "flex", gap: 6, alignItems: "center" }}>
-          <label style={{ fontSize: 12, color: "var(--muted)" }}>zoom</label>
+        <div className="canvas-toolbar-meta">
+          <span>{w} × {h}</span>
+          <span>rgb565</span>
+        </div>
+        <div className="canvas-zoom-control">
+          <label>zoom</label>
           <input
             type="range"
             min={MIN_ZOOM}
             max={MAX_ZOOM}
             step={ZOOM_STEP}
             value={zoom}
+            style={{ "--range-progress": `${zoomProgress}%` } as CSSProperties}
             onChange={(e) => setZoom(normalizeZoom(Number(e.target.value)))}
           />
-          <span style={{ fontSize: 12, minWidth: 30 }}>{renderZoom.toFixed(renderZoom % 1 === 0 ? 0 : 1)}×</span>
+          <span>{renderZoom.toFixed(renderZoom % 1 === 0 ? 0 : 1)}×</span>
         </div>
       </div>
       <div

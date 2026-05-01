@@ -776,6 +776,110 @@ input[type="color"] {
   line-height: 1.2;
 }
 
+.text-prop-group {
+  display: grid;
+  gap: 10px;
+}
+
+.text-field-stack {
+  display: grid;
+  gap: 6px;
+}
+
+.text-field-stack label,
+.typography-card label {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.typography-card {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #242424;
+  border-radius: 8px;
+  background: #0b0b0b;
+}
+
+.typography-card-title {
+  color: #b8b8b8;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.font-fields-compact {
+  display: grid;
+  gap: 8px;
+}
+
+.font-fields-compact .prop-row {
+  margin-bottom: 0;
+}
+
+.font-toolbar-row {
+  display: grid;
+  grid-template-columns: auto minmax(74px, 1fr);
+  gap: 8px;
+  align-items: end;
+}
+
+.font-style-control,
+.font-size-control {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.font-size-control .custom-select-trigger {
+  min-height: 32px;
+}
+
+.align-control-row-wide {
+  grid-template-columns: 1fr;
+  gap: 6px;
+  align-items: stretch;
+  margin-bottom: 0;
+}
+
+.align-control-row-wide .icon-toggle-group {
+  display: flex;
+  width: 100%;
+}
+
+.align-control-row-wide .icon-toggle {
+  flex: 1 1 0;
+  width: auto;
+}
+
+.typography-color-grid {
+  display: grid;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+.typography-color-section {
+  display: grid;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid #242424;
+  border-radius: 7px;
+  background: #0f0f0f;
+}
+
+.typography-color-section .prop-row {
+  margin-bottom: 0;
+}
+
+.typography-toggle-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .icon-toggle-group {
   display: inline-flex;
   width: max-content;

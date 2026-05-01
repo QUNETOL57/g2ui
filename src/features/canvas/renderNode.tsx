@@ -123,12 +123,16 @@ function PanelVisual({
 function LabelVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; rect: Frame }) {
   const props = (node.props ?? {}) as LabelProps;
   const color = resolveColor(node.style?.textColor, ctx.palette, "#FFFFFF");
+  const bg = node.style?.drawBackground
+    ? resolveColor(node.style?.background, ctx.palette, "#FFFFFF")
+    : "transparent";
   const face = findFontFace(props);
   return (
     <div
       style={{
         width: "100%",
         height: "100%",
+        background: bg,
       }}
     >
       <BitmapText

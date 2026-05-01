@@ -504,7 +504,8 @@ function FontFields({
             value={selectedStyle}
             availableStyles={styleOptions}
             onChange={(style) => {
-              const nextSize = getFontSizes(selectedFamily, style)[0] ?? selectedSize;
+              const availableSizes = getFontSizes(selectedFamily, style);
+              const nextSize = availableSizes.includes(selectedSize) ? selectedSize : availableSizes[0] ?? selectedSize;
               onChange({ fontStyle: style, fontSize: nextSize, fontFace: undefined });
             }}
             compact
@@ -543,7 +544,8 @@ function FontFields({
         value={selectedStyle}
         availableStyles={styleOptions}
         onChange={(style) => {
-          const nextSize = getFontSizes(selectedFamily, style)[0] ?? selectedSize;
+          const availableSizes = getFontSizes(selectedFamily, style);
+          const nextSize = availableSizes.includes(selectedSize) ? selectedSize : availableSizes[0] ?? selectedSize;
           onChange({ fontStyle: style, fontSize: nextSize, fontFace: undefined });
         }}
       />

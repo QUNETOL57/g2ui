@@ -10,6 +10,8 @@ import type {
 
 import type { LayoutNode } from "../../layout/layoutEngine";
 import { resolveColor } from "../../layout/color";
+import { BitmapText } from "../fonts/BitmapText";
+import { findFontFace } from "../fonts/fontLibrary";
 import { IconGlyph } from "../icons/iconLibrary";
 import { DEFAULT_ICON_ID, getIconScaleForFrame, getResolvedIconDefinition } from "../icons/iconSizing";
 
@@ -73,9 +75,9 @@ function NodeVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; rec
     case "rect":
       return <PanelVisual node={node} ctx={ctx} rectMode />;
     case "label":
-      return <LabelVisual node={node} ctx={ctx} />;
+      return <LabelVisual node={node} ctx={ctx} rect={rect} />;
     case "button":
-      return <ButtonVisual node={node} ctx={ctx} />;
+      return <ButtonVisual node={node} ctx={ctx} rect={rect} />;
     case "icon":
       return <IconVisual node={node} ctx={ctx} rect={rect} />;
     case "image":
@@ -118,33 +120,30 @@ function PanelVisual({
   );
 }
 
-function LabelVisual({ node, ctx }: { node: WidgetNode; ctx: RenderCtx }) {
+function LabelVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; rect: Frame }) {
   const props = (node.props ?? {}) as LabelProps;
   const color = resolveColor(node.style?.textColor, ctx.palette, "#FFFFFF");
-  const align =
-    props.align === "center" ? "center" : props.align === "right" ? "flex-end" : "flex-start";
+  const face = findFontFace(props);
   return (
     <div
       style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: align,
-        color,
-        fontSize: 8 * (props.scale ?? 1),
-        fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
         width: "100%",
         height: "100%",
-        padding: 0,
-        lineHeight: 1,
-        whiteSpace: "nowrap",
       }}
     >
-      {props.text ?? ""}
+      <BitmapText
+        face={face}
+        text={props.text ?? ""}
+        color={color}
+        align={props.align ?? "left"}
+        boxWidth={rect.width}
+        boxHeight={rect.height}
+      />
     </div>
   );
 }
 
-function ButtonVisual({ node, ctx }: { node: WidgetNode; ctx: RenderCtx }) {
+function ButtonVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; rect: Frame }) {
   const props = (node.props ?? {}) as ButtonProps;
   const bg = resolveColor(node.style?.background, ctx.palette, "#333");
   const fg = resolveColor(node.style?.textColor, ctx.palette, "#FFF");
@@ -157,16 +156,17 @@ function ButtonVisual({ node, ctx }: { node: WidgetNode; ctx: RenderCtx }) {
         width: "100%",
         height: "100%",
         background: bg,
-        color: fg,
         border: `${bw}px solid ${bc}`,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontSize: 8 * (props.scale ?? 1),
-        fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
       }}
     >
-      {props.text ?? ""}
+      <BitmapText
+        face={findFontFace(props)}
+        text={props.text ?? ""}
+        color={fg}
+        align="center"
+        boxWidth={rect.width}
+        boxHeight={rect.height}
+      />
     </div>
   );
 }

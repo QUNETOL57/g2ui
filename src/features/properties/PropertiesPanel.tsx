@@ -189,6 +189,11 @@ function StyleGroup({
   updateStyle: (id: string, patch: Partial<NonNullable<WidgetNode["style"]>>) => void;
 }) {
   const s = node.style ?? {};
+  const fillColor = s.background ?? { kind: "hex", value: "#FFFFFF" } satisfies ColorRef;
+  const borderColor = s.borderColor ?? { kind: "hex", value: "#FFFFFF" } satisfies ColorRef;
+  const fillEnabled = s.drawBackground !== false;
+  const borderEnabled = Boolean(s.drawBorder);
+
   if (node.type === "icon") {
     return (
       <div className="prop-group">
@@ -206,45 +211,63 @@ function StyleGroup({
   return (
     <div className="prop-group">
       <h4>Style</h4>
+      <div className="prop-row">
+        <label>fill</label>
+        <input
+          type="checkbox"
+          checked={fillEnabled}
+          onChange={(e) =>
+            updateStyle(node.id, {
+              drawBackground: e.target.checked,
+              background: e.target.checked ? fillColor : s.background,
+            })
+          }
+        />
+      </div>
+      {fillEnabled ? (
+        <ColorField
+          label="fill color"
+          value={fillColor}
+          palette={palette}
+          onChange={(v) => updateStyle(node.id, { background: v, drawBackground: true })}
+        />
+      ) : null}
+      <div className="prop-row">
+        <label>border</label>
+        <input
+          type="checkbox"
+          checked={borderEnabled}
+          onChange={(e) =>
+            updateStyle(node.id, {
+              drawBorder: e.target.checked,
+              borderColor: e.target.checked ? borderColor : s.borderColor,
+              borderWidth: e.target.checked ? Math.max(1, s.borderWidth ?? 1) : s.borderWidth,
+            })
+          }
+        />
+      </div>
+      {borderEnabled ? (
+        <>
+          <ColorField
+            label="border color"
+            value={borderColor}
+            palette={palette}
+            onChange={(v) => updateStyle(node.id, { borderColor: v, drawBorder: true })}
+          />
+          <NumberField
+            label="border width"
+            value={s.borderWidth ?? 1}
+            min={1}
+            onChange={(v) => updateStyle(node.id, { borderWidth: Math.max(1, v), drawBorder: true })}
+          />
+        </>
+      ) : null}
       <ColorField
-        label="background"
-        value={s.background}
-        palette={palette}
-        onChange={(v) => updateStyle(node.id, { background: v })}
-      />
-      <ColorField
-        label="border"
-        value={s.borderColor}
-        palette={palette}
-        onChange={(v) => updateStyle(node.id, { borderColor: v })}
-      />
-      <ColorField
-        label="text"
+        label="text color"
         value={s.textColor}
         palette={palette}
         onChange={(v) => updateStyle(node.id, { textColor: v })}
       />
-      <NumberField
-        label="borderWidth"
-        value={s.borderWidth ?? 0}
-        onChange={(v) => updateStyle(node.id, { borderWidth: v })}
-      />
-      <div className="prop-row">
-        <label>drawBg</label>
-        <input
-          type="checkbox"
-          checked={s.drawBackground !== false}
-          onChange={(e) => updateStyle(node.id, { drawBackground: e.target.checked })}
-        />
-      </div>
-      <div className="prop-row">
-        <label>drawBorder</label>
-        <input
-          type="checkbox"
-          checked={Boolean(s.drawBorder)}
-          onChange={(e) => updateStyle(node.id, { drawBorder: e.target.checked })}
-        />
-      </div>
     </div>
   );
 }

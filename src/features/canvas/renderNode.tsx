@@ -99,7 +99,7 @@ function PanelVisual({
   const defaultBg = node.type === "screen" ? "transparent" : "#FFFFFF";
   const bg = node.style?.drawBackground !== false
     ? resolveColor(node.style?.background, ctx.palette, defaultBg)
-    : "transparent";
+    : "#000000";
   const borderWidth = node.style?.borderWidth ?? 0;
   const borderColor =
     node.style?.drawBorder && borderWidth > 0

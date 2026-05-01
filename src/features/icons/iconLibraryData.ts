@@ -277,14 +277,79 @@ export const ICON_LIBRARY: IconDefinition[] = [
   { id: "bolt", group: "Status", width: 8, height: 8, rows: [0x0018, 0x0038, 0x0078, 0x0018, 0x0030, 0x0038, 0x0030, 0x0000] },
 ];
 
+const ICON_CATEGORY_ORDER = [
+  "Navigation",
+  "Status & System",
+  "Connectivity & Power",
+  "Files & Data",
+  "Media & Communication",
+  "Time & Weather",
+  "Transport & Places",
+  "Objects & Misc",
+];
+
+const ICON_CATEGORY_BY_GROUP: Record<string, string> = {
+  Arrows: "Navigation",
+  Check: "Navigation",
+  Checked: "Navigation",
+  Choice: "Navigation",
+  Cross: "Navigation",
+  Crossed: "Navigation",
+  Cursor: "Navigation",
+  Navigation: "Navigation",
+  Operation: "Status & System",
+  Status: "Status & System",
+  Battery: "Connectivity & Power",
+  Connectivity: "Connectivity & Power",
+  Devices: "Connectivity & Power",
+  Display: "Connectivity & Power",
+  Micro: "Connectivity & Power",
+  Monitor: "Connectivity & Power",
+  Smartphone: "Connectivity & Power",
+  Tv: "Connectivity & Power",
+  Usb: "Connectivity & Power",
+  File: "Files & Data",
+  Folder: "Files & Data",
+  Chart: "Files & Data",
+  Date: "Files & Data",
+  Stats: "Files & Data",
+  Camera: "Media & Communication",
+  Envelope: "Media & Communication",
+  Message: "Media & Communication",
+  Microphone: "Media & Communication",
+  Music: "Media & Communication",
+  Phone: "Media & Communication",
+  Video: "Media & Communication",
+  Volume: "Media & Communication",
+  Clock: "Time & Weather",
+  Clockface: "Time & Weather",
+  Hour: "Time & Weather",
+  Weather: "Time & Weather",
+  Bike: "Transport & Places",
+  Car: "Transport & Places",
+  Earth: "Transport & Places",
+  Location: "Transport & Places",
+  Map: "Transport & Places",
+  Plane: "Transport & Places",
+  Satellite: "Transport & Places",
+};
+
+function getIconCategory(icon: IconDefinition) {
+  return ICON_CATEGORY_BY_GROUP[icon.group] ?? "Objects & Misc";
+}
+
 export const ICON_GROUPS = Array.from(
   ICON_LIBRARY.reduce((groups, icon) => {
-    const items = groups.get(icon.group);
+    const group = getIconCategory(icon);
+    const items = groups.get(group);
     if (items) {
       items.push(icon);
     } else {
-      groups.set(icon.group, [icon]);
+      groups.set(group, [icon]);
     }
     return groups;
   }, new Map<string, IconDefinition[]>())
+).sort(
+  ([left], [right]) =>
+    ICON_CATEGORY_ORDER.indexOf(left) - ICON_CATEGORY_ORDER.indexOf(right),
 );

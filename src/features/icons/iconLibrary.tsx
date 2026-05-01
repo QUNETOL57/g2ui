@@ -14,15 +14,20 @@ export const IconGlyph = memo(function IconGlyph({
   iconId,
   color = "currentColor",
   title,
+  pixelSize,
   style,
 }: {
   iconId: string | undefined | null;
   color?: string;
   title?: string;
+  pixelSize?: number;
   style?: CSSProperties;
 }) {
   const icon = getIconDefinition(iconId);
   if (!icon) return null;
+  const sizeStyle: CSSProperties = pixelSize
+    ? { width: icon.width * pixelSize, height: icon.height * pixelSize }
+    : { width: "100%", height: "100%" };
 
   const pixels: JSX.Element[] = [];
   for (let y = 0; y < icon.height; y += 1) {
@@ -41,11 +46,11 @@ export const IconGlyph = memo(function IconGlyph({
       preserveAspectRatio="xMidYMid meet"
       role="img"
       aria-label={title ?? icon.id}
+      shapeRendering="crispEdges"
       style={{
         display: "block",
-        width: "100%",
-        height: "100%",
-        overflow: "visible",
+        ...sizeStyle,
+        overflow: "hidden",
         shapeRendering: "crispEdges",
         ...style,
       }}

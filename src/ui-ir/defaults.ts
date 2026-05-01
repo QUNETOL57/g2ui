@@ -88,7 +88,10 @@ export function makeWidget(id: string, type: WidgetType): WidgetNode {
     visible: true,
     enabled: true,
     layout: defaultLayout(type === "panel" ? "column" : "absolute"),
-    style: { textColor: { kind: "hex", value: "#FFFFFF" } },
+    style: {
+      textColor: { kind: "hex", value: "#FFFFFF" },
+      ...(type === "label" ? { drawBackground: false } : {}),
+    },
     props: defaultProps(type),
     children: type === "panel" || type === "screen" ? [] : undefined,
   };

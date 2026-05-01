@@ -2,12 +2,28 @@
   "schemaVersion": "0.1.0",
   "id": "hello",
   "name": "Hello GuiMintLab",
-  "display": { "width": 240, "height": 240, "colorFormat": "rgb565" },
+  "display": {
+    "width": 240,
+    "height": 240,
+    "colorFormat": "rgb565"
+  },
   "palette": [
-    { "token": "bg", "hex": "#0B1020" },
-    { "token": "fg", "hex": "#E6E6E6" },
-    { "token": "accent", "hex": "#1E90FF" },
-    { "token": "muted", "hex": "#5A6478" }
+    {
+      "token": "bg",
+      "hex": "#0B1020"
+    },
+    {
+      "token": "fg",
+      "hex": "#E6E6E6"
+    },
+    {
+      "token": "accent",
+      "hex": "#1E90FF"
+    },
+    {
+      "token": "muted",
+      "hex": "#5A6478"
+    }
   ],
   "initialScreenId": "screen_main",
   "screens": [
@@ -18,27 +34,67 @@
       "width": 240,
       "height": 240,
       "visible": true,
-      "layout": { "mode": "absolute", "padding": 0 },
-      "style": { "background": { "kind": "token", "token": "bg" }, "drawBackground": true },
-      "props": { "background": { "kind": "token", "token": "bg" } },
+      "layout": {
+        "mode": "absolute",
+        "padding": 0
+      },
+      "style": {
+        "background": {
+          "kind": "token",
+          "token": "bg"
+        },
+        "drawBackground": true
+      },
+      "props": {
+        "background": {
+          "kind": "token",
+          "token": "bg"
+        }
+      },
       "children": [
         {
           "id": "header",
           "type": "panel",
           "name": "Header",
-          "frame": { "x": 0, "y": 0, "width": 240, "height": 28 },
-          "layout": { "mode": "row", "padding": 6, "gap": 6, "align": "center" },
+          "frame": {
+            "x": 0,
+            "y": 0,
+            "width": 240,
+            "height": 28
+          },
+          "layout": {
+            "mode": "row",
+            "padding": 6,
+            "gap": 6,
+            "align": "center"
+          },
           "style": {
-            "background": { "kind": "token", "token": "accent" },
+            "background": {
+              "kind": "token",
+              "token": "accent"
+            },
             "drawBackground": true
           },
           "children": [
             {
               "id": "header_title",
               "type": "label",
-              "frame": { "x": 6, "y": 6, "width": 160, "height": 16 },
-              "style": { "textColor": { "kind": "token", "token": "fg" } },
-              "props": { "text": "GuiMintLab", "scale": 1, "align": "left" }
+              "frame": {
+                "x": 6,
+                "y": 6,
+                "width": 160,
+                "height": 7
+              },
+              "style": {
+                "textColor": {
+                  "kind": "token",
+                  "token": "fg"
+                }
+              },
+              "props": {
+                "text": "GuiMintLab",
+                "align": "left"
+              }
             }
           ]
         },
@@ -46,39 +102,98 @@
           "id": "body",
           "type": "panel",
           "name": "Body",
-          "frame": { "x": 0, "y": 32, "width": 240, "height": 176 },
-          "layout": { "mode": "column", "padding": 12, "gap": 8 },
+          "frame": {
+            "x": 0,
+            "y": 32,
+            "width": 240,
+            "height": 176
+          },
+          "layout": {
+            "mode": "column",
+            "padding": 12,
+            "gap": 8
+          },
           "style": {
-            "background": { "kind": "token", "token": "bg" },
+            "background": {
+              "kind": "token",
+              "token": "bg"
+            },
             "drawBackground": true
           },
           "children": [
             {
               "id": "greeting",
               "type": "label",
-              "frame": { "x": 12, "y": 44, "width": 216, "height": 20 },
-              "style": { "textColor": { "kind": "token", "token": "fg" } },
-              "props": { "text": "Hello, world!", "scale": 2, "align": "center" }
+              "frame": {
+                "x": 12,
+                "y": 44,
+                "width": 216,
+                "height": 7
+              },
+              "style": {
+                "textColor": {
+                  "kind": "token",
+                  "token": "fg"
+                }
+              },
+              "props": {
+                "text": "Hello, world!",
+                "align": "center"
+              }
             },
             {
               "id": "subtitle",
               "type": "label",
-              "frame": { "x": 12, "y": 78, "width": 216, "height": 16 },
-              "style": { "textColor": { "kind": "token", "token": "muted" } },
-              "props": { "text": "Built by GuiMintLab Studio", "scale": 1, "align": "center" }
+              "frame": {
+                "x": 12,
+                "y": 78,
+                "width": 216,
+                "height": 7
+              },
+              "style": {
+                "textColor": {
+                  "kind": "token",
+                  "token": "muted"
+                }
+              },
+              "props": {
+                "text": "Built by GuiMintLab Studio",
+                "align": "center"
+              }
             },
             {
               "id": "start_btn",
               "type": "button",
-              "frame": { "x": 60, "y": 120, "width": 120, "height": 28 },
+              "frame": {
+                "x": 60,
+                "y": 120,
+                "width": 120,
+                "height": 28
+              },
               "style": {
-                "background": { "kind": "token", "token": "accent" },
-                "textColor": { "kind": "token", "token": "fg" },
-                "borderColor": { "kind": "token", "token": "fg" },
+                "background": {
+                  "kind": "token",
+                  "token": "accent"
+                },
+                "textColor": {
+                  "kind": "token",
+                  "token": "fg"
+                },
+                "borderColor": {
+                  "kind": "token",
+                  "token": "fg"
+                },
                 "borderWidth": 1
               },
-              "props": { "text": "Start", "scale": 1, "paddingX": 8, "paddingY": 4 },
-              "onPress": { "kind": "navigate", "target": "screen_main" }
+              "props": {
+                "text": "Start",
+                "paddingX": 8,
+                "paddingY": 4
+              },
+              "onPress": {
+                "kind": "navigate",
+                "target": "screen_main"
+              }
             }
           ]
         },
@@ -86,16 +201,44 @@
           "id": "footer",
           "type": "panel",
           "name": "Footer",
-          "frame": { "x": 0, "y": 212, "width": 240, "height": 28 },
-          "layout": { "mode": "row", "padding": 6, "gap": 6 },
-          "style": { "background": { "kind": "token", "token": "muted" }, "drawBackground": true },
+          "frame": {
+            "x": 0,
+            "y": 212,
+            "width": 240,
+            "height": 28
+          },
+          "layout": {
+            "mode": "row",
+            "padding": 6,
+            "gap": 6
+          },
+          "style": {
+            "background": {
+              "kind": "token",
+              "token": "muted"
+            },
+            "drawBackground": true
+          },
           "children": [
             {
               "id": "footer_hint",
               "type": "label",
-              "frame": { "x": 6, "y": 218, "width": 228, "height": 16 },
-              "style": { "textColor": { "kind": "token", "token": "fg" } },
-              "props": { "text": "IR -> C -> ESP32", "scale": 1, "align": "center" }
+              "frame": {
+                "x": 6,
+                "y": 218,
+                "width": 228,
+                "height": 7
+              },
+              "style": {
+                "textColor": {
+                  "kind": "token",
+                  "token": "fg"
+                }
+              },
+              "props": {
+                "text": "IR -> C -> ESP32",
+                "align": "center"
+              }
             }
           ]
         }

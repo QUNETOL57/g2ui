@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { Frame, IconProps, UiProject, WidgetNode, WidgetType, ScreenNode } from "../ui-ir";
 import { makeWidget, nextId, validateProject } from "../ui-ir";
+import { findFontFace } from "../features/fonts/fontLibrary";
 import { getIconDefinition } from "../features/icons/iconLibrary";
 import { DEFAULT_ICON_ID, getResolvedIconDefinition, normalizeIconNodeFrame } from "../features/icons/iconSizing";
 
@@ -43,8 +44,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   selectedNodeId: null,
   lastError: null,
 
-  setProject: (project) =>
-    set({ project, activeScreenId: project.initialScreenId, selectedNodeId: null }),
+  setProject: (project) => {
+    normalizeProjectTextFrames(project);
+    set({ project, activeScreenId: project.initialScreenId, selectedNodeId: null });
+  },
 
   setActiveScreen: (screenId) => set({ activeScreenId: screenId, selectedNodeId: null }),
 
@@ -75,6 +78,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   loadHelloSample: () => {
     const p = helloSample();
+    normalizeProjectTextFrames(p);
     set({ project: p, activeScreenId: p.initialScreenId, selectedNodeId: null });
   },
 
@@ -205,6 +209,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           };
         }
       }
+      if (node.type === "label") {
+        node.frame = normalizeTextNodeFrame(node, node.frame ?? defaultFrameFor("label", "", next));
+      }
       return { project: next };
     }),
 
@@ -243,7 +250,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         return false;
       }
       set({
-        project: parsed,
+        project: normalizeProjectTextFrames(parsed),
         activeScreenId: parsed.initialScreenId,
         selectedNodeId: null,
         lastError: null,
@@ -350,7 +357,12 @@ function defaultFrameFor(type: WidgetType, parentId: string, p: UiProject) {
   const parentH = (parent?.frame?.height ?? p.display.height) || 240;
   switch (type) {
     case "label":
-      return { x: 8, y: 8, width: Math.min(120, parentW - 16), height: 16 };
+      return normalizeTextNodeFrame(makeWidget("label_measure", "label"), {
+        x: 8,
+        y: 8,
+        width: Math.min(120, parentW - 16),
+        height: findFontFace({ fontFamily: "BDF", fontSize: 7 }).lineHeight,
+      });
     case "button":
       return { x: 8, y: 8, width: 80, height: 24 };
     case "icon": {
@@ -368,4 +380,30 @@ function defaultFrameFor(type: WidgetType, parentId: string, p: UiProject) {
     default:
       return { x: 0, y: 0, width: 40, height: 20 };
   }
+}
+
+function normalizeTextNodeFrame(node: WidgetNode, frame: Frame): Frame {
+  if (node.type !== "label") {
+    return frame;
+  }
+  const face = findFontFace((node.props ?? {}) as Parameters<typeof findFontFace>[0]);
+  return {
+    ...frame,
+    height: face.lineHeight,
+  };
+}
+
+function normalizeProjectTextFrames(project: UiProject): UiProject {
+  const walk = (node: WidgetNode) => {
+    if (node.frame) {
+      node.frame = normalizeTextNodeFrame(node, node.frame);
+    }
+    for (const child of node.children ?? []) {
+      walk(child);
+    }
+  };
+  for (const screen of project.screens) {
+    walk(screen);
+  }
+  return project;
 }

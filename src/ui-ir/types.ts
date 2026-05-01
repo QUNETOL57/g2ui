@@ -77,14 +77,20 @@ export interface WidgetNode {
 
 export interface LabelProps {
   text: string;
-  scale?: number;
   align?: LabelAlign;
   font?: string;
+  fontFamily?: string;
+  fontSize?: number;
+  fontStyle?: "regular" | "bold" | "oblique" | "boldOblique";
+  fontFace?: string;
 }
 
 export interface ButtonProps {
   text: string;
-  scale?: number;
+  fontFamily?: string;
+  fontSize?: number;
+  fontStyle?: "regular" | "bold" | "oblique" | "boldOblique";
+  fontFace?: string;
   paddingX?: number;
   paddingY?: number;
   pressedBackground?: ColorRef;

@@ -6,6 +6,7 @@ import { CanvasWorkspace } from "../features/canvas/CanvasWorkspace";
 import { PropertiesPanel } from "../features/properties/PropertiesPanel";
 import { ExportPanel } from "../features/export/ExportPanel";
 import { DISPLAY_PRESETS, presetForSize } from "../layout/displayPresets";
+import { CustomSelect } from "../components/CustomSelect";
 
 export function App() {
   const lastError = useEditorStore((s) => s.lastError);
@@ -51,35 +52,39 @@ export function App() {
   return (
     <div className="app-shell">
       <div className="top-bar">
-        <h1>GuiMintLab Studio</h1>
-        <span style={{ color: "var(--muted)", fontSize: 12 }}>
-          project: <strong style={{ color: "var(--fg)" }}>{project.name}</strong> · schema{" "}
-          {project.schemaVersion}
-        </span>
-        <button onClick={loadHelloSample} title="Load the bundled hello sample">
-          load hello
-        </button>
-        <div style={{ marginLeft: "auto", display: "flex", gap: 6, alignItems: "center" }}>
-          <label style={{ fontSize: 12, color: "var(--muted)" }}>display</label>
-          <select
+        <div className="top-bar-brand">
+          <div>
+            <h1>GuiMintLab Studio</h1>
+            <span className="top-bar-meta">
+              project <strong>{project.name}</strong> · schema {project.schemaVersion}
+            </span>
+          </div>
+          <button onClick={loadHelloSample} title="Load the bundled hello sample">
+            load hello
+          </button>
+        </div>
+        <div className="top-bar-controls">
+          <label>display</label>
+          <CustomSelect
+            ariaLabel="display"
             value={currentValue}
-            onChange={(e) => {
-              const preset = DISPLAY_PRESETS.find((p) => p.id === e.target.value);
+            options={[
+              ...DISPLAY_PRESETS.map((p) => ({ value: p.id, label: p.label })),
+              ...(currentValue === "custom"
+                ? [
+                    {
+                      value: "custom",
+                      label: `custom (${project.display.width} × ${project.display.height})`,
+                    },
+                  ]
+                : []),
+            ]}
+            onChange={(nextValue) => {
+              const preset = DISPLAY_PRESETS.find((p) => p.id === nextValue);
               if (preset) setDisplaySize(preset.width, preset.height);
             }}
-            style={{ width: 130 }}
-          >
-            {DISPLAY_PRESETS.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.label}
-              </option>
-            ))}
-            {currentValue === "custom" ? (
-              <option value="custom">
-                custom ({project.display.width} × {project.display.height})
-              </option>
-            ) : null}
-          </select>
+          />
+          <div className="display-size-control">
           <input
             type="number"
             value={project.display.width}
@@ -87,10 +92,9 @@ export function App() {
             onChange={(e) =>
               setDisplaySize(Number(e.target.value) || 1, project.display.height)
             }
-            style={{ width: 64 }}
             title="width"
           />
-          <span style={{ color: "var(--muted)" }}>×</span>
+            <span>×</span>
           <input
             type="number"
             value={project.display.height}
@@ -98,21 +102,19 @@ export function App() {
             onChange={(e) =>
               setDisplaySize(project.display.width, Number(e.target.value) || 1)
             }
-            style={{ width: 64 }}
             title="height"
           />
-          <label style={{ fontSize: 12, color: "var(--muted)", marginLeft: 10 }}>screen</label>
-          <select
+          </div>
+          <label>screen</label>
+          <CustomSelect
+            ariaLabel="screen"
             value={activeScreenId}
-            onChange={(e) => setActiveScreen(e.target.value)}
-            style={{ width: 140 }}
-          >
-            {project.screens.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name ?? s.id}
-              </option>
-            ))}
-          </select>
+            options={project.screens.map((screen) => ({
+              value: screen.id,
+              label: screen.name ?? screen.id,
+            }))}
+            onChange={setActiveScreen}
+          />
         </div>
       </div>
       <div className="left-panel">

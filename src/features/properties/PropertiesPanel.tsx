@@ -1,4 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import FormatAlignCenterIcon from "@mui/icons-material/FormatAlignCenter";
+import FormatAlignLeftIcon from "@mui/icons-material/FormatAlignLeft";
+import FormatAlignRightIcon from "@mui/icons-material/FormatAlignRight";
+import FormatBoldIcon from "@mui/icons-material/FormatBold";
+import FormatItalicIcon from "@mui/icons-material/FormatItalic";
 import type {
   ButtonProps,
   ColorRef,
@@ -10,6 +15,8 @@ import type {
 
 import { CustomSelect } from "../../components/CustomSelect";
 import { useEditorStore, findNode } from "../../store/editorStore";
+import { findFontFace, getFontFamilyOptions, getFontSizes } from "../fonts/fontLibrary";
+import type { BitmapFontStyle } from "../fonts/fontTypes";
 import { ICON_GROUPS, IconGlyph } from "../icons/iconLibrary";
 import { getResolvedIconDefinition } from "../icons/iconSizing";
 
@@ -53,7 +60,9 @@ export function PropertiesPanel() {
       {node.type === "label" && (
         <LabelGroup
           node={node}
+          palette={project.palette}
           onChange={(patch) => updateProps(node.id, patch)}
+          onStyleChange={(patch) => updateStyle(node.id, patch)}
         />
       )}
       {node.type === "button" && (
@@ -70,7 +79,7 @@ export function PropertiesPanel() {
         <LayoutGroup node={node} updateLayout={updateLayout} />
       )}
 
-      {node.type !== "icon" ? (
+      {node.type !== "icon" && node.type !== "label" ? (
         <StyleGroup node={node} palette={project.palette} updateStyle={updateStyle} />
       ) : null}
     </>
@@ -240,6 +249,8 @@ function StyleGroup({
   const borderColor = s.borderColor ?? { kind: "hex", value: "#FFFFFF" } satisfies ColorRef;
   const fillEnabled = s.drawBackground !== false;
   const borderEnabled = Boolean(s.drawBorder);
+  const showFill = node.type !== "label";
+  const showText = node.type !== "screen" && node.type !== "panel" && node.type !== "label";
 
   if (node.type === "icon") {
     return (
@@ -260,32 +271,34 @@ function StyleGroup({
   return (
     <div className="prop-group appearance-group">
       <h4>Appearance</h4>
-      <div className="appearance-section">
-        <label className="appearance-toggle">
-          <span>
-            <strong>Fill</strong>
-            <small>Background color</small>
-          </span>
-          <input
-            type="checkbox"
-            checked={fillEnabled}
-            onChange={(e) =>
-              updateStyle(node.id, {
-                drawBackground: e.target.checked,
-                background: e.target.checked ? fillColor : s.background,
-              })
-            }
-          />
-        </label>
-        {fillEnabled ? (
-          <ColorField
-            label="Color"
-            value={fillColor}
-            palette={palette}
-            onChange={(v) => updateStyle(node.id, { background: v, drawBackground: true })}
-          />
-        ) : null}
-      </div>
+      {showFill ? (
+        <div className="appearance-section">
+          <label className="appearance-toggle">
+            <span>
+              <strong>Fill</strong>
+              <small>Background color</small>
+            </span>
+            <input
+              type="checkbox"
+              checked={fillEnabled}
+              onChange={(e) =>
+                updateStyle(node.id, {
+                  drawBackground: e.target.checked,
+                  background: e.target.checked ? fillColor : s.background,
+                })
+              }
+            />
+          </label>
+          {fillEnabled ? (
+            <ColorField
+              label="Color"
+              value={fillColor}
+              palette={palette}
+              onChange={(v) => updateStyle(node.id, { background: v, drawBackground: true })}
+            />
+          ) : null}
+        </div>
+      ) : null}
       <div className="appearance-section">
         <label className="appearance-toggle">
           <span>
@@ -321,7 +334,7 @@ function StyleGroup({
           </>
         ) : null}
       </div>
-      {node.type !== "screen" && node.type !== "panel" ? (
+      {showText ? (
         <div className="appearance-section">
           <div className="appearance-static-head">
             <span>
@@ -343,42 +356,73 @@ function StyleGroup({
 
 function LabelGroup({
   node,
+  palette,
   onChange,
+  onStyleChange,
 }: {
   node: WidgetNode;
+  palette: { token: string; hex: string }[] | undefined;
   onChange: (patch: Partial<LabelProps>) => void;
+  onStyleChange: (patch: Partial<NonNullable<WidgetNode["style"]>>) => void;
 }) {
   const p = (node.props ?? {}) as LabelProps;
+  const s = node.style ?? {};
+  const fillColor = s.background ?? { kind: "hex", value: "#FFFFFF" } satisfies ColorRef;
+  const fillEnabled = Boolean(s.drawBackground);
   return (
-    <div className="prop-group">
+    <div className="prop-group text-prop-group">
       <h4>Content</h4>
-      <div className="prop-row">
+      <div className="text-field-stack">
         <label>text</label>
         <input
+          aria-label="label text"
           type="text"
           value={p.text ?? ""}
           onChange={(e) => onChange({ text: e.target.value })}
         />
       </div>
-      <NumberField
-        label="scale"
-        value={p.scale ?? 1}
-        min={1}
-        max={4}
-        onChange={(v) => onChange({ scale: v })}
-      />
-      <div className="prop-row">
-        <label>align</label>
-        <CustomSelect
-          ariaLabel="label align"
+      <div className="typography-card">
+        <div className="typography-card-title">Typography</div>
+        <FontFields props={p} onChange={onChange} compact />
+        <AlignIconGroup
           value={p.align ?? "left"}
-          options={[
-            { value: "left", label: "left" },
-            { value: "center", label: "center" },
-            { value: "right", label: "right" },
-          ]}
-          onChange={(value) => onChange({ align: value as LabelProps["align"] })}
+          onChange={(align) => onChange({ align })}
+          wide
         />
+        <div className="typography-color-grid">
+          <div className="typography-color-section">
+            <div className="typography-card-title">Text color</div>
+            <ColorField
+              label="Color"
+              value={s.textColor}
+              palette={palette}
+              onChange={(v) => onStyleChange({ textColor: v })}
+            />
+          </div>
+          <div className="typography-color-section">
+            <label className="typography-toggle-title">
+              <span className="typography-card-title">Background</span>
+              <input
+                type="checkbox"
+                checked={fillEnabled}
+                onChange={(e) =>
+                  onStyleChange({
+                    drawBackground: e.target.checked,
+                    background: e.target.checked ? fillColor : s.background,
+                  })
+                }
+              />
+            </label>
+            {fillEnabled ? (
+              <ColorField
+                label="Color"
+                value={fillColor}
+                palette={palette}
+                onChange={(v) => onStyleChange({ background: v, drawBackground: true })}
+              />
+            ) : null}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -403,11 +447,7 @@ function ButtonGroup({
           onChange={(e) => onChange({ text: e.target.value })}
         />
       </div>
-      <NumberField
-        label="scale"
-        value={p.scale ?? 1}
-        onChange={(v) => onChange({ scale: v })}
-      />
+      <FontFields props={p} onChange={onChange} />
       <NumberField
         label="padX"
         value={p.paddingX ?? 0}
@@ -420,6 +460,229 @@ function ButtonGroup({
       />
     </div>
   );
+}
+
+function FontFields({
+  props,
+  onChange,
+  compact = false,
+}: {
+  props: Partial<LabelProps & ButtonProps>;
+  onChange: (patch: Partial<LabelProps & ButtonProps>) => void;
+  compact?: boolean;
+}) {
+  const families = useMemo(() => getFontFamilyOptions(), []);
+  const currentFace = findFontFace(props);
+  const selectedFamily = props.fontFamily ?? currentFace.family;
+  const selectedStyle = props.fontStyle ?? currentFace.style;
+  const family = families.find((entry) => entry.family === selectedFamily) ?? families[0];
+  const styleOptions = family?.styles.length ? family.styles : [currentFace.style];
+  const facesForSelection = families.length > 0
+    ? getFontSizes(selectedFamily, selectedStyle)
+    : [currentFace.size];
+  const selectedSize = props.fontSize ?? currentFace.size;
+
+  if (compact) {
+    return (
+      <div className="font-fields-compact">
+        <div className="prop-row">
+          <label>font</label>
+          <CustomSelect
+            ariaLabel="font family"
+            value={selectedFamily}
+            options={families.map((entry) => ({ value: entry.family, label: entry.family }))}
+            onChange={(value) => {
+              const nextFamily = families.find((entry) => entry.family === value);
+              const nextStyle = nextFamily?.styles.includes(selectedStyle) ? selectedStyle : nextFamily?.styles[0] ?? "regular";
+              const nextSize = getFontSizes(value, nextStyle)[0] ?? currentFace.size;
+              onChange({ fontFamily: value, fontStyle: nextStyle, fontSize: nextSize, fontFace: undefined });
+            }}
+          />
+        </div>
+        <div className="font-toolbar-row">
+          <StyleIconGroup
+            value={selectedStyle}
+            availableStyles={styleOptions}
+            onChange={(style) => {
+              const availableSizes = getFontSizes(selectedFamily, style);
+              const nextSize = availableSizes.includes(selectedSize) ? selectedSize : availableSizes[0] ?? selectedSize;
+              onChange({ fontStyle: style, fontSize: nextSize, fontFace: undefined });
+            }}
+            compact
+          />
+          <div className="font-size-control">
+            <label>size</label>
+            <CustomSelect
+              ariaLabel="font size"
+              value={String(selectedSize)}
+              options={facesForSelection.map((size) => ({ value: String(size), label: `${size}` }))}
+              onChange={(value) => onChange({ fontSize: Number(value), fontFace: undefined })}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="prop-row">
+        <label>font</label>
+        <CustomSelect
+          ariaLabel="font family"
+          value={selectedFamily}
+          options={families.map((entry) => ({ value: entry.family, label: entry.family }))}
+          onChange={(value) => {
+            const nextFamily = families.find((entry) => entry.family === value);
+            const nextStyle = nextFamily?.styles.includes(selectedStyle) ? selectedStyle : nextFamily?.styles[0] ?? "regular";
+            const nextSize = getFontSizes(value, nextStyle)[0] ?? currentFace.size;
+            onChange({ fontFamily: value, fontStyle: nextStyle, fontSize: nextSize, fontFace: undefined });
+          }}
+        />
+      </div>
+      <StyleIconGroup
+        value={selectedStyle}
+        availableStyles={styleOptions}
+        onChange={(style) => {
+          const availableSizes = getFontSizes(selectedFamily, style);
+          const nextSize = availableSizes.includes(selectedSize) ? selectedSize : availableSizes[0] ?? selectedSize;
+          onChange({ fontStyle: style, fontSize: nextSize, fontFace: undefined });
+        }}
+      />
+      <div className="prop-row">
+        <label>size</label>
+        <CustomSelect
+          ariaLabel="font size"
+          value={String(selectedSize)}
+          options={facesForSelection.map((size) => ({ value: String(size), label: `${size}` }))}
+          onChange={(value) => onChange({ fontSize: Number(value), fontFace: undefined })}
+        />
+      </div>
+    </>
+  );
+}
+
+function StyleIconGroup({
+  value,
+  availableStyles,
+  onChange,
+  compact = false,
+}: {
+  value: BitmapFontStyle;
+  availableStyles: BitmapFontStyle[];
+  onChange: (style: BitmapFontStyle) => void;
+  compact?: boolean;
+}) {
+  const isBold = value === "bold" || value === "boldOblique";
+  const isItalic = value === "oblique" || value === "boldOblique";
+  const nextBold = styleFromFlags(!isBold, isItalic);
+  const nextItalic = styleFromFlags(isBold, !isItalic);
+  const buttons = (
+    <IconButtonGroup ariaLabel="font style">
+      <IconToggleButton
+        label="Bold"
+        active={isBold}
+        disabled={!availableStyles.includes(nextBold)}
+        onClick={() => onChange(nextBold)}
+      >
+        <FormatBoldIcon fontSize="inherit" />
+      </IconToggleButton>
+      <IconToggleButton
+        label="Italic"
+        active={isItalic}
+        disabled={!availableStyles.includes(nextItalic)}
+        onClick={() => onChange(nextItalic)}
+      >
+        <FormatItalicIcon fontSize="inherit" />
+      </IconToggleButton>
+    </IconButtonGroup>
+  );
+
+  if (compact) {
+    return (
+      <div className="font-style-control">
+        <label>style</label>
+        {buttons}
+      </div>
+    );
+  }
+
+  return (
+    <div className="prop-row">
+      <label>style</label>
+      {buttons}
+    </div>
+  );
+}
+
+function AlignIconGroup({
+  value,
+  onChange,
+  wide = false,
+}: {
+  value: NonNullable<LabelProps["align"]>;
+  onChange: (align: NonNullable<LabelProps["align"]>) => void;
+  wide?: boolean;
+}) {
+  return (
+    <div className={`prop-row align-control-row${wide ? " align-control-row-wide" : ""}`}>
+      <label>align</label>
+      <IconButtonGroup ariaLabel="label align">
+        <IconToggleButton label="Align left" active={value === "left"} onClick={() => onChange("left")}>
+          <FormatAlignLeftIcon fontSize="inherit" />
+        </IconToggleButton>
+        <IconToggleButton label="Align center" active={value === "center"} onClick={() => onChange("center")}>
+          <FormatAlignCenterIcon fontSize="inherit" />
+        </IconToggleButton>
+        <IconToggleButton label="Align right" active={value === "right"} onClick={() => onChange("right")}>
+          <FormatAlignRightIcon fontSize="inherit" />
+        </IconToggleButton>
+      </IconButtonGroup>
+    </div>
+  );
+}
+
+function IconButtonGroup({ ariaLabel, children }: { ariaLabel: string; children: ReactNode }) {
+  return (
+    <div className="icon-toggle-group" role="group" aria-label={ariaLabel}>
+      {children}
+    </div>
+  );
+}
+
+function IconToggleButton({
+  label,
+  active,
+  disabled,
+  onClick,
+  children,
+}: {
+  label: string;
+  active: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      className={`icon-toggle${active ? " active" : ""}`}
+      aria-label={label}
+      aria-pressed={active}
+      title={label}
+      disabled={disabled}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  );
+}
+
+function styleFromFlags(bold: boolean, italic: boolean): BitmapFontStyle {
+  if (bold && italic) return "boldOblique";
+  if (bold) return "bold";
+  if (italic) return "oblique";
+  return "regular";
 }
 
 function IconGroup({

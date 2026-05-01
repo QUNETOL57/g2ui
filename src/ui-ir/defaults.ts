@@ -25,11 +25,13 @@ export function defaultProps(type: WidgetType): Record<string, unknown> {
     case "panel":
       return { scrollable: false } satisfies PanelProps;
     case "label":
-      return { text: "Label", scale: 1, align: "left" } satisfies LabelProps;
+      return { text: "Label", align: "left", fontFamily: "BDF", fontSize: 7, fontStyle: "regular" } satisfies LabelProps;
     case "button":
       return {
         text: "Button",
-        scale: 1,
+        fontFamily: "BDF",
+        fontSize: 7,
+        fontStyle: "regular",
         paddingX: 8,
         paddingY: 4,
       } satisfies ButtonProps;
@@ -86,7 +88,10 @@ export function makeWidget(id: string, type: WidgetType): WidgetNode {
     visible: true,
     enabled: true,
     layout: defaultLayout(type === "panel" ? "column" : "absolute"),
-    style: { textColor: { kind: "hex", value: "#FFFFFF" } },
+    style: {
+      textColor: { kind: "hex", value: "#FFFFFF" },
+      ...(type === "label" ? { drawBackground: false } : {}),
+    },
     props: defaultProps(type),
     children: type === "panel" || type === "screen" ? [] : undefined,
   };

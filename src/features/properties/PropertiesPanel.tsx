@@ -46,6 +46,10 @@ export function PropertiesPanel() {
         <FrameGroup node={node} updateFrame={updateFrame} />
       ) : null}
 
+      {node.type === "icon" ? (
+        <StyleGroup node={node} palette={project.palette} updateStyle={updateStyle} />
+      ) : null}
+
       {node.type === "label" && (
         <LabelGroup
           node={node}
@@ -66,7 +70,9 @@ export function PropertiesPanel() {
         <LayoutGroup node={node} updateLayout={updateLayout} />
       )}
 
-      <StyleGroup node={node} palette={project.palette} updateStyle={updateStyle} />
+      {node.type !== "icon" ? (
+        <StyleGroup node={node} palette={project.palette} updateStyle={updateStyle} />
+      ) : null}
     </>
   );
 }
@@ -424,9 +430,24 @@ function IconGroup({
   onChange: (patch: Partial<IconProps>) => void;
 }) {
   const p = (node.props ?? {}) as IconProps;
+  const iconSearch = p.iconId ?? "";
+  const normalizedIconSearch = iconSearch.trim().toLowerCase();
   const selectedGroup = useMemo(
-    () => ICON_GROUPS.find(([, icons]) => icons.some((icon) => icon.id === p.iconId))?.[0] ?? "Earth",
+    () => ICON_GROUPS.find(([, icons]) => icons.some((icon) => icon.id === p.iconId))?.[0] ?? "Transport & Places",
     [p.iconId],
+  );
+  const filteredIconGroups = useMemo(
+    () =>
+      normalizedIconSearch
+        ? ICON_GROUPS.map(
+            ([group, icons]) =>
+              [
+                group,
+                icons.filter((icon) => icon.id.toLowerCase().includes(normalizedIconSearch)),
+              ] as const,
+          ).filter(([, icons]) => icons.length > 0)
+        : ICON_GROUPS,
+    [normalizedIconSearch],
   );
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => ({
     [selectedGroup]: true,
@@ -445,17 +466,18 @@ function IconGroup({
       <div className="prop-row">
         <label>iconId</label>
         <input
-          type="text"
-          value={p.iconId ?? ""}
+          type="search"
+          placeholder="search or enter iconId"
+          value={iconSearch}
           onChange={(e) => onChange({ iconId: e.target.value })}
         />
       </div>
       <div className="icon-browser">
-        {ICON_GROUPS.map(([group, icons]) => (
+        {filteredIconGroups.length > 0 ? filteredIconGroups.map(([group, icons]) => (
           <details
             key={group}
             className="icon-accordion"
-            open={Boolean(openGroups[group])}
+            open={Boolean(openGroups[group]) || Boolean(normalizedIconSearch)}
             onToggle={(event) => {
               const isOpen = event.currentTarget.open;
               setOpenGroups((current) =>
@@ -489,7 +511,9 @@ function IconGroup({
               })}
             </div>
           </details>
-        ))}
+        )) : (
+          <p className="field-hint">No icons found for "{iconSearch}".</p>
+        )}
       </div>
     </div>
   );

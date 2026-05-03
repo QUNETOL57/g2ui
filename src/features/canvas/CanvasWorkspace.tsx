@@ -98,11 +98,14 @@ export function CanvasWorkspace() {
   const selectNode = useEditorStore((s) => s.selectNode);
   const absolutizeLayout = useEditorStore((s) => s.absolutizeLayout);
   const updateFrame = useEditorStore((s) => s.updateFrame);
+  const setDraftFrame = useEditorStore((s) => s.setDraftFrame);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const centeredViewKeyRef = useRef<string | null>(null);
   const activeInteractionRef = useRef<ActiveCanvasInteraction | null>(null);
   const pendingDragPreviewRef = useRef<DragPreview | null>(null);
   const dragPreviewRafRef = useRef<number | null>(null);
+  const pendingDraftFrameRef = useRef<{ nodeId: string; frame: Frame } | null>(null);
+  const draftFrameRafRef = useRef<number | null>(null);
   const pendingWheelFocusRef = useRef<
     | {
         type: "frame";
@@ -327,9 +330,15 @@ export function CanvasWorkspace() {
         window.cancelAnimationFrame(dragPreviewRafRef.current);
         dragPreviewRafRef.current = null;
       }
+      pendingDraftFrameRef.current = null;
+      if (draftFrameRafRef.current !== null) {
+        window.cancelAnimationFrame(draftFrameRafRef.current);
+        draftFrameRafRef.current = null;
+      }
+      setDraftFrame(null);
       document.body.style.userSelect = "";
     };
-  }, []);
+  }, [setDraftFrame]);
 
   const scheduleDragPreview = (preview: DragPreview) => {
     pendingDragPreviewRef.current = preview;
@@ -340,6 +349,18 @@ export function CanvasWorkspace() {
       const next = pendingDragPreviewRef.current;
       pendingDragPreviewRef.current = null;
       if (next) setDragPreview(next);
+    });
+  };
+
+  const scheduleDraftFrame = (draft: { nodeId: string; frame: Frame }) => {
+    pendingDraftFrameRef.current = draft;
+    if (draftFrameRafRef.current !== null) return;
+
+    draftFrameRafRef.current = window.requestAnimationFrame(() => {
+      draftFrameRafRef.current = null;
+      const next = pendingDraftFrameRef.current;
+      pendingDraftFrameRef.current = null;
+      if (next) setDraftFrame(next);
     });
   };
 
@@ -367,6 +388,7 @@ export function CanvasWorkspace() {
           };
           if (sameFrame(active.latestFrame ?? active.startFrame, nextFrame)) return;
           active.latestFrame = nextFrame;
+          scheduleDraftFrame({ nodeId: active.nodeId, frame: nextFrame });
           scheduleDragPreview({
             nodeId: active.nodeId,
             rect: {
@@ -475,6 +497,11 @@ export function CanvasWorkspace() {
         window.cancelAnimationFrame(dragPreviewRafRef.current);
         dragPreviewRafRef.current = null;
       }
+      pendingDraftFrameRef.current = null;
+      if (draftFrameRafRef.current !== null) {
+        window.cancelAnimationFrame(draftFrameRafRef.current);
+        draftFrameRafRef.current = null;
+      }
       setDragPreview(null);
       document.body.style.userSelect = previousUserSelect;
       window.removeEventListener("mousemove", handleMouseMove);
@@ -482,6 +509,7 @@ export function CanvasWorkspace() {
       if (active?.latestFrame) {
         updateFrame(active.nodeId, active.latestFrame);
       }
+      setDraftFrame(null);
     };
 
     window.addEventListener("mousemove", handleMouseMove);

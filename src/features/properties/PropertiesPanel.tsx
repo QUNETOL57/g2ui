@@ -7,6 +7,7 @@ import FormatItalicIcon from "@mui/icons-material/FormatItalic";
 import type {
   ButtonProps,
   ColorRef,
+  Frame,
   IconProps,
   LabelProps,
   LayoutMode,
@@ -23,6 +24,7 @@ import { getResolvedIconDefinition } from "../icons/iconSizing";
 export function PropertiesPanel() {
   const project = useEditorStore((s) => s.project);
   const selectedNodeId = useEditorStore((s) => s.selectedNodeId);
+  const draftFrame = useEditorStore((s) => s.draftFrame);
   const updateNode = useEditorStore((s) => s.updateNode);
   const updateFrame = useEditorStore((s) => s.updateFrame);
   const updateProps = useEditorStore((s) => s.updateProps);
@@ -50,7 +52,11 @@ export function PropertiesPanel() {
       <SelectedGroup node={node} updateNode={updateNode} />
 
       {node.type !== "screen" ? (
-        <FrameGroup node={node} updateFrame={updateFrame} />
+        <FrameGroup
+          node={node}
+          draftFrame={draftFrame?.nodeId === node.id ? draftFrame.frame : null}
+          updateFrame={updateFrame}
+        />
       ) : null}
 
       {node.type === "icon" ? (
@@ -124,12 +130,14 @@ function SelectedGroup({
 
 function FrameGroup({
   node,
+  draftFrame,
   updateFrame,
 }: {
   node: WidgetNode;
+  draftFrame: Frame | null;
   updateFrame: (id: string, patch: Partial<NonNullable<WidgetNode["frame"]>>) => void;
 }) {
-  const f = node.frame ?? { x: 0, y: 0, width: 0, height: 0 };
+  const f = draftFrame ?? node.frame ?? { x: 0, y: 0, width: 0, height: 0 };
   const icon = node.type === "icon" ? getResolvedIconDefinition(((node.props ?? {}) as Partial<IconProps>).iconId) : null;
   return (
     <div className="prop-group">
@@ -291,7 +299,7 @@ function StyleGroup({
           </label>
           {fillEnabled ? (
             <ColorField
-              label="Color"
+              label="color"
               value={fillColor}
               palette={palette}
               onChange={(v) => updateStyle(node.id, { background: v, drawBackground: true })}
@@ -320,7 +328,7 @@ function StyleGroup({
         {borderEnabled ? (
           <>
             <ColorField
-              label="Color"
+              label="color"
               value={borderColor}
               palette={palette}
               onChange={(v) => updateStyle(node.id, { borderColor: v, drawBorder: true })}
@@ -343,7 +351,7 @@ function StyleGroup({
             </span>
           </div>
           <ColorField
-            label="Color"
+            label="color"
             value={s.textColor}
             palette={palette}
             onChange={(v) => updateStyle(node.id, { textColor: v })}
@@ -393,7 +401,7 @@ function LabelGroup({
           <div className="typography-color-section">
             <div className="typography-card-title">Text color</div>
             <ColorField
-              label="Color"
+              label="color"
               value={s.textColor}
               palette={palette}
               onChange={(v) => onStyleChange({ textColor: v })}
@@ -415,7 +423,7 @@ function LabelGroup({
             </label>
             {fillEnabled ? (
               <ColorField
-                label="Color"
+                label="color"
                 value={fillColor}
                 palette={palette}
                 onChange={(v) => onStyleChange({ background: v, drawBackground: true })}

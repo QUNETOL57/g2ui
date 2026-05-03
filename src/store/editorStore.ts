@@ -11,6 +11,7 @@ interface EditorState {
   project: UiProject;
   activeScreenId: string;
   selectedNodeId: string | null;
+  draftFrame: { nodeId: string; frame: Frame } | null;
   lastError: string | null;
 
   setProject: (project: UiProject) => void;
@@ -31,6 +32,7 @@ interface EditorState {
   updateProps: (id: string, patch: Record<string, unknown>) => void;
   updateLayout: (id: string, patch: Partial<NonNullable<WidgetNode["layout"]>>) => void;
   updateStyle: (id: string, patch: Partial<NonNullable<WidgetNode["style"]>>) => void;
+  setDraftFrame: (draftFrame: { nodeId: string; frame: Frame } | null) => void;
 
   importJson: (json: string) => boolean;
   exportJson: () => string;
@@ -42,16 +44,17 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   project: initialProject,
   activeScreenId: initialProject.initialScreenId,
   selectedNodeId: null,
+  draftFrame: null,
   lastError: null,
 
   setProject: (project) => {
     normalizeProjectTextFrames(project);
-    set({ project, activeScreenId: project.initialScreenId, selectedNodeId: null });
+    set({ project, activeScreenId: project.initialScreenId, selectedNodeId: null, draftFrame: null });
   },
 
-  setActiveScreen: (screenId) => set({ activeScreenId: screenId, selectedNodeId: null }),
+  setActiveScreen: (screenId) => set({ activeScreenId: screenId, selectedNodeId: null, draftFrame: null }),
 
-  selectNode: (id) => set({ selectedNodeId: id }),
+  selectNode: (id) => set({ selectedNodeId: id, draftFrame: null }),
 
   setDisplaySize: (width, height) =>
     set((state) => {
@@ -79,7 +82,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   loadHelloSample: () => {
     const p = helloSample();
     normalizeProjectTextFrames(p);
-    set({ project: p, activeScreenId: p.initialScreenId, selectedNodeId: null });
+    set({ project: p, activeScreenId: p.initialScreenId, selectedNodeId: null, draftFrame: null });
   },
 
   addWidget: (parentId, type) => {
@@ -241,6 +244,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       return { project: next };
     }),
 
+  setDraftFrame: (draftFrame) => set({ draftFrame }),
+
   importJson: (json) => {
     try {
       const parsed = JSON.parse(json);
@@ -253,6 +258,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         project: normalizeProjectTextFrames(parsed),
         activeScreenId: parsed.initialScreenId,
         selectedNodeId: null,
+        draftFrame: null,
         lastError: null,
       });
       return true;

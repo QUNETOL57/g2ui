@@ -18,12 +18,32 @@ export function App() {
   const setDisplaySize = useEditorStore((s) => s.setDisplaySize);
   const loadHelloSample = useEditorStore((s) => s.loadHelloSample);
   const deleteNode = useEditorStore((s) => s.deleteNode);
+  const undo = useEditorStore((s) => s.undo);
+  const redo = useEditorStore((s) => s.redo);
 
   const currentPreset = presetForSize(project.display.width, project.display.height);
   const currentValue = currentPreset ? currentPreset.id : "custom";
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target;
+      const isEditingText =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        (target instanceof HTMLElement && target.isContentEditable);
+      const isModifier = event.metaKey || event.ctrlKey;
+      const key = event.key.toLowerCase();
+      const isUndoKey = isModifier && key === "z" && !event.shiftKey;
+      const isRedoKey = isModifier && ((key === "z" && event.shiftKey) || key === "y");
+
+      if ((isUndoKey || isRedoKey) && !isEditingText) {
+        event.preventDefault();
+        if (isUndoKey) undo();
+        else redo();
+        return;
+      }
+
       const isDeleteKey =
         event.key === "Delete" ||
         event.key === "Backspace" ||
@@ -32,13 +52,7 @@ export function App() {
 
       if (!isDeleteKey || !selectedNodeId) return;
 
-      const target = event.target;
-      if (
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement ||
-        target instanceof HTMLSelectElement ||
-        (target instanceof HTMLElement && target.isContentEditable)
-      ) {
+      if (isEditingText) {
         return;
       }
 
@@ -48,7 +62,7 @@ export function App() {
 
     window.addEventListener("keydown", handleKeyDown, { capture: true });
     return () => window.removeEventListener("keydown", handleKeyDown, { capture: true });
-  }, [deleteNode, selectedNodeId]);
+  }, [deleteNode, redo, selectedNodeId, undo]);
 
   return (
     <div className="app-shell">

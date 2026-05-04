@@ -264,7 +264,8 @@ function StyleGroup({
   const s = node.style ?? {};
   const defaultFillColor = node.type === "button" ? "#333333" : "#FFFFFF";
   const fillColor = s.background ?? { kind: "hex", value: defaultFillColor } satisfies ColorRef;
-  const borderColor = s.borderColor ?? { kind: "hex", value: "#FFFFFF" } satisfies ColorRef;
+  const defaultBorderColor = "#FFFFFF";
+  const borderColor = s.borderColor ?? { kind: "hex", value: defaultBorderColor } satisfies ColorRef;
   const fillEnabled = s.drawBackground !== false;
   const borderEnabled = Boolean(s.drawBorder);
   const showFill = node.type !== "label";
@@ -285,6 +286,28 @@ function StyleGroup({
             value={s.textColor}
             palette={palette}
             onChange={(v) => updateStyle(node.id, { textColor: v })}
+          />
+        </InspectorCard>
+      </div>
+    );
+  }
+
+  if (node.type === "line") {
+    return (
+      <div className="prop-group appearance-group">
+        <h4>Appearance</h4>
+        <InspectorCard title="Stroke">
+          <ColorField
+            label="color"
+            value={borderColor}
+            palette={palette}
+            onChange={(v) => updateStyle(node.id, { borderColor: v })}
+          />
+          <NumberField
+            label="width"
+            value={s.borderWidth ?? 1}
+            min={1}
+            onChange={(v) => updateStyle(node.id, { borderWidth: Math.max(1, v) })}
           />
         </InspectorCard>
       </div>

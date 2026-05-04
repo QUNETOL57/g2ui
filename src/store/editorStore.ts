@@ -7,18 +7,30 @@ import { DEFAULT_ICON_ID, getResolvedIconDefinition, normalizeIconNodeFrame } fr
 
 import { blankProject, helloSample } from "../samples/hello";
 
+const MAX_HISTORY = 100;
+
+interface HistorySnapshot {
+  project: UiProject;
+  activeScreenId: string;
+  selectedNodeId: string | null;
+}
+
 interface EditorState {
   project: UiProject;
   activeScreenId: string;
   selectedNodeId: string | null;
   draftFrame: { nodeId: string; frame: Frame } | null;
   lastError: string | null;
+  historyPast: HistorySnapshot[];
+  historyFuture: HistorySnapshot[];
 
   setProject: (project: UiProject) => void;
   setActiveScreen: (screenId: string) => void;
   selectNode: (id: string | null) => void;
   setDisplaySize: (width: number, height: number) => void;
   loadHelloSample: () => void;
+  undo: () => void;
+  redo: () => void;
 
   addWidget: (parentId: string, type: WidgetType) => string | null;
   deleteNode: (id: string) => void;
@@ -47,10 +59,18 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   selectedNodeId: null,
   draftFrame: null,
   lastError: null,
+  historyPast: [],
+  historyFuture: [],
 
   setProject: (project) => {
     normalizeProjectTextFrames(project);
-    set({ project, activeScreenId: project.initialScreenId, selectedNodeId: null, draftFrame: null });
+    set((state) => ({
+      ...recordHistory(state),
+      project,
+      activeScreenId: project.initialScreenId,
+      selectedNodeId: null,
+      draftFrame: null,
+    }));
   },
 
   setActiveScreen: (screenId) => set({ activeScreenId: screenId, selectedNodeId: null, draftFrame: null }),
@@ -60,6 +80,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setDisplaySize: (width, height) =>
     set((state) => {
       if (width <= 0 || height <= 0) return state;
+      if (state.project.display.width === width && state.project.display.height === height) return state;
       const next = cloneProject(state.project);
       const prevW = next.display.width;
       const prevH = next.display.height;
@@ -77,14 +98,49 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           }
         }
       }
-      return { project: next };
+      return { ...recordHistory(state), project: next, draftFrame: null };
     }),
 
   loadHelloSample: () => {
     const p = helloSample();
     normalizeProjectTextFrames(p);
-    set({ project: p, activeScreenId: p.initialScreenId, selectedNodeId: null, draftFrame: null });
+    set((state) => ({
+      ...recordHistory(state),
+      project: p,
+      activeScreenId: p.initialScreenId,
+      selectedNodeId: null,
+      draftFrame: null,
+    }));
   },
+
+  undo: () =>
+    set((state) => {
+      const previous = state.historyPast.at(-1);
+      if (!previous) return state;
+      const nextPast = state.historyPast.slice(0, -1);
+      return {
+        project: cloneProject(previous.project),
+        activeScreenId: previous.activeScreenId,
+        selectedNodeId: previous.selectedNodeId,
+        draftFrame: null,
+        historyPast: nextPast,
+        historyFuture: [snapshotState(state), ...state.historyFuture].slice(0, MAX_HISTORY),
+      };
+    }),
+
+  redo: () =>
+    set((state) => {
+      const next = state.historyFuture[0];
+      if (!next) return state;
+      return {
+        project: cloneProject(next.project),
+        activeScreenId: next.activeScreenId,
+        selectedNodeId: next.selectedNodeId,
+        draftFrame: null,
+        historyPast: [...state.historyPast, snapshotState(state)].slice(-MAX_HISTORY),
+        historyFuture: state.historyFuture.slice(1),
+      };
+    }),
 
   addWidget: (parentId, type) => {
     let newId: string | null = null;
@@ -96,7 +152,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const node = makeWidget(id, type);
       node.frame = defaultFrameFor(type, parentId, nextProject);
       insertChild(nextProject, parentId, node);
-      return { project: nextProject, selectedNodeId: id };
+      return { ...recordHistory(state), project: nextProject, selectedNodeId: id, draftFrame: null };
     });
     return newId;
   },
@@ -104,10 +160,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   deleteNode: (id) =>
     set((state) => {
       const next = cloneProject(state.project);
-      removeNode(next, id);
+      const removed = removeNode(next, id);
+      if (!removed) return state;
       return {
+        ...recordHistory(state),
         project: next,
         selectedNodeId: state.selectedNodeId === id ? null : state.selectedNodeId,
+        draftFrame: null,
       };
     }),
 
@@ -121,7 +180,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const j = direction === "up" ? idx - 1 : idx + 1;
       if (j < 0 || j >= parent.children.length) return state;
       [parent.children[idx], parent.children[j]] = [parent.children[j], parent.children[idx]];
-      return { project: next };
+      return { ...recordHistory(state), project: next, draftFrame: null };
     }),
 
   moveNodeToIndex: (id, index) =>
@@ -135,7 +194,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       if (clampedIndex === currentIndex) return state;
       const [node] = parent.children.splice(currentIndex, 1);
       parent.children.splice(clampedIndex, 0, node);
-      return { project: next };
+      return { ...recordHistory(state), project: next, draftFrame: null };
     }),
 
   moveNodeToParentIndex: (id, parentId, index) =>
@@ -155,7 +214,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const adjustedIndex = currentParent.id === nextParent.id && currentIndex < index ? index - 1 : index;
       const clampedIndex = clampIndex(adjustedIndex, nextParent.children.length);
       nextParent.children.splice(clampedIndex, 0, node);
-      return { project: next, selectedNodeId: id, draftFrame: null };
+      return { ...recordHistory(state), project: next, selectedNodeId: id, draftFrame: null };
     }),
 
   absolutizeLayout: (parentId, childFrames) =>
@@ -175,7 +234,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         child.frame = { ...childPatch.frame };
       }
 
-      return { project: next };
+      return { ...recordHistory(state), project: next, draftFrame: null };
     }),
 
   reparentNode: (id, newParentId) =>
@@ -191,7 +250,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       if (!parent) return state;
       if (!parent.children) parent.children = [];
       parent.children.push(detached);
-      return { project: next };
+      return { ...recordHistory(state), project: next, selectedNodeId: id, draftFrame: null };
     }),
 
   updateNode: (id, patch) =>
@@ -200,7 +259,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const node = findNode(next, id);
       if (!node) return state;
       Object.assign(node, patch);
-      return { project: next };
+      return { ...recordHistory(state), project: next, draftFrame: null };
     }),
 
   updateFrame: (id, framePatch) =>
@@ -210,7 +269,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       if (!node) return state;
       const nextFrame = { x: 0, y: 0, width: 0, height: 0, ...(node.frame ?? {}), ...framePatch };
       node.frame = normalizeIconNodeFrame(node, nextFrame);
-      return { project: next };
+      return { ...recordHistory(state), project: next, draftFrame: null };
     }),
 
   updateProps: (id, patch) =>
@@ -236,7 +295,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       if (node.type === "label") {
         node.frame = normalizeTextNodeFrame(node, node.frame ?? defaultFrameFor("label", "", next));
       }
-      return { project: next };
+      return { ...recordHistory(state), project: next, draftFrame: null };
     }),
 
   updateLayout: (id, patch) =>
@@ -253,7 +312,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         ...(node.layout ?? {}),
         ...patch,
       };
-      return { project: next };
+      return { ...recordHistory(state), project: next, draftFrame: null };
     }),
 
   updateStyle: (id, patch) =>
@@ -262,7 +321,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const node = findNode(next, id);
       if (!node) return state;
       node.style = { ...(node.style ?? {}), ...patch };
-      return { project: next };
+      return { ...recordHistory(state), project: next, draftFrame: null };
     }),
 
   setDraftFrame: (draftFrame) => set({ draftFrame }),
@@ -275,13 +334,14 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         set({ lastError: result.issues.map((i) => `${i.path}: ${i.message}`).join("\n") });
         return false;
       }
-      set({
+      set((state) => ({
+        ...recordHistory(state),
         project: normalizeProjectTextFrames(parsed),
         activeScreenId: parsed.initialScreenId,
         selectedNodeId: null,
         draftFrame: null,
         lastError: null,
-      });
+      }));
       return true;
     } catch (err) {
       set({ lastError: String(err) });
@@ -296,6 +356,21 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
 function cloneProject(p: UiProject): UiProject {
   return JSON.parse(JSON.stringify(p)) as UiProject;
+}
+
+function snapshotState(state: EditorState): HistorySnapshot {
+  return {
+    project: cloneProject(state.project),
+    activeScreenId: state.activeScreenId,
+    selectedNodeId: state.selectedNodeId,
+  };
+}
+
+function recordHistory(state: EditorState): Pick<EditorState, "historyPast" | "historyFuture"> {
+  return {
+    historyPast: [...state.historyPast, snapshotState(state)].slice(-MAX_HISTORY),
+    historyFuture: [],
+  };
 }
 
 export function collectIds(p: UiProject): Set<string> {

@@ -2,12 +2,14 @@ import type { BitmapFontFace } from "./fontTypes";
 import { findGlyph, glyphPixelOn, measureTextWidth } from "./fontLibrary";
 
 export type BitmapTextAlign = "left" | "center" | "right";
+export type BitmapTextVerticalAlign = "top" | "center" | "bottom";
 
 interface BitmapTextProps {
   face: BitmapFontFace;
   text: string;
   color: string;
   align?: BitmapTextAlign;
+  verticalAlign?: BitmapTextVerticalAlign;
   boxWidth: number;
   boxHeight: number;
 }
@@ -24,6 +26,7 @@ export function BitmapText({
   text,
   color,
   align = "left",
+  verticalAlign = "center",
   boxWidth,
   boxHeight,
 }: BitmapTextProps) {
@@ -35,7 +38,12 @@ export function BitmapText({
   } else if (align === "right") {
     originX = boxWidth - textWidth;
   }
-  const originY = Math.floor((boxHeight - textHeight) / 2);
+  let originY = 0;
+  if (verticalAlign === "center") {
+    originY = Math.floor((boxHeight - textHeight) / 2);
+  } else if (verticalAlign === "bottom") {
+    originY = boxHeight - textHeight;
+  }
   const runs = buildTextRuns(face, text, originX, originY);
 
   return (

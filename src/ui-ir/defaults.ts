@@ -32,15 +32,19 @@ export function defaultProps(type: WidgetType): Record<string, unknown> {
         fontFamily: "BDF",
         fontSize: 7,
         fontStyle: "regular",
-        paddingX: 8,
-        paddingY: 4,
+        horizontalAlign: "center",
+        verticalAlign: "center",
+        paddingTop: 4,
+        paddingRight: 8,
+        paddingBottom: 4,
+        paddingLeft: 8,
       } satisfies ButtonProps;
     case "icon":
       return { iconId: "earth" } satisfies IconProps;
     case "image":
       return { imageId: "placeholder" } satisfies ImageProps;
     case "line":
-      return { x2: 10, y2: 0, strokeWidth: 1 } satisfies LineProps;
+      return { x1: 0, y1: 0, x2: 59, y2: 0, strokeWidth: 1 } satisfies LineProps;
     case "rect":
       return { radius: 0 } satisfies RectProps;
   }
@@ -91,6 +95,7 @@ export function makeWidget(id: string, type: WidgetType): WidgetNode {
     style: {
       textColor: { kind: "hex", value: "#FFFFFF" },
       ...(type === "label" ? { drawBackground: false } : {}),
+      ...(type === "line" ? { borderColor: { kind: "hex", value: "#FFFFFF" }, borderWidth: 1 } : {}),
     },
     props: defaultProps(type),
     children: type === "panel" || type === "screen" ? [] : undefined,

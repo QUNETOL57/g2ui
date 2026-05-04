@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 
-import type { Frame, IconProps, LayoutMode } from "../../ui-ir";
+import type { Frame, IconProps, LayoutMode, LineProps } from "../../ui-ir";
 import { findNode, findParent, useEditorStore } from "../../store/editorStore";
 import { layoutTree } from "../../layout/layoutEngine";
 import type { LayoutNode } from "../../layout/layoutEngine";
@@ -17,26 +17,38 @@ const PIXEL_GRID_VISIBLE_ZOOM = 5;
 const RULER_SIZE = 24;
 
 type ResizeHandle = "nw" | "ne" | "sw" | "se";
+type LineHandle = "start" | "end";
 
 interface ActiveCanvasInteraction {
-  type: "move" | "resize";
+  type: "move" | "resize" | "line-end";
   nodeId: string;
   startClientX: number;
   startClientY: number;
   startFrame: Frame;
   startRect: Frame;
   parentRect: Frame;
+  parentContentInset: number;
   parentMode: LayoutMode;
   siblingCenters?: { id: string; center: number }[];
   handle?: ResizeHandle;
+  lineHandle?: LineHandle;
+  startLineStart?: Point;
+  startLineEnd?: Point;
   isIcon?: boolean;
   iconId?: string;
   latestFrame?: Frame;
+  latestLineProps?: Partial<LineProps>;
 }
 
 interface DragPreview {
   nodeId: string;
   rect: Frame;
+  lineProps?: Partial<LineProps>;
+}
+
+interface Point {
+  x: number;
+  y: number;
 }
 
 function clampZoom(value: number): number {
@@ -57,6 +69,73 @@ function normalizeZoom(value: number): number {
 
 function sameFrame(a: Frame, b: Frame): boolean {
   return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
+}
+
+function borderInsetFor(node: { style?: { drawBorder?: boolean; borderWidth?: number } } | null | undefined): number {
+  if (!node?.style?.drawBorder) return 0;
+  return Math.max(0, node.style.borderWidth ?? 1);
+}
+
+function lineStrokeWidthFor(node: { style?: { borderWidth?: number }; props?: unknown } | null | undefined): number {
+  const props = (node?.props ?? {}) as Partial<LineProps>;
+  return Math.max(1, node?.style?.borderWidth ?? props.strokeWidth ?? 1);
+}
+
+function visualRectForNode(node: { type: string; style?: { borderWidth?: number }; props?: unknown } | null, rect: Frame): Frame {
+  if (node?.type !== "line") return rect;
+  return { ...rect, height: Math.max(rect.height, lineStrokeWidthFor(node)) };
+}
+
+function lineEndpointsForRect(node: { props?: unknown; style?: { borderWidth?: number } }, rect: Frame): { start: Point; end: Point } {
+  const props = (node.props ?? {}) as Partial<LineProps>;
+  const strokeWidth = lineStrokeWidthFor(node);
+  const visualHeight = Math.max(rect.height, strokeWidth);
+  const fallbackY = Math.floor(visualHeight / 2);
+  const pad = Math.floor(strokeWidth / 2);
+  const maxY = Math.max(pad, visualHeight - Math.ceil(strokeWidth / 2));
+  const visibleY = (value: number | undefined) => Math.min(maxY, Math.max(pad, Math.round(value ?? fallbackY)));
+  return {
+    start: {
+      x: rect.x + Math.round(props.x1 ?? 0),
+      y: rect.y + visibleY(props.y1),
+    },
+    end: {
+      x: rect.x + Math.round(props.x2 ?? Math.max(0, rect.width - 1)),
+      y: rect.y + visibleY(props.y2),
+    },
+  };
+}
+
+function clampPointToContent(point: Point, parentRect: Frame, inset: number): Point {
+  return {
+    x: clamp(point.x, parentRect.x + inset, parentRect.x + parentRect.width - inset),
+    y: clamp(point.y, parentRect.y + inset, parentRect.y + parentRect.height - inset),
+  };
+}
+
+function lineFrameFromEndpoints(start: Point, end: Point, parentRect: Frame, strokeWidth: number): { frame: Frame; props: Partial<LineProps> } {
+  const strokeOffset = Math.floor(strokeWidth / 2);
+  const strokeEndOffset = Math.ceil(strokeWidth / 2) - 1;
+  const left = Math.min(start.x, end.x) - strokeOffset;
+  const top = Math.min(start.y, end.y) - strokeOffset;
+  const right = Math.max(start.x, end.x) + strokeEndOffset;
+  const bottom = Math.max(start.y, end.y) + strokeEndOffset;
+  const width = Math.max(1, right - left + 1);
+  const height = Math.max(1, bottom - top + 1);
+  return {
+    frame: {
+      x: left - parentRect.x,
+      y: top - parentRect.y,
+      width,
+      height,
+    },
+    props: {
+      x1: start.x - left,
+      y1: start.y - top,
+      x2: end.x - left,
+      y2: end.y - top,
+    },
+  };
 }
 
 function nextWheelZoom(currentZoom: number, direction: 1 | -1): number {
@@ -98,11 +177,15 @@ export function CanvasWorkspace() {
   const selectNode = useEditorStore((s) => s.selectNode);
   const absolutizeLayout = useEditorStore((s) => s.absolutizeLayout);
   const updateFrame = useEditorStore((s) => s.updateFrame);
+  const updateProps = useEditorStore((s) => s.updateProps);
+  const setDraftFrame = useEditorStore((s) => s.setDraftFrame);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const centeredViewKeyRef = useRef<string | null>(null);
   const activeInteractionRef = useRef<ActiveCanvasInteraction | null>(null);
   const pendingDragPreviewRef = useRef<DragPreview | null>(null);
   const dragPreviewRafRef = useRef<number | null>(null);
+  const pendingDraftFrameRef = useRef<{ nodeId: string; frame: Frame } | null>(null);
+  const draftFrameRafRef = useRef<number | null>(null);
   const pendingWheelFocusRef = useRef<
     | {
         type: "frame";
@@ -180,8 +263,20 @@ export function CanvasWorkspace() {
   const showPixelGrid = renderZoom >= PIXEL_GRID_VISIBLE_ZOOM;
   const showGuides = !!selectedLayoutNode && selectedLayoutNode.node.id !== screen.id;
   const selectedRect = selectedLayoutNode?.rect ?? null;
-  const displayedSelectedRect =
+  const rawDisplayedSelectedRect =
     dragPreview && dragPreview.nodeId === selectedNodeId ? dragPreview.rect : selectedRect;
+  const displayedSelectedRect = rawDisplayedSelectedRect && selectedNode
+    ? visualRectForNode(selectedNode, rawDisplayedSelectedRect)
+    : rawDisplayedSelectedRect;
+  const displayedLineEndpoints =
+    displayedSelectedRect && selectedNode?.type === "line"
+      ? lineEndpointsForRect(
+          dragPreview?.nodeId === selectedNodeId && dragPreview.lineProps
+            ? { ...selectedNode, props: { ...(selectedNode.props ?? {}), ...dragPreview.lineProps } }
+            : selectedNode,
+          displayedSelectedRect,
+        )
+      : null;
   const selectedParentMode: LayoutMode = selectedParentNode?.layout?.mode ?? "absolute";
   const selectionHasFrame = !!selectedNode?.frame && !!selectedParentLayoutNode;
   const canMoveSelection =
@@ -327,9 +422,15 @@ export function CanvasWorkspace() {
         window.cancelAnimationFrame(dragPreviewRafRef.current);
         dragPreviewRafRef.current = null;
       }
+      pendingDraftFrameRef.current = null;
+      if (draftFrameRafRef.current !== null) {
+        window.cancelAnimationFrame(draftFrameRafRef.current);
+        draftFrameRafRef.current = null;
+      }
+      setDraftFrame(null);
       document.body.style.userSelect = "";
     };
-  }, []);
+  }, [setDraftFrame]);
 
   const scheduleDragPreview = (preview: DragPreview) => {
     pendingDragPreviewRef.current = preview;
@@ -340,6 +441,18 @@ export function CanvasWorkspace() {
       const next = pendingDragPreviewRef.current;
       pendingDragPreviewRef.current = null;
       if (next) setDragPreview(next);
+    });
+  };
+
+  const scheduleDraftFrame = (draft: { nodeId: string; frame: Frame }) => {
+    pendingDraftFrameRef.current = draft;
+    if (draftFrameRafRef.current !== null) return;
+
+    draftFrameRafRef.current = window.requestAnimationFrame(() => {
+      draftFrameRafRef.current = null;
+      const next = pendingDraftFrameRef.current;
+      pendingDraftFrameRef.current = null;
+      if (next) setDraftFrame(next);
     });
   };
 
@@ -357,16 +470,19 @@ export function CanvasWorkspace() {
 
       if (active.type === "move") {
         if (active.parentMode === "absolute") {
-          const maxX = Math.max(0, active.parentRect.width - active.startFrame.width);
-          const maxY = Math.max(0, active.parentRect.height - active.startFrame.height);
+          const minX = active.parentContentInset;
+          const minY = active.parentContentInset;
+          const maxX = Math.max(minX, active.parentRect.width - active.parentContentInset - active.startFrame.width);
+          const maxY = Math.max(minY, active.parentRect.height - active.parentContentInset - active.startFrame.height);
           const nextFrame = {
-            x: clamp(active.startFrame.x + deltaX, 0, maxX),
-            y: clamp(active.startFrame.y + deltaY, 0, maxY),
+            x: clamp(active.startFrame.x + deltaX, minX, maxX),
+            y: clamp(active.startFrame.y + deltaY, minY, maxY),
             width: active.startFrame.width,
             height: active.startFrame.height,
           };
           if (sameFrame(active.latestFrame ?? active.startFrame, nextFrame)) return;
           active.latestFrame = nextFrame;
+          scheduleDraftFrame({ nodeId: active.nodeId, frame: nextFrame });
           scheduleDragPreview({
             nodeId: active.nodeId,
             rect: {
@@ -391,6 +507,44 @@ export function CanvasWorkspace() {
         return;
       }
 
+      if (active.type === "line-end") {
+        if (!active.startLineStart || !active.startLineEnd || !active.lineHandle) return;
+        const movedPoint = {
+          x: (active.lineHandle === "start" ? active.startLineStart.x : active.startLineEnd.x) + deltaX,
+          y: (active.lineHandle === "start" ? active.startLineStart.y : active.startLineEnd.y) + deltaY,
+        };
+        const nextStart =
+          active.lineHandle === "start"
+            ? clampPointToContent(movedPoint, active.parentRect, active.parentContentInset)
+            : active.startLineStart;
+        const nextEnd =
+          active.lineHandle === "end"
+            ? clampPointToContent(movedPoint, active.parentRect, active.parentContentInset)
+            : active.startLineEnd;
+        const strokeWidth = lineStrokeWidthFor(findNode(project, active.nodeId));
+        const { frame: nextFrame, props: nextLineProps } = lineFrameFromEndpoints(
+          nextStart,
+          nextEnd,
+          active.parentRect,
+          strokeWidth,
+        );
+        if (sameFrame(active.latestFrame ?? active.startFrame, nextFrame)) return;
+        active.latestFrame = nextFrame;
+        active.latestLineProps = nextLineProps;
+        scheduleDraftFrame({ nodeId: active.nodeId, frame: nextFrame });
+        scheduleDragPreview({
+          nodeId: active.nodeId,
+          rect: {
+            x: active.parentRect.x + nextFrame.x,
+            y: active.parentRect.y + nextFrame.y,
+            width: nextFrame.width,
+            height: nextFrame.height,
+          },
+          lineProps: nextLineProps,
+        });
+        return;
+      }
+
       const startRight = active.startFrame.x + active.startFrame.width;
       const startBottom = active.startFrame.y + active.startFrame.height;
       let nextLeft = active.startFrame.x;
@@ -400,16 +554,24 @@ export function CanvasWorkspace() {
 
       if (active.parentMode === "absolute") {
         if (active.handle?.includes("w")) {
-          nextLeft = clamp(active.startFrame.x + deltaX, 0, startRight - 1);
+          nextLeft = clamp(active.startFrame.x + deltaX, active.parentContentInset, startRight - 1);
         }
         if (active.handle?.includes("e")) {
-          nextRight = clamp(startRight + deltaX, active.startFrame.x + 1, active.parentRect.width);
+          nextRight = clamp(
+            startRight + deltaX,
+            active.startFrame.x + 1,
+            active.parentRect.width - active.parentContentInset,
+          );
         }
         if (active.handle?.includes("n")) {
-          nextTop = clamp(active.startFrame.y + deltaY, 0, startBottom - 1);
+          nextTop = clamp(active.startFrame.y + deltaY, active.parentContentInset, startBottom - 1);
         }
         if (active.handle?.includes("s")) {
-          nextBottom = clamp(startBottom + deltaY, active.startFrame.y + 1, active.parentRect.height);
+          nextBottom = clamp(
+            startBottom + deltaY,
+            active.startFrame.y + 1,
+            active.parentRect.height - active.parentContentInset,
+          );
         }
       } else {
         if (active.handle?.includes("w") || active.handle?.includes("e")) {
@@ -442,11 +604,11 @@ export function CanvasWorkspace() {
         const maxWidth =
           anchorX === "right"
             ? active.startFrame.x + active.startFrame.width
-            : active.parentRect.width - active.startFrame.x;
+            : active.parentRect.width - active.parentContentInset - active.startFrame.x;
         const maxHeight =
           anchorY === "bottom"
             ? active.startFrame.y + active.startFrame.height
-            : active.parentRect.height - active.startFrame.y;
+            : active.parentRect.height - active.parentContentInset - active.startFrame.y;
         nextFrame = normalizeIconFrame(active.iconId, nextFrame, {
           anchorX,
           anchorY,
@@ -475,6 +637,11 @@ export function CanvasWorkspace() {
         window.cancelAnimationFrame(dragPreviewRafRef.current);
         dragPreviewRafRef.current = null;
       }
+      pendingDraftFrameRef.current = null;
+      if (draftFrameRafRef.current !== null) {
+        window.cancelAnimationFrame(draftFrameRafRef.current);
+        draftFrameRafRef.current = null;
+      }
       setDragPreview(null);
       document.body.style.userSelect = previousUserSelect;
       window.removeEventListener("mousemove", handleMouseMove);
@@ -482,6 +649,10 @@ export function CanvasWorkspace() {
       if (active?.latestFrame) {
         updateFrame(active.nodeId, active.latestFrame);
       }
+      if (active?.latestLineProps) {
+        updateProps(active.nodeId, active.latestLineProps);
+      }
+      setDraftFrame(null);
     };
 
     window.addEventListener("mousemove", handleMouseMove);
@@ -539,6 +710,7 @@ export function CanvasWorkspace() {
       startFrame,
       startRect: { ...nodeLayout.rect },
       parentRect: parentLayout.rect,
+      parentContentInset: borderInsetFor(parentNode),
       parentMode: "absolute",
       siblingCenters,
     });
@@ -572,10 +744,47 @@ export function CanvasWorkspace() {
         startFrame,
         startRect: { ...(selectedRect ?? selectedNode.frame) },
         parentRect: selectedParentLayoutNode.rect,
+        parentContentInset: borderInsetFor(selectedParentNode),
         parentMode: "absolute",
         handle,
         isIcon: selectedNode.type === "icon",
         iconId: selectedNode.type === "icon" ? ((selectedNode.props ?? {}) as Partial<IconProps>).iconId : undefined,
+      });
+    };
+
+  const handleLineEndpointMouseDown =
+    (lineHandle: LineHandle) => (event: React.MouseEvent<HTMLDivElement>) => {
+      if (!selectedNodeId || selectedNode?.type !== "line" || !selectedRect || !selectedParentLayoutNode) return;
+      if (event.button !== 0) return;
+      event.preventDefault();
+      event.stopPropagation();
+
+      const visualLineRect = visualRectForNode(selectedNode, selectedRect);
+      const endpoints = lineEndpointsForRect(selectedNode, visualLineRect);
+      const parentMode: LayoutMode = selectedParentNode?.layout?.mode ?? "absolute";
+
+      if (selectedParentNode && parentMode !== "absolute") {
+        absolutizeLayout(selectedParentNode.id, makeAbsoluteChildFrames(selectedParentLayoutNode));
+      }
+
+      startInteraction({
+        type: "line-end",
+        nodeId: selectedNodeId,
+        startClientX: event.clientX,
+        startClientY: event.clientY,
+        startFrame: {
+          x: visualLineRect.x - selectedParentLayoutNode.rect.x,
+          y: visualLineRect.y - selectedParentLayoutNode.rect.y,
+          width: visualLineRect.width,
+          height: visualLineRect.height,
+        },
+        startRect: visualLineRect,
+        parentRect: selectedParentLayoutNode.rect,
+        parentContentInset: borderInsetFor(selectedParentNode),
+        parentMode: "absolute",
+        lineHandle,
+        startLineStart: endpoints.start,
+        startLineEnd: endpoints.end,
       });
     };
 
@@ -793,6 +1002,26 @@ export function CanvasWorkspace() {
                         className="canvas-selection-handle se"
                         style={{ left: Math.round((displayedSelectedRect.x + displayedSelectedRect.width) * renderZoom), top: Math.round((displayedSelectedRect.y + displayedSelectedRect.height) * renderZoom) }}
                         onMouseDown={handleResizeMouseDown("se")}
+                      />
+                    </>
+                  ) : null}
+                  {displayedLineEndpoints ? (
+                    <>
+                      <div
+                        className="canvas-line-endpoint-handle start"
+                        style={{
+                          left: Math.round((displayedLineEndpoints.start.x + 0.5) * renderZoom),
+                          top: Math.round((displayedLineEndpoints.start.y + 0.5) * renderZoom),
+                        }}
+                        onMouseDown={handleLineEndpointMouseDown("start")}
+                      />
+                      <div
+                        className="canvas-line-endpoint-handle end"
+                        style={{
+                          left: Math.round((displayedLineEndpoints.end.x + 0.5) * renderZoom),
+                          top: Math.round((displayedLineEndpoints.end.y + 0.5) * renderZoom),
+                        }}
+                        onMouseDown={handleLineEndpointMouseDown("end")}
                       />
                     </>
                   ) : null}

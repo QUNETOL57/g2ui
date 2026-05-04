@@ -91,8 +91,14 @@ export interface ButtonProps {
   fontSize?: number;
   fontStyle?: "regular" | "bold" | "oblique" | "boldOblique";
   fontFace?: string;
+  horizontalAlign?: LabelAlign;
+  verticalAlign?: "top" | "center" | "bottom";
   paddingX?: number;
   paddingY?: number;
+  paddingTop?: number;
+  paddingRight?: number;
+  paddingBottom?: number;
+  paddingLeft?: number;
   pressedBackground?: ColorRef;
 }
 
@@ -105,6 +111,8 @@ export interface ImageProps {
 }
 
 export interface LineProps {
+  x1?: number;
+  y1?: number;
   x2: number;
   y2: number;
   strokeWidth?: number;

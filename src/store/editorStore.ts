@@ -24,6 +24,7 @@ interface EditorState {
   deleteNode: (id: string) => void;
   moveNode: (id: string, direction: "up" | "down") => void;
   moveNodeToIndex: (id: string, index: number) => void;
+  moveNodeToParentIndex: (id: string, parentId: string, index: number) => void;
   absolutizeLayout: (parentId: string, childFrames: Array<{ id: string; frame: Frame }>) => void;
   reparentNode: (id: string, newParentId: string) => void;
 
@@ -135,6 +136,26 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const [node] = parent.children.splice(currentIndex, 1);
       parent.children.splice(clampedIndex, 0, node);
       return { project: next };
+    }),
+
+  moveNodeToParentIndex: (id, parentId, index) =>
+    set((state) => {
+      if (id === parentId) return state;
+      const next = cloneProject(state.project);
+      const currentParent = findParent(next, id);
+      const nextParent = findNode(next, parentId);
+      if (!currentParent?.children || !nextParent) return state;
+      if (isAncestor(next, id, parentId)) return state;
+
+      const currentIndex = currentParent.children.findIndex((child) => child.id === id);
+      if (currentIndex < 0) return state;
+      const [node] = currentParent.children.splice(currentIndex, 1);
+      if (!nextParent.children) nextParent.children = [];
+
+      const adjustedIndex = currentParent.id === nextParent.id && currentIndex < index ? index - 1 : index;
+      const clampedIndex = clampIndex(adjustedIndex, nextParent.children.length);
+      nextParent.children.splice(clampedIndex, 0, node);
+      return { project: next, selectedNodeId: id, draftFrame: null };
     }),
 
   absolutizeLayout: (parentId, childFrames) =>

@@ -19,7 +19,7 @@ interface RenderCtx {
   palette: PaletteEntry[] | undefined;
   selectedId: string | null;
   movableId: string | null;
-  dragPreview: { nodeId: string; rect: Frame } | null;
+  dragPreview: { nodeId: string; rect: Frame; lineProps?: Partial<LineProps> } | null;
   onSelect: (id: string) => void;
   onNodeMouseDown?: (nodeId: string, event: React.MouseEvent<HTMLDivElement>) => void;
 }
@@ -35,17 +35,29 @@ export function PreviewNode({
 }) {
   const { node, rect, children } = layoutNode;
   if (node.visible === false) return null;
-  const previewRect = ctx.dragPreview?.nodeId === node.id ? ctx.dragPreview.rect : null;
+  const preview = ctx.dragPreview?.nodeId === node.id ? ctx.dragPreview : null;
+  const previewRect = preview?.rect ?? null;
   const nextDragOffset = previewRect
     ? { x: previewRect.x - rect.x, y: previewRect.y - rect.y }
     : dragOffset;
+  const displayRect = previewRect ?? rect;
+  const lineStrokeWidth = node.type === "line"
+    ? Math.max(1, node.style?.borderWidth ?? ((node.props ?? {}) as Partial<LineProps>).strokeWidth ?? 1)
+    : 0;
+  const visualHeight = node.type === "line"
+    ? Math.max(displayRect.height, lineStrokeWidth)
+    : displayRect.height;
   const style: React.CSSProperties = {
     left: rect.x + nextDragOffset.x,
     top: rect.y + nextDragOffset.y,
-    width: previewRect?.width ?? rect.width,
-    height: previewRect?.height ?? rect.height,
+    width: displayRect.width,
+    height: visualHeight,
     cursor: node.id === ctx.movableId ? "move" : undefined,
   };
+  const visualNode: WidgetNode =
+    node.type === "line" && preview?.lineProps
+      ? { ...node, props: { ...((node.props ?? {}) as LineProps), ...preview.lineProps } }
+      : node;
 
   return (
     <>
@@ -58,7 +70,7 @@ export function PreviewNode({
           ctx.onNodeMouseDown?.(node.id, e);
         }}
       >
-        <NodeVisual node={node} ctx={ctx} rect={previewRect ?? rect} />
+        <NodeVisual node={visualNode} ctx={ctx} rect={{ ...displayRect, height: visualHeight }} />
       </div>
       {children.map((child) => (
         <PreviewNode key={child.node.id} layoutNode={child} ctx={ctx} dragOffset={nextDragOffset} />
@@ -83,10 +95,49 @@ function NodeVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; rec
     case "image":
       return <ImageVisual node={node} ctx={ctx} />;
     case "line":
-      return <LineVisual node={node} ctx={ctx} />;
+      return <LineVisual node={node} ctx={ctx} rect={rect} />;
     default:
       return null;
   }
+}
+
+interface PixelPoint {
+  x: number;
+  y: number;
+}
+
+function visibleLineY(value: number | undefined, height: number, strokeWidth: number): number {
+  const fallback = Math.floor(height / 2);
+  const pad = Math.floor(strokeWidth / 2);
+  const max = Math.max(pad, height - Math.ceil(strokeWidth / 2));
+  return Math.min(max, Math.max(pad, Math.round(value ?? fallback)));
+}
+
+function rasterLine(x1: number, y1: number, x2: number, y2: number): PixelPoint[] {
+  const points: PixelPoint[] = [];
+  let currentX = x1;
+  let currentY = y1;
+  const dx = Math.abs(x2 - x1);
+  const sx = x1 < x2 ? 1 : -1;
+  const dy = -Math.abs(y2 - y1);
+  const sy = y1 < y2 ? 1 : -1;
+  let error = dx + dy;
+
+  while (true) {
+    points.push({ x: currentX, y: currentY });
+    if (currentX === x2 && currentY === y2) break;
+    const doubledError = error * 2;
+    if (doubledError >= dy) {
+      error += dy;
+      currentX += sx;
+    }
+    if (doubledError <= dx) {
+      error += dx;
+      currentY += sy;
+    }
+  }
+
+  return points;
 }
 
 function PanelVisual({
@@ -99,9 +150,11 @@ function PanelVisual({
   rectMode?: boolean;
 }) {
   const defaultBg = node.type === "screen" ? "transparent" : "#FFFFFF";
-  const bg = node.style?.drawBackground !== false
-    ? resolveColor(node.style?.background, ctx.palette, defaultBg)
-    : "#000000";
+  const bg = node.type === "screen"
+    ? "transparent"
+    : node.style?.drawBackground !== false
+      ? resolveColor(node.style?.background, ctx.palette, defaultBg)
+      : "transparent";
   const borderWidth = node.style?.borderWidth ?? 0;
   const borderColor =
     node.style?.drawBorder && borderWidth > 0
@@ -149,11 +202,19 @@ function LabelVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; re
 
 function ButtonVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; rect: Frame }) {
   const props = (node.props ?? {}) as ButtonProps;
-  const bg = resolveColor(node.style?.background, ctx.palette, "#333");
+  const bg = node.style?.drawBackground === false
+    ? "transparent"
+    : resolveColor(node.style?.background, ctx.palette, "#333");
   const fg = resolveColor(node.style?.textColor, ctx.palette, "#FFF");
-  const bw = node.style?.borderWidth ?? 0;
+  const bw = node.style?.drawBorder ? node.style?.borderWidth ?? 1 : 0;
   const bc =
     bw > 0 ? resolveColor(node.style?.borderColor, ctx.palette, "#FFF") : "transparent";
+  const paddingLeft = Math.max(0, props.paddingLeft ?? props.paddingX ?? 0);
+  const paddingRight = Math.max(0, props.paddingRight ?? props.paddingX ?? 0);
+  const paddingTop = Math.max(0, props.paddingTop ?? props.paddingY ?? 0);
+  const paddingBottom = Math.max(0, props.paddingBottom ?? props.paddingY ?? 0);
+  const contentWidth = Math.max(0, rect.width - bw * 2 - paddingLeft - paddingRight);
+  const contentHeight = Math.max(0, rect.height - bw * 2 - paddingTop - paddingBottom);
   return (
     <div
       style={{
@@ -161,15 +222,17 @@ function ButtonVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; r
         height: "100%",
         background: bg,
         border: `${bw}px solid ${bc}`,
+        padding: `${paddingTop}px ${paddingRight}px ${paddingBottom}px ${paddingLeft}px`,
       }}
     >
       <BitmapText
         face={findFontFace(props)}
         text={props.text ?? ""}
         color={fg}
-        align="center"
-        boxWidth={rect.width}
-        boxHeight={rect.height}
+        align={props.horizontalAlign ?? "center"}
+        verticalAlign={props.verticalAlign ?? "center"}
+        boxWidth={contentWidth}
+        boxHeight={contentHeight}
       />
     </div>
   );
@@ -189,7 +252,6 @@ function IconVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; rec
         display: "grid",
         placeItems: "center",
         color,
-        opacity: 0.9,
         overflow: "hidden",
       }}
       title={`icon: ${iconId}`}
@@ -216,24 +278,35 @@ function ImageVisual({ node, ctx }: { node: WidgetNode; ctx: RenderCtx }) {
   );
 }
 
-function LineVisual({ node, ctx }: { node: WidgetNode; ctx: RenderCtx }) {
+function LineVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; rect: Frame }) {
   const props = (node.props ?? {}) as LineProps;
-  const color = resolveColor(node.style?.borderColor ?? node.style?.textColor, ctx.palette, "#FFF");
+  const strokeWidth = Math.max(1, node.style?.borderWidth ?? props.strokeWidth ?? 1);
+  const viewWidth = Math.max(strokeWidth, rect.width);
+  const viewHeight = Math.max(strokeWidth, rect.height);
+  const fallbackY = Math.floor(viewHeight / 2);
+  const x1 = Math.round(props.x1 ?? 0);
+  const y1 = visibleLineY(props.y1 ?? fallbackY, viewHeight, strokeWidth);
+  const x2 = Math.round(props.x2 ?? viewWidth - 1);
+  const y2 = visibleLineY(props.y2 ?? fallbackY, viewHeight, strokeWidth);
+  const color = resolveColor(node.style?.borderColor ?? node.style?.textColor, ctx.palette, "#FFFFFF");
+  const strokeOffset = Math.floor(strokeWidth / 2);
+  const pixels = rasterLine(x1, y1, x2, y2);
+
   return (
-    <svg
-      width="100%"
-      height="100%"
-      viewBox={`0 0 ${Math.max(1, node.frame?.width ?? 1)} ${Math.max(1, node.frame?.height ?? 1)}`}
-      preserveAspectRatio="none"
-    >
-      <line
-        x1={0}
-        y1={0}
-        x2={props.x2 ?? node.frame?.width ?? 0}
-        y2={props.y2 ?? 0}
-        stroke={color}
-        strokeWidth={props.strokeWidth ?? 1}
-      />
-    </svg>
+    <div style={{ position: "relative", width: viewWidth, height: viewHeight }}>
+      {pixels.map((pixel, index) => (
+        <div
+          key={`${pixel.x}:${pixel.y}:${index}`}
+          style={{
+            position: "absolute",
+            left: pixel.x - strokeOffset,
+            top: pixel.y - strokeOffset,
+            width: strokeWidth,
+            height: strokeWidth,
+            background: color,
+          }}
+        />
+      ))}
+    </div>
   );
 }

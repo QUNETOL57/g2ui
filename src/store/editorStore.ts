@@ -378,7 +378,7 @@ function defaultFrameFor(type: WidgetType, parentId: string, p: UiProject) {
     case "panel":
       return { x: 0, y: 0, width: parentW, height: Math.min(60, parentH) };
     case "line":
-      return { x: 0, y: 0, width: 60, height: 1 };
+      return { x: 8, y: 8, width: 60, height: 1 };
     case "rect":
       return { x: 8, y: 8, width: 40, height: 24 };
     case "image":

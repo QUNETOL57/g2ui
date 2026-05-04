@@ -4,6 +4,9 @@ import FormatAlignLeftIcon from "@mui/icons-material/FormatAlignLeft";
 import FormatAlignRightIcon from "@mui/icons-material/FormatAlignRight";
 import FormatBoldIcon from "@mui/icons-material/FormatBold";
 import FormatItalicIcon from "@mui/icons-material/FormatItalic";
+import VerticalAlignBottomIcon from "@mui/icons-material/VerticalAlignBottom";
+import VerticalAlignCenterIcon from "@mui/icons-material/VerticalAlignCenter";
+import VerticalAlignTopIcon from "@mui/icons-material/VerticalAlignTop";
 import type {
   ButtonProps,
   ColorRef,
@@ -15,6 +18,7 @@ import type {
 } from "../../ui-ir";
 
 import { CustomSelect } from "../../components/CustomSelect";
+import { DraftNumberInput } from "../../components/DraftNumberInput";
 import { useEditorStore, findNode } from "../../store/editorStore";
 import { findFontFace, getFontFamilyOptions, getFontSizes } from "../fonts/fontLibrary";
 import type { BitmapFontStyle } from "../fonts/fontTypes";
@@ -74,7 +78,9 @@ export function PropertiesPanel() {
       {node.type === "button" && (
         <ButtonGroup
           node={node}
+          palette={project.palette}
           onChange={(patch) => updateProps(node.id, patch)}
+          onStyleChange={(patch) => updateStyle(node.id, patch)}
         />
       )}
       {node.type === "icon" && (
@@ -176,11 +182,10 @@ function TransformField({
   return (
     <label className="transform-field">
       <span>{label}</span>
-      <input
-        type="number"
+      <DraftNumberInput
         value={value}
         min={min}
-        onChange={(e) => onChange(Number(e.target.value))}
+        onChange={onChange}
       />
     </label>
   );
@@ -195,50 +200,54 @@ function LayoutGroup({
 }) {
   const l = node.layout ?? { mode: "absolute" as LayoutMode };
   return (
-    <div className="prop-group">
+    <div className="prop-group layout-group">
       <h4>Layout</h4>
-      <div className="prop-row">
-        <label>mode</label>
-        <CustomSelect
-          ariaLabel="layout mode"
-          value={l.mode}
-          options={[
-            { value: "absolute", label: "absolute" },
-            { value: "row", label: "row" },
-            { value: "column", label: "column" },
-          ]}
-          onChange={(value) => updateLayout(node.id, { mode: value as LayoutMode })}
-        />
-      </div>
-      <div className="inline-grid-2">
-        <NumberField
-          label="padding"
-          value={l.padding ?? 0}
-          onChange={(v) => updateLayout(node.id, { padding: v })}
-        />
-        <NumberField
-          label="gap"
-          value={l.gap ?? 0}
-          onChange={(v) => updateLayout(node.id, { gap: v })}
-        />
-      </div>
-      <div className="prop-row">
-        <label>align</label>
-        <CustomSelect
-          ariaLabel="layout align"
-          value={l.align ?? "start"}
-          options={["start", "center", "end", "stretch"].map((value) => ({
-            value,
-            label: value,
-          }))}
-          onChange={(value) =>
-            updateLayout(node.id, {
-              align: value as NonNullable<typeof l.align>,
-            })
-          }
-        />
-      </div>
-      <p className="field-hint">Controls how children are arranged inside this container.</p>
+      <InspectorCard title="Flow">
+        <div className="prop-row">
+          <label>mode</label>
+          <CustomSelect
+            ariaLabel="layout mode"
+            value={l.mode}
+            options={[
+              { value: "absolute", label: "absolute" },
+              { value: "row", label: "row" },
+              { value: "column", label: "column" },
+            ]}
+            onChange={(value) => updateLayout(node.id, { mode: value as LayoutMode })}
+          />
+        </div>
+        <div className="inline-grid-2">
+          <NumberField
+            label="padding"
+            value={l.padding ?? 0}
+            min={0}
+            onChange={(v) => updateLayout(node.id, { padding: Math.max(0, v) })}
+          />
+          <NumberField
+            label="gap"
+            value={l.gap ?? 0}
+            min={0}
+            onChange={(v) => updateLayout(node.id, { gap: Math.max(0, v) })}
+          />
+        </div>
+        <div className="prop-row">
+          <label>align</label>
+          <CustomSelect
+            ariaLabel="layout align"
+            value={l.align ?? "start"}
+            options={["start", "center", "end", "stretch"].map((value) => ({
+              value,
+              label: value,
+            }))}
+            onChange={(value) =>
+              updateLayout(node.id, {
+                align: value as NonNullable<typeof l.align>,
+              })
+            }
+          />
+        </div>
+        <p className="field-hint">Controls how children are arranged inside this container.</p>
+      </InspectorCard>
     </div>
   );
 }
@@ -253,25 +262,31 @@ function StyleGroup({
   updateStyle: (id: string, patch: Partial<NonNullable<WidgetNode["style"]>>) => void;
 }) {
   const s = node.style ?? {};
-  const fillColor = s.background ?? { kind: "hex", value: "#FFFFFF" } satisfies ColorRef;
+  const defaultFillColor = node.type === "button" ? "#333333" : "#FFFFFF";
+  const fillColor = s.background ?? { kind: "hex", value: defaultFillColor } satisfies ColorRef;
   const borderColor = s.borderColor ?? { kind: "hex", value: "#FFFFFF" } satisfies ColorRef;
   const fillEnabled = s.drawBackground !== false;
   const borderEnabled = Boolean(s.drawBorder);
   const showFill = node.type !== "label";
-  const showText = node.type !== "screen" && node.type !== "panel" && node.type !== "label";
+  const showText =
+    node.type !== "screen" &&
+    node.type !== "panel" &&
+    node.type !== "label" &&
+    node.type !== "button" &&
+    node.type !== "rect";
 
   if (node.type === "icon") {
     return (
       <div className="prop-group appearance-group">
         <h4>Appearance</h4>
-        <div className="appearance-section">
+        <InspectorCard title="Icon color">
           <ColorField
-            label="Icon color"
+            label="color"
             value={s.textColor}
             palette={palette}
             onChange={(v) => updateStyle(node.id, { textColor: v })}
           />
-        </div>
+        </InspectorCard>
       </div>
     );
   }
@@ -280,23 +295,16 @@ function StyleGroup({
     <div className="prop-group appearance-group">
       <h4>Appearance</h4>
       {showFill ? (
-        <div className="appearance-section">
-          <label className="appearance-toggle">
-            <span>
-              <strong>Fill</strong>
-              <small>Background color</small>
-            </span>
-            <input
-              type="checkbox"
-              checked={fillEnabled}
-              onChange={(e) =>
-                updateStyle(node.id, {
-                  drawBackground: e.target.checked,
-                  background: e.target.checked ? fillColor : s.background,
-                })
-              }
-            />
-          </label>
+        <InspectorCard
+          title="Fill"
+          checked={fillEnabled}
+          onToggle={(checked) =>
+            updateStyle(node.id, {
+              drawBackground: checked,
+              background: checked ? fillColor : s.background,
+            })
+          }
+        >
           {fillEnabled ? (
             <ColorField
               label="color"
@@ -305,26 +313,19 @@ function StyleGroup({
               onChange={(v) => updateStyle(node.id, { background: v, drawBackground: true })}
             />
           ) : null}
-        </div>
+        </InspectorCard>
       ) : null}
-      <div className="appearance-section">
-        <label className="appearance-toggle">
-          <span>
-            <strong>Border</strong>
-            <small>Stroke around the element</small>
-          </span>
-          <input
-            type="checkbox"
-            checked={borderEnabled}
-            onChange={(e) =>
-              updateStyle(node.id, {
-                drawBorder: e.target.checked,
-                borderColor: e.target.checked ? borderColor : s.borderColor,
-                borderWidth: e.target.checked ? Math.max(1, s.borderWidth ?? 1) : s.borderWidth,
-              })
-            }
-          />
-        </label>
+      <InspectorCard
+        title="Border"
+        checked={borderEnabled}
+        onToggle={(checked) =>
+          updateStyle(node.id, {
+            drawBorder: checked,
+            borderColor: checked ? borderColor : s.borderColor,
+            borderWidth: checked ? Math.max(1, s.borderWidth ?? 1) : s.borderWidth,
+          })
+        }
+      >
         {borderEnabled ? (
           <>
             <ColorField
@@ -334,30 +335,63 @@ function StyleGroup({
               onChange={(v) => updateStyle(node.id, { borderColor: v, drawBorder: true })}
             />
             <NumberField
-              label="Width"
+              label="width"
               value={s.borderWidth ?? 1}
               min={1}
               onChange={(v) => updateStyle(node.id, { borderWidth: Math.max(1, v), drawBorder: true })}
             />
           </>
         ) : null}
-      </div>
+      </InspectorCard>
       {showText ? (
-        <div className="appearance-section">
-          <div className="appearance-static-head">
-            <span>
-              <strong>Text</strong>
-              <small>Foreground color</small>
-            </span>
-          </div>
+        <InspectorCard title="Text">
           <ColorField
             label="color"
             value={s.textColor}
             palette={palette}
             onChange={(v) => updateStyle(node.id, { textColor: v })}
           />
-        </div>
+        </InspectorCard>
       ) : null}
+    </div>
+  );
+}
+
+function InspectorCard({
+  title,
+  subtitle,
+  checked,
+  onToggle,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  checked?: boolean;
+  onToggle?: (checked: boolean) => void;
+  children: ReactNode;
+}) {
+  const titleContent = (
+    <span className="inspector-card-title-stack">
+      <span className="typography-card-title">{title}</span>
+      {subtitle ? <small>{subtitle}</small> : null}
+    </span>
+  );
+
+  return (
+    <div className="inspector-card">
+      {onToggle ? (
+        <label className="inspector-card-head inspector-card-toggle">
+          {titleContent}
+          <input
+            type="checkbox"
+            checked={Boolean(checked)}
+            onChange={(event) => onToggle(event.target.checked)}
+          />
+        </label>
+      ) : (
+        <div className="inspector-card-head">{titleContent}</div>
+      )}
+      {children}
     </div>
   );
 }
@@ -374,9 +408,6 @@ function LabelGroup({
   onStyleChange: (patch: Partial<NonNullable<WidgetNode["style"]>>) => void;
 }) {
   const p = (node.props ?? {}) as LabelProps;
-  const s = node.style ?? {};
-  const fillColor = s.background ?? { kind: "hex", value: "#FFFFFF" } satisfies ColorRef;
-  const fillEnabled = Boolean(s.drawBackground);
   return (
     <div className="prop-group text-prop-group">
       <h4>Content</h4>
@@ -389,38 +420,177 @@ function LabelGroup({
           onChange={(e) => onChange({ text: e.target.value })}
         />
       </div>
-      <div className="typography-card">
-        <div className="typography-card-title">Typography</div>
-        <FontFields props={p} onChange={onChange} compact />
+      <TypographyCard
+        props={p}
+        style={node.style}
+        palette={palette}
+        backgroundDefaultEnabled={false}
+        showBackground
+        onPropsChange={(patch) => onChange(patch as Partial<LabelProps>)}
+        onStyleChange={onStyleChange}
+        align={p.align ?? "left"}
+        onAlignChange={(align) => onChange({ align })}
+      />
+    </div>
+  );
+}
+
+function ButtonGroup({
+  node,
+  palette,
+  onChange,
+  onStyleChange,
+}: {
+  node: WidgetNode;
+  palette: { token: string; hex: string }[] | undefined;
+  onChange: (patch: Partial<ButtonProps>) => void;
+  onStyleChange: (patch: Partial<NonNullable<WidgetNode["style"]>>) => void;
+}) {
+  const p = (node.props ?? {}) as ButtonProps;
+  const paddingTop = p.paddingTop ?? p.paddingY ?? 0;
+  const paddingRight = p.paddingRight ?? p.paddingX ?? 0;
+  const paddingBottom = p.paddingBottom ?? p.paddingY ?? 0;
+  const paddingLeft = p.paddingLeft ?? p.paddingX ?? 0;
+  return (
+    <div className="prop-group text-prop-group">
+      <h4>Content</h4>
+      <div className="text-field-stack">
+        <label>text</label>
+        <input
+          aria-label="button text"
+          type="text"
+          value={p.text ?? ""}
+          onChange={(e) => onChange({ text: e.target.value })}
+        />
+      </div>
+      <TypographyCard
+        props={p}
+        style={node.style}
+        palette={palette}
+        backgroundDefaultEnabled
+        showBackground={false}
+        onPropsChange={(patch) => onChange(patch as Partial<ButtonProps>)}
+        onStyleChange={onStyleChange}
+        paddingControls={{
+          horizontalAlign: p.horizontalAlign ?? "center",
+          verticalAlign: p.verticalAlign ?? "center",
+          top: paddingTop,
+          right: paddingRight,
+          bottom: paddingBottom,
+          left: paddingLeft,
+          onChange,
+        }}
+      />
+    </div>
+  );
+}
+
+function TypographyCard({
+  props,
+  style,
+  palette,
+  backgroundDefaultEnabled,
+  showBackground = true,
+  onPropsChange,
+  onStyleChange,
+  align,
+  onAlignChange,
+  paddingControls,
+}: {
+  props: Partial<LabelProps & ButtonProps>;
+  style: WidgetNode["style"] | undefined;
+  palette: { token: string; hex: string }[] | undefined;
+  backgroundDefaultEnabled: boolean;
+  showBackground?: boolean;
+  onPropsChange: (patch: Partial<LabelProps & ButtonProps>) => void;
+  onStyleChange: (patch: Partial<NonNullable<WidgetNode["style"]>>) => void;
+  align?: NonNullable<LabelProps["align"]>;
+  onAlignChange?: (align: NonNullable<LabelProps["align"]>) => void;
+  paddingControls?: {
+    horizontalAlign: NonNullable<ButtonProps["horizontalAlign"]>;
+    verticalAlign: NonNullable<ButtonProps["verticalAlign"]>;
+    top: number;
+    right: number;
+    bottom: number;
+    left: number;
+    onChange: (patch: Partial<ButtonProps>) => void;
+  };
+}) {
+  const s = style ?? {};
+  const fillColor = s.background ?? { kind: "hex", value: "#FFFFFF" } satisfies ColorRef;
+  const fillEnabled = backgroundDefaultEnabled ? s.drawBackground !== false : Boolean(s.drawBackground);
+
+  return (
+    <div className="typography-card">
+      <div className="typography-card-title">Typography</div>
+      <FontFields props={props} onChange={onPropsChange} compact />
+      {align && onAlignChange ? (
         <AlignIconGroup
-          value={p.align ?? "left"}
-          onChange={(align) => onChange({ align })}
+          value={align}
+          onChange={onAlignChange}
           wide
         />
-        <div className="typography-color-grid">
-          <div className="typography-color-section">
-            <div className="typography-card-title">Text color</div>
-            <ColorField
-              label="color"
-              value={s.textColor}
-              palette={palette}
-              onChange={(v) => onStyleChange({ textColor: v })}
+      ) : null}
+      {paddingControls ? (
+        <InspectorCard title="Padding">
+          <AlignIconGroup
+            label="horizontal"
+            value={paddingControls.horizontalAlign}
+            onChange={(horizontalAlign) => paddingControls.onChange({ horizontalAlign })}
+            wide
+          />
+          <VerticalAlignIconGroup
+            value={paddingControls.verticalAlign}
+            onChange={(verticalAlign) => paddingControls.onChange({ verticalAlign })}
+          />
+          <div className="padding-grid-4">
+            <NumberField
+              label="top"
+              value={paddingControls.top}
+              min={0}
+              onChange={(v) => paddingControls.onChange({ paddingTop: Math.max(0, v) })}
+            />
+            <NumberField
+              label="right"
+              value={paddingControls.right}
+              min={0}
+              onChange={(v) => paddingControls.onChange({ paddingRight: Math.max(0, v) })}
+            />
+            <NumberField
+              label="bottom"
+              value={paddingControls.bottom}
+              min={0}
+              onChange={(v) => paddingControls.onChange({ paddingBottom: Math.max(0, v) })}
+            />
+            <NumberField
+              label="left"
+              value={paddingControls.left}
+              min={0}
+              onChange={(v) => paddingControls.onChange({ paddingLeft: Math.max(0, v) })}
             />
           </div>
-          <div className="typography-color-section">
-            <label className="typography-toggle-title">
-              <span className="typography-card-title">Background</span>
-              <input
-                type="checkbox"
-                checked={fillEnabled}
-                onChange={(e) =>
-                  onStyleChange({
-                    drawBackground: e.target.checked,
-                    background: e.target.checked ? fillColor : s.background,
-                  })
-                }
-              />
-            </label>
+        </InspectorCard>
+      ) : null}
+      <div className="typography-color-grid">
+        <InspectorCard title="Text color">
+          <ColorField
+            label="color"
+            value={s.textColor}
+            palette={palette}
+            onChange={(v) => onStyleChange({ textColor: v })}
+          />
+        </InspectorCard>
+        {showBackground ? (
+          <InspectorCard
+            title="Background"
+            checked={fillEnabled}
+            onToggle={(checked) =>
+              onStyleChange({
+                drawBackground: checked,
+                background: checked ? fillColor : s.background,
+              })
+            }
+          >
             {fillEnabled ? (
               <ColorField
                 label="color"
@@ -429,43 +599,9 @@ function LabelGroup({
                 onChange={(v) => onStyleChange({ background: v, drawBackground: true })}
               />
             ) : null}
-          </div>
-        </div>
+          </InspectorCard>
+        ) : null}
       </div>
-    </div>
-  );
-}
-
-function ButtonGroup({
-  node,
-  onChange,
-}: {
-  node: WidgetNode;
-  onChange: (patch: Partial<ButtonProps>) => void;
-}) {
-  const p = (node.props ?? {}) as ButtonProps;
-  return (
-    <div className="prop-group">
-      <h4>Content</h4>
-      <div className="prop-row">
-        <label>text</label>
-        <input
-          type="text"
-          value={p.text ?? ""}
-          onChange={(e) => onChange({ text: e.target.value })}
-        />
-      </div>
-      <FontFields props={p} onChange={onChange} />
-      <NumberField
-        label="padX"
-        value={p.paddingX ?? 0}
-        onChange={(v) => onChange({ paddingX: v })}
-      />
-      <NumberField
-        label="padY"
-        value={p.paddingY ?? 0}
-        onChange={(v) => onChange({ paddingY: v })}
-      />
     </div>
   );
 }
@@ -624,17 +760,19 @@ function StyleIconGroup({
 }
 
 function AlignIconGroup({
+  label = "align",
   value,
   onChange,
   wide = false,
 }: {
+  label?: string;
   value: NonNullable<LabelProps["align"]>;
   onChange: (align: NonNullable<LabelProps["align"]>) => void;
   wide?: boolean;
 }) {
   return (
     <div className={`prop-row align-control-row${wide ? " align-control-row-wide" : ""}`}>
-      <label>align</label>
+      <label>{label}</label>
       <IconButtonGroup ariaLabel="label align">
         <IconToggleButton label="Align left" active={value === "left"} onClick={() => onChange("left")}>
           <FormatAlignLeftIcon fontSize="inherit" />
@@ -644,6 +782,31 @@ function AlignIconGroup({
         </IconToggleButton>
         <IconToggleButton label="Align right" active={value === "right"} onClick={() => onChange("right")}>
           <FormatAlignRightIcon fontSize="inherit" />
+        </IconToggleButton>
+      </IconButtonGroup>
+    </div>
+  );
+}
+
+function VerticalAlignIconGroup({
+  value,
+  onChange,
+}: {
+  value: NonNullable<ButtonProps["verticalAlign"]>;
+  onChange: (align: NonNullable<ButtonProps["verticalAlign"]>) => void;
+}) {
+  return (
+    <div className="prop-row align-control-row align-control-row-wide">
+      <label>vertical</label>
+      <IconButtonGroup ariaLabel="button vertical align">
+        <IconToggleButton label="Align top" active={value === "top"} onClick={() => onChange("top")}>
+          <VerticalAlignTopIcon fontSize="inherit" />
+        </IconToggleButton>
+        <IconToggleButton label="Align middle" active={value === "center"} onClick={() => onChange("center")}>
+          <VerticalAlignCenterIcon fontSize="inherit" />
+        </IconToggleButton>
+        <IconToggleButton label="Align bottom" active={value === "bottom"} onClick={() => onChange("bottom")}>
+          <VerticalAlignBottomIcon fontSize="inherit" />
         </IconToggleButton>
       </IconButtonGroup>
     </div>
@@ -806,12 +969,11 @@ function NumberField({
   return (
     <div className="prop-row">
       <label>{label}</label>
-      <input
-        type="number"
+      <DraftNumberInput
         value={value}
         min={min}
         max={max}
-        onChange={(e) => onChange(Number(e.target.value))}
+        onChange={onChange}
       />
     </div>
   );

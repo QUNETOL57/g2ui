@@ -26,6 +26,7 @@ interface ActiveCanvasInteraction {
   startFrame: Frame;
   startRect: Frame;
   parentRect: Frame;
+  parentContentInset: number;
   parentMode: LayoutMode;
   siblingCenters?: { id: string; center: number }[];
   handle?: ResizeHandle;
@@ -57,6 +58,11 @@ function normalizeZoom(value: number): number {
 
 function sameFrame(a: Frame, b: Frame): boolean {
   return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
+}
+
+function borderInsetFor(node: { style?: { drawBorder?: boolean; borderWidth?: number } } | null | undefined): number {
+  if (!node?.style?.drawBorder) return 0;
+  return Math.max(0, node.style.borderWidth ?? 1);
 }
 
 function nextWheelZoom(currentZoom: number, direction: 1 | -1): number {
@@ -378,11 +384,13 @@ export function CanvasWorkspace() {
 
       if (active.type === "move") {
         if (active.parentMode === "absolute") {
-          const maxX = Math.max(0, active.parentRect.width - active.startFrame.width);
-          const maxY = Math.max(0, active.parentRect.height - active.startFrame.height);
+          const minX = active.parentContentInset;
+          const minY = active.parentContentInset;
+          const maxX = Math.max(minX, active.parentRect.width - active.parentContentInset - active.startFrame.width);
+          const maxY = Math.max(minY, active.parentRect.height - active.parentContentInset - active.startFrame.height);
           const nextFrame = {
-            x: clamp(active.startFrame.x + deltaX, 0, maxX),
-            y: clamp(active.startFrame.y + deltaY, 0, maxY),
+            x: clamp(active.startFrame.x + deltaX, minX, maxX),
+            y: clamp(active.startFrame.y + deltaY, minY, maxY),
             width: active.startFrame.width,
             height: active.startFrame.height,
           };
@@ -422,16 +430,24 @@ export function CanvasWorkspace() {
 
       if (active.parentMode === "absolute") {
         if (active.handle?.includes("w")) {
-          nextLeft = clamp(active.startFrame.x + deltaX, 0, startRight - 1);
+          nextLeft = clamp(active.startFrame.x + deltaX, active.parentContentInset, startRight - 1);
         }
         if (active.handle?.includes("e")) {
-          nextRight = clamp(startRight + deltaX, active.startFrame.x + 1, active.parentRect.width);
+          nextRight = clamp(
+            startRight + deltaX,
+            active.startFrame.x + 1,
+            active.parentRect.width - active.parentContentInset,
+          );
         }
         if (active.handle?.includes("n")) {
-          nextTop = clamp(active.startFrame.y + deltaY, 0, startBottom - 1);
+          nextTop = clamp(active.startFrame.y + deltaY, active.parentContentInset, startBottom - 1);
         }
         if (active.handle?.includes("s")) {
-          nextBottom = clamp(startBottom + deltaY, active.startFrame.y + 1, active.parentRect.height);
+          nextBottom = clamp(
+            startBottom + deltaY,
+            active.startFrame.y + 1,
+            active.parentRect.height - active.parentContentInset,
+          );
         }
       } else {
         if (active.handle?.includes("w") || active.handle?.includes("e")) {
@@ -464,11 +480,11 @@ export function CanvasWorkspace() {
         const maxWidth =
           anchorX === "right"
             ? active.startFrame.x + active.startFrame.width
-            : active.parentRect.width - active.startFrame.x;
+            : active.parentRect.width - active.parentContentInset - active.startFrame.x;
         const maxHeight =
           anchorY === "bottom"
             ? active.startFrame.y + active.startFrame.height
-            : active.parentRect.height - active.startFrame.y;
+            : active.parentRect.height - active.parentContentInset - active.startFrame.y;
         nextFrame = normalizeIconFrame(active.iconId, nextFrame, {
           anchorX,
           anchorY,
@@ -567,6 +583,7 @@ export function CanvasWorkspace() {
       startFrame,
       startRect: { ...nodeLayout.rect },
       parentRect: parentLayout.rect,
+      parentContentInset: borderInsetFor(parentNode),
       parentMode: "absolute",
       siblingCenters,
     });
@@ -600,6 +617,7 @@ export function CanvasWorkspace() {
         startFrame,
         startRect: { ...(selectedRect ?? selectedNode.frame) },
         parentRect: selectedParentLayoutNode.rect,
+        parentContentInset: borderInsetFor(selectedParentNode),
         parentMode: "absolute",
         handle,
         isIcon: selectedNode.type === "icon",

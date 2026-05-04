@@ -32,8 +32,12 @@ export function defaultProps(type: WidgetType): Record<string, unknown> {
         fontFamily: "BDF",
         fontSize: 7,
         fontStyle: "regular",
-        paddingX: 8,
-        paddingY: 4,
+        horizontalAlign: "center",
+        verticalAlign: "center",
+        paddingTop: 4,
+        paddingRight: 8,
+        paddingBottom: 4,
+        paddingLeft: 8,
       } satisfies ButtonProps;
     case "icon":
       return { iconId: "earth" } satisfies IconProps;

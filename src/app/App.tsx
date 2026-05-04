@@ -7,6 +7,7 @@ import { PropertiesPanel } from "../features/properties/PropertiesPanel";
 import { ExportPanel } from "../features/export/ExportPanel";
 import { DISPLAY_PRESETS, presetForSize } from "../layout/displayPresets";
 import { CustomSelect } from "../components/CustomSelect";
+import { DraftNumberInput } from "../components/DraftNumberInput";
 
 export function App() {
   const lastError = useEditorStore((s) => s.lastError);
@@ -85,25 +86,19 @@ export function App() {
             }}
           />
           <div className="display-size-control">
-          <input
-            type="number"
-            value={project.display.width}
-            min={1}
-            onChange={(e) =>
-              setDisplaySize(Number(e.target.value) || 1, project.display.height)
-            }
-            title="width"
-          />
+            <DraftNumberInput
+              value={project.display.width}
+              min={1}
+              onChange={(value) => setDisplaySize(value, project.display.height)}
+              title="width"
+            />
             <span>×</span>
-          <input
-            type="number"
-            value={project.display.height}
-            min={1}
-            onChange={(e) =>
-              setDisplaySize(project.display.width, Number(e.target.value) || 1)
-            }
-            title="height"
-          />
+            <DraftNumberInput
+              value={project.display.height}
+              min={1}
+              onChange={(value) => setDisplaySize(project.display.width, value)}
+              title="height"
+            />
           </div>
           <label>screen</label>
           <CustomSelect

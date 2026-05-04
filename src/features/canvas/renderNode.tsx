@@ -149,11 +149,19 @@ function LabelVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; re
 
 function ButtonVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; rect: Frame }) {
   const props = (node.props ?? {}) as ButtonProps;
-  const bg = resolveColor(node.style?.background, ctx.palette, "#333");
+  const bg = node.style?.drawBackground === false
+    ? "transparent"
+    : resolveColor(node.style?.background, ctx.palette, "#333");
   const fg = resolveColor(node.style?.textColor, ctx.palette, "#FFF");
-  const bw = node.style?.borderWidth ?? 0;
+  const bw = node.style?.drawBorder ? node.style?.borderWidth ?? 1 : 0;
   const bc =
     bw > 0 ? resolveColor(node.style?.borderColor, ctx.palette, "#FFF") : "transparent";
+  const paddingLeft = Math.max(0, props.paddingLeft ?? props.paddingX ?? 0);
+  const paddingRight = Math.max(0, props.paddingRight ?? props.paddingX ?? 0);
+  const paddingTop = Math.max(0, props.paddingTop ?? props.paddingY ?? 0);
+  const paddingBottom = Math.max(0, props.paddingBottom ?? props.paddingY ?? 0);
+  const contentWidth = Math.max(0, rect.width - bw * 2 - paddingLeft - paddingRight);
+  const contentHeight = Math.max(0, rect.height - bw * 2 - paddingTop - paddingBottom);
   return (
     <div
       style={{
@@ -161,15 +169,17 @@ function ButtonVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; r
         height: "100%",
         background: bg,
         border: `${bw}px solid ${bc}`,
+        padding: `${paddingTop}px ${paddingRight}px ${paddingBottom}px ${paddingLeft}px`,
       }}
     >
       <BitmapText
         face={findFontFace(props)}
         text={props.text ?? ""}
         color={fg}
-        align="center"
-        boxWidth={rect.width}
-        boxHeight={rect.height}
+        align={props.horizontalAlign ?? "center"}
+        verticalAlign={props.verticalAlign ?? "center"}
+        boxWidth={contentWidth}
+        boxHeight={contentHeight}
       />
     </div>
   );

@@ -299,29 +299,34 @@ input[type="color"] {
 .top-bar-brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
 }
 
-.top-bar-brand > div {
-  display: grid;
-  gap: 1px;
+.top-bar-brand-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   min-width: 0;
-  padding-left: 10px;
-  border-left: 3px solid var(--accent);
+  height: 30px;
+  padding: 3px 8px 3px 4px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.025);
 }
 
-.top-bar h1 {
-  font-size: 14px;
-  font-weight: 600;
-  margin: 0;
-  letter-spacing: 0.04em;
+.top-bar-logo {
+  display: block;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
 }
 
 .top-bar-meta {
   color: var(--muted);
   font-size: 11px;
   white-space: nowrap;
+  line-height: 1;
 }
 
 .top-bar-meta strong {

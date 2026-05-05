@@ -8,6 +8,7 @@ import { ExportPanel } from "../features/export/ExportPanel";
 import { DISPLAY_PRESETS, presetForSize } from "../layout/displayPresets";
 import { CustomSelect } from "../components/CustomSelect";
 import { DraftNumberInput } from "../components/DraftNumberInput";
+import logoUrl from "../assets/logo.svg";
 
 export function App() {
   const lastError = useEditorStore((s) => s.lastError);
@@ -68,8 +69,8 @@ export function App() {
     <div className="app-shell">
       <div className="top-bar">
         <div className="top-bar-brand">
-          <div>
-            <h1>GuiMintLab Studio</h1>
+          <div className="top-bar-brand-main">
+            <img className="top-bar-logo" src={logoUrl} alt="GuiMintLab Studio" title="GuiMintLab Studio" />
             <span className="top-bar-meta">
               project <strong>{project.name}</strong> · schema {project.schemaVersion}
             </span>

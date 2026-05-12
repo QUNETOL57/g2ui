@@ -6,6 +6,7 @@ import { PrismLight as SyntaxHighlighter } from "react-syntax-highlighter";
 import json from "react-syntax-highlighter/dist/esm/languages/prism/json";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 
+import { IconButton } from "../../components/IconButton";
 import { useEditorStore } from "../../store/editorStore";
 
 SyntaxHighlighter.registerLanguage("json", json);
@@ -41,17 +42,15 @@ export function ExportPanel() {
           </SyntaxHighlighter>
         </div>
         <div className="panel-actions">
-          <button
-            className="icon-button"
+          <IconButton
             onClick={() => navigator.clipboard?.writeText(output)}
             aria-label="Copy JSON to clipboard"
             title="Copy JSON to clipboard"
-            data-tooltip="Copy JSON"
+            tooltip="Copy JSON"
           >
             <ContentCopyOutlinedIcon />
-          </button>
-          <button
-            className="icon-button"
+          </IconButton>
+          <IconButton
             onClick={() => {
               const blob = new Blob([output], { type: "application/json" });
               const url = URL.createObjectURL(blob);
@@ -63,10 +62,10 @@ export function ExportPanel() {
             }}
             aria-label="Download JSON"
             title="Download JSON"
-            data-tooltip="Download JSON"
+            tooltip="Download JSON"
           >
             <FileDownloadOutlinedIcon />
-          </button>
+          </IconButton>
         </div>
         <p className="hint">
           Save this file to your ESP-IDF project and embed it via
@@ -84,15 +83,14 @@ export function ExportPanel() {
           onChange={(e) => setPasted(e.target.value)}
         />
         <div className="panel-actions">
-          <button
-            className="icon-button"
+          <IconButton
             onClick={() => importJson(pasted)}
             aria-label="Load JSON"
             title="Load JSON"
-            data-tooltip="Load JSON"
+            tooltip="Load JSON"
           >
             <FileUploadOutlinedIcon />
-          </button>
+          </IconButton>
         </div>
       </div>
     </details>

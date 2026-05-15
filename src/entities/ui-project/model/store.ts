@@ -1,19 +1,35 @@
 import { create } from "zustand";
-import type { Frame, IconProps, UiProject, WidgetNode, WidgetType, ScreenNode } from "../ui-ir";
-import { makeWidget, nextId, validateProject } from "../ui-ir";
-import { findFontFace } from "../features/fonts/fontLibrary";
-import { getIconDefinition } from "../features/icons/iconLibrary";
-import { DEFAULT_ICON_ID, getResolvedIconDefinition, normalizeIconNodeFrame } from "../features/icons/iconSizing";
+import type {
+  Frame,
+  IconProps,
+  UiProject,
+  WidgetNode,
+  WidgetType,
+} from "..";
+import { makeWidget, nextId, validateProject } from "..";
+import { getIconDefinition } from "@entities/icon/iconLibrary";
+import { normalizeIconNodeFrame } from "@entities/icon/iconSizing";
 
 import { blankProject, helloSample } from "../samples/hello";
-
-const MAX_HISTORY = 100;
-
-interface HistorySnapshot {
-  project: UiProject;
-  activeScreenId: string;
-  selectedNodeId: string | null;
-}
+import {
+  clampIndex,
+  cloneProject,
+  collectIds,
+  defaultFrameFor,
+  findNode,
+  findParent,
+  insertChild,
+  isAncestor,
+  normalizeProjectTextFrames,
+  normalizeTextNodeFrame,
+  removeNode,
+} from "./tree-ops";
+import {
+  MAX_HISTORY,
+  recordHistory,
+  snapshotState,
+  type HistorySnapshot,
+} from "./history";
 
 interface EditorState {
   project: UiProject;
@@ -86,8 +102,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const prevH = next.display.height;
       next.display.width = width;
       next.display.height = height;
-      // Resize screens that currently span the full old display so new
-      // projects and fresh samples stay in sync with the picked resolution.
       for (const screen of next.screens) {
         if (screen.width === prevW && screen.height === prevH) {
           screen.width = width;
@@ -149,8 +163,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const usedIds = collectIds(nextProject);
       const id = nextId(type.slice(0, 3), usedIds);
       newId = id;
-      const node = makeWidget(id, type);
-      node.frame = defaultFrameFor(type, parentId, nextProject);
+      const node = makeWidgetWithFrame(id, type, parentId, nextProject);
       insertChild(nextProject, parentId, node);
       return { ...recordHistory(state), project: nextProject, selectedNodeId: id, draftFrame: null };
     });
@@ -223,10 +236,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const parent = findNode(next, parentId);
       if (!parent) return state;
 
-      parent.layout = {
-        ...(parent.layout ?? {}),
-        mode: "absolute",
-      };
+      parent.layout = { ...(parent.layout ?? {}), mode: "absolute" };
 
       for (const childPatch of childFrames) {
         const child = findNode(next, childPatch.id);
@@ -243,7 +253,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const next = cloneProject(state.project);
       const node = findNode(next, id);
       if (!node) return state;
-      if (isAncestor(next, id, newParentId)) return state; // prevent cycles
+      if (isAncestor(next, id, newParentId)) return state;
       const detached = removeNode(next, id);
       if (!detached) return state;
       const parent = findNode(next, newParentId);
@@ -352,160 +362,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   exportJson: () => JSON.stringify(get().project, null, 2),
 }));
 
-/* -------------------- helpers -------------------- */
-
-function cloneProject(p: UiProject): UiProject {
-  return JSON.parse(JSON.stringify(p)) as UiProject;
-}
-
-function snapshotState(state: EditorState): HistorySnapshot {
-  return {
-    project: cloneProject(state.project),
-    activeScreenId: state.activeScreenId,
-    selectedNodeId: state.selectedNodeId,
-  };
-}
-
-function recordHistory(state: EditorState): Pick<EditorState, "historyPast" | "historyFuture"> {
-  return {
-    historyPast: [...state.historyPast, snapshotState(state)].slice(-MAX_HISTORY),
-    historyFuture: [],
-  };
-}
-
-export function collectIds(p: UiProject): Set<string> {
-  const ids = new Set<string>();
-  const walk = (n: WidgetNode) => {
-    ids.add(n.id);
-    (n.children ?? []).forEach(walk);
-  };
-  p.screens.forEach(walk);
-  return ids;
-}
-
-export function findNode(p: UiProject, id: string): WidgetNode | null {
-  const walk = (n: WidgetNode): WidgetNode | null => {
-    if (n.id === id) return n;
-    for (const c of n.children ?? []) {
-      const hit = walk(c);
-      if (hit) return hit;
-    }
-    return null;
-  };
-  for (const s of p.screens) {
-    const hit = walk(s);
-    if (hit) return hit;
-  }
-  return null;
-}
-
-export function findParent(p: UiProject, id: string): WidgetNode | null {
-  const walk = (n: WidgetNode): WidgetNode | null => {
-    for (const c of n.children ?? []) {
-      if (c.id === id) return n;
-      const hit = walk(c);
-      if (hit) return hit;
-    }
-    return null;
-  };
-  for (const s of p.screens) {
-    const hit = walk(s);
-    if (hit) return hit;
-  }
-  return null;
-}
-
-export function findScreenOf(p: UiProject, id: string): ScreenNode | null {
-  for (const s of p.screens) {
-    if (containsId(s, id)) return s;
-  }
-  return null;
-}
-
-function containsId(n: WidgetNode, id: string): boolean {
-  if (n.id === id) return true;
-  return (n.children ?? []).some((c) => containsId(c, id));
-}
-
-function insertChild(p: UiProject, parentId: string, child: WidgetNode): void {
-  const parent = findNode(p, parentId);
-  if (!parent) return;
-  if (!parent.children) parent.children = [];
-  parent.children.push(child);
-}
-
-function removeNode(p: UiProject, id: string): WidgetNode | null {
-  const parent = findParent(p, id);
-  if (!parent || !parent.children) return null;
-  const idx = parent.children.findIndex((c) => c.id === id);
-  if (idx < 0) return null;
-  const [detached] = parent.children.splice(idx, 1);
-  return detached;
-}
-
-function isAncestor(p: UiProject, ancestorId: string, nodeId: string): boolean {
-  const ancestor = findNode(p, ancestorId);
-  if (!ancestor) return false;
-  return containsId(ancestor, nodeId);
-}
-
-function clampIndex(value: number, max: number): number {
-  return Math.min(Math.max(0, value), max);
-}
-
-function defaultFrameFor(type: WidgetType, parentId: string, p: UiProject) {
-  const parent = findNode(p, parentId);
-  const parentW = (parent?.frame?.width ?? p.display.width) || 240;
-  const parentH = (parent?.frame?.height ?? p.display.height) || 240;
-  switch (type) {
-    case "label":
-      return normalizeTextNodeFrame(makeWidget("label_measure", "label"), {
-        x: 8,
-        y: 8,
-        width: Math.min(120, parentW - 16),
-        height: findFontFace({ fontFamily: "BDF", fontSize: 7 }).lineHeight,
-      });
-    case "button":
-      return { x: 8, y: 8, width: 80, height: 24 };
-    case "icon": {
-      const icon = getResolvedIconDefinition(DEFAULT_ICON_ID);
-      return { x: 8, y: 8, width: icon.width, height: icon.height };
-    }
-    case "panel":
-      return { x: 0, y: 0, width: parentW, height: Math.min(60, parentH) };
-    case "line":
-      return { x: 8, y: 8, width: 60, height: 1 };
-    case "rect":
-      return { x: 8, y: 8, width: 40, height: 24 };
-    case "image":
-      return { x: 8, y: 8, width: 32, height: 32 };
-    default:
-      return { x: 0, y: 0, width: 40, height: 20 };
-  }
-}
-
-function normalizeTextNodeFrame(node: WidgetNode, frame: Frame): Frame {
-  if (node.type !== "label") {
-    return frame;
-  }
-  const face = findFontFace((node.props ?? {}) as Parameters<typeof findFontFace>[0]);
-  return {
-    ...frame,
-    height: face.lineHeight,
-  };
-}
-
-function normalizeProjectTextFrames(project: UiProject): UiProject {
-  const walk = (node: WidgetNode) => {
-    if (node.frame) {
-      node.frame = normalizeTextNodeFrame(node, node.frame);
-    }
-    for (const child of node.children ?? []) {
-      walk(child);
-    }
-  };
-  for (const screen of project.screens) {
-    walk(screen);
-  }
-  return project;
+function makeWidgetWithFrame(id: string, type: WidgetType, parentId: string, p: UiProject): WidgetNode {
+  const node = makeWidget(id, type);
+  node.frame = defaultFrameFor(type, parentId, p);
+  return node;
 }

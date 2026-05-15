@@ -1,4 +1,4 @@
-import type { ColorRef, PaletteEntry } from "../ui-ir";
+import type { ColorRef, PaletteEntry } from "@entities/ui-project";
 
 const DEFAULTS: Record<string, string> = {
   bg: "#000000",

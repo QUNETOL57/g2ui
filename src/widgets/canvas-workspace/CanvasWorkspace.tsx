@@ -1,23 +1,36 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 
-import type { Frame, IconProps, LayoutMode, LineProps } from "../../ui-ir";
-import { findNode, findParent, useEditorStore } from "../../store/editorStore";
-import { layoutTree } from "../../layout/layoutEngine";
-import type { LayoutNode } from "../../layout/layoutEngine";
-import { resolveColor } from "../../layout/color";
+import type { Frame, IconProps, LayoutMode } from "@entities/ui-project";
+import { useEditorStore } from "@entities/ui-project/model/store";
+import { findNode, findParent } from "@entities/ui-project/model/tree-ops";
+import { layoutTree } from "@entities/ui-project/lib/layoutEngine";
+import type { LayoutNode } from "@entities/ui-project/lib/layoutEngine";
+import { resolveColor } from "@entities/ui-project/lib/color";
+import { normalizeIconFrame } from "@entities/icon/iconSizing";
+
+import { CanvasRulers } from "./CanvasRulers";
+import { SelectionOverlay } from "./SelectionOverlay";
 import { PreviewNode } from "./renderNode";
-import { normalizeIconFrame } from "../icons/iconSizing";
-
-const MAX_ZOOM = 15;
-const MIN_ZOOM = 1;
-const ZOOM_STEP = 0.5;
-const WHEEL_ZOOM_STEP = 0.25;
-const PIXEL_GRID_VISIBLE_ZOOM = 5;
-const RULER_SIZE = 24;
-
-type ResizeHandle = "nw" | "ne" | "sw" | "se";
-type LineHandle = "start" | "end";
+import {
+  MAX_ZOOM,
+  MIN_ZOOM,
+  PIXEL_GRID_VISIBLE_ZOOM,
+  RULER_SIZE,
+  ZOOM_STEP,
+  borderInsetFor,
+  clamp,
+  clampPointToContent,
+  lineEndpointsForRect,
+  lineFrameFromEndpoints,
+  lineStrokeWidthFor,
+  nextWheelZoom,
+  normalizeZoom,
+  sameFrame,
+  visualRectForNode,
+} from "./lib/geometry";
+import type { LineHandle, Point, ResizeHandle } from "./lib/geometry";
+import { findLayoutNode, findParentLayoutNode } from "./lib/layoutNodeOps";
 
 interface ActiveCanvasInteraction {
   type: "move" | "resize" | "line-end";
@@ -37,137 +50,13 @@ interface ActiveCanvasInteraction {
   isIcon?: boolean;
   iconId?: string;
   latestFrame?: Frame;
-  latestLineProps?: Partial<LineProps>;
+  latestLineProps?: Partial<import("@entities/ui-project").LineProps>;
 }
 
 interface DragPreview {
   nodeId: string;
   rect: Frame;
-  lineProps?: Partial<LineProps>;
-}
-
-interface Point {
-  x: number;
-  y: number;
-}
-
-function clampZoom(value: number): number {
-  return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value));
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
-}
-
-function normalizeZoom(value: number): number {
-  const clamped = clampZoom(value);
-  if (clamped >= PIXEL_GRID_VISIBLE_ZOOM) {
-    return Math.round(clamped);
-  }
-  return Math.round(clamped * 4) / 4;
-}
-
-function sameFrame(a: Frame, b: Frame): boolean {
-  return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
-}
-
-function borderInsetFor(node: { style?: { drawBorder?: boolean; borderWidth?: number } } | null | undefined): number {
-  if (!node?.style?.drawBorder) return 0;
-  return Math.max(0, node.style.borderWidth ?? 1);
-}
-
-function lineStrokeWidthFor(node: { style?: { borderWidth?: number }; props?: unknown } | null | undefined): number {
-  const props = (node?.props ?? {}) as Partial<LineProps>;
-  return Math.max(1, node?.style?.borderWidth ?? props.strokeWidth ?? 1);
-}
-
-function visualRectForNode(node: { type: string; style?: { borderWidth?: number }; props?: unknown } | null, rect: Frame): Frame {
-  if (node?.type !== "line") return rect;
-  return { ...rect, height: Math.max(rect.height, lineStrokeWidthFor(node)) };
-}
-
-function lineEndpointsForRect(node: { props?: unknown; style?: { borderWidth?: number } }, rect: Frame): { start: Point; end: Point } {
-  const props = (node.props ?? {}) as Partial<LineProps>;
-  const strokeWidth = lineStrokeWidthFor(node);
-  const visualHeight = Math.max(rect.height, strokeWidth);
-  const fallbackY = Math.floor(visualHeight / 2);
-  const pad = Math.floor(strokeWidth / 2);
-  const maxY = Math.max(pad, visualHeight - Math.ceil(strokeWidth / 2));
-  const visibleY = (value: number | undefined) => Math.min(maxY, Math.max(pad, Math.round(value ?? fallbackY)));
-  return {
-    start: {
-      x: rect.x + Math.round(props.x1 ?? 0),
-      y: rect.y + visibleY(props.y1),
-    },
-    end: {
-      x: rect.x + Math.round(props.x2 ?? Math.max(0, rect.width - 1)),
-      y: rect.y + visibleY(props.y2),
-    },
-  };
-}
-
-function clampPointToContent(point: Point, parentRect: Frame, inset: number): Point {
-  return {
-    x: clamp(point.x, parentRect.x + inset, parentRect.x + parentRect.width - inset),
-    y: clamp(point.y, parentRect.y + inset, parentRect.y + parentRect.height - inset),
-  };
-}
-
-function lineFrameFromEndpoints(start: Point, end: Point, parentRect: Frame, strokeWidth: number): { frame: Frame; props: Partial<LineProps> } {
-  const strokeOffset = Math.floor(strokeWidth / 2);
-  const strokeEndOffset = Math.ceil(strokeWidth / 2) - 1;
-  const left = Math.min(start.x, end.x) - strokeOffset;
-  const top = Math.min(start.y, end.y) - strokeOffset;
-  const right = Math.max(start.x, end.x) + strokeEndOffset;
-  const bottom = Math.max(start.y, end.y) + strokeEndOffset;
-  const width = Math.max(1, right - left + 1);
-  const height = Math.max(1, bottom - top + 1);
-  return {
-    frame: {
-      x: left - parentRect.x,
-      y: top - parentRect.y,
-      width,
-      height,
-    },
-    props: {
-      x1: start.x - left,
-      y1: start.y - top,
-      x2: end.x - left,
-      y2: end.y - top,
-    },
-  };
-}
-
-function nextWheelZoom(currentZoom: number, direction: 1 | -1): number {
-  if (currentZoom >= PIXEL_GRID_VISIBLE_ZOOM) {
-    return clampZoom(currentZoom + direction * WHEEL_ZOOM_STEP);
-  }
-
-  const next = currentZoom + direction * WHEEL_ZOOM_STEP;
-  if (direction > 0 && next >= PIXEL_GRID_VISIBLE_ZOOM) {
-    return PIXEL_GRID_VISIBLE_ZOOM;
-  }
-  return normalizeZoom(next);
-}
-
-function findLayoutNode(layoutNode: LayoutNode, nodeId: string | null): LayoutNode | null {
-  if (!nodeId) return null;
-  if (layoutNode.node.id === nodeId) return layoutNode;
-  for (const child of layoutNode.children) {
-    const match = findLayoutNode(child, nodeId);
-    if (match) return match;
-  }
-  return null;
-}
-
-function findParentLayoutNode(layoutNode: LayoutNode, nodeId: string | null): LayoutNode | null {
-  if (!nodeId) return null;
-  for (const child of layoutNode.children) {
-    if (child.node.id === nodeId) return layoutNode;
-    const match = findParentLayoutNode(child, nodeId);
-    if (match) return match;
-  }
-  return null;
+  lineProps?: Partial<import("@entities/ui-project").LineProps>;
 }
 
 export function CanvasWorkspace() {
@@ -187,20 +76,8 @@ export function CanvasWorkspace() {
   const pendingDraftFrameRef = useRef<{ nodeId: string; frame: Frame } | null>(null);
   const draftFrameRafRef = useRef<number | null>(null);
   const pendingWheelFocusRef = useRef<
-    | {
-        type: "frame";
-        viewportX: number;
-        viewportY: number;
-        localX: number;
-        localY: number;
-      }
-    | {
-        type: "shell";
-        viewportX: number;
-        viewportY: number;
-        ratioX: number;
-        ratioY: number;
-      }
+    | { type: "frame"; viewportX: number; viewportY: number; localX: number; localY: number }
+    | { type: "shell"; viewportX: number; viewportY: number; ratioX: number; ratioY: number }
     | null
   >(null);
 
@@ -280,9 +157,7 @@ export function CanvasWorkspace() {
   const selectedParentMode: LayoutMode = selectedParentNode?.layout?.mode ?? "absolute";
   const selectionHasFrame = !!selectedNode?.frame && !!selectedParentLayoutNode;
   const canMoveSelection =
-    !!selectedNode &&
-    selectedNode.id !== screen.id &&
-    selectionHasFrame;
+    !!selectedNode && selectedNode.id !== screen.id && selectionHasFrame;
   const canResizeSelection =
     !!selectedNode &&
     selectedNode.id !== screen.id &&
@@ -748,7 +623,10 @@ export function CanvasWorkspace() {
         parentMode: "absolute",
         handle,
         isIcon: selectedNode.type === "icon",
-        iconId: selectedNode.type === "icon" ? ((selectedNode.props ?? {}) as Partial<IconProps>).iconId : undefined,
+        iconId:
+          selectedNode.type === "icon"
+            ? ((selectedNode.props ?? {}) as Partial<IconProps>).iconId
+            : undefined,
       });
     };
 
@@ -818,10 +696,7 @@ export function CanvasWorkspace() {
       >
         <div
           className="canvas-stage-center"
-          style={{
-            width: stageContentWidth,
-            height: stageContentHeight,
-          }}
+          style={{ width: stageContentWidth, height: stageContentHeight }}
         >
           <div
             className="canvas-artboard-shell"
@@ -832,112 +707,15 @@ export function CanvasWorkspace() {
               top: artboardOffsetY,
             }}
           >
-            <div
-              className="canvas-ruler canvas-ruler-top"
-              style={{ left: RULER_SIZE, top: 0, width: scaledW, height: RULER_SIZE }}
-            >
-              {horizontalTicks.map((tick) => (
-                <div
-                  key={`top-${tick.value}`}
-                  className={`canvas-ruler-tick horizontal ${tick.major ? "major" : ""}`}
-                  style={{ left: tick.offset }}
-                />
-              ))}
-              {showGuides && displayedSelectedRect ? (
-                <>
-                  <div className="canvas-ruler-label horizontal" style={{ left: Math.round(displayedSelectedRect.x * renderZoom) }}>
-                    {displayedSelectedRect.x}
-                  </div>
-                  <div
-                    className="canvas-ruler-label horizontal"
-                    style={{ left: Math.round((displayedSelectedRect.x + displayedSelectedRect.width) * renderZoom) }}
-                  >
-                    {displayedSelectedRect.x + displayedSelectedRect.width}
-                  </div>
-                </>
-              ) : null}
-            </div>
-
-            <div
-              className="canvas-ruler canvas-ruler-bottom"
-              style={{ left: RULER_SIZE, top: RULER_SIZE + scaledH, width: scaledW, height: RULER_SIZE }}
-            >
-              {horizontalTicks.map((tick) => (
-                <div
-                  key={`bottom-${tick.value}`}
-                  className={`canvas-ruler-tick horizontal bottom ${tick.major ? "major" : ""}`}
-                  style={{ left: tick.offset }}
-                />
-              ))}
-              {showGuides && displayedSelectedRect ? (
-                <>
-                  <div
-                    className="canvas-ruler-label horizontal bottom"
-                    style={{ left: Math.round(displayedSelectedRect.x * renderZoom) }}
-                  >
-                    {displayedSelectedRect.x}
-                  </div>
-                  <div
-                    className="canvas-ruler-label horizontal bottom"
-                    style={{ left: Math.round((displayedSelectedRect.x + displayedSelectedRect.width) * renderZoom) }}
-                  >
-                    {displayedSelectedRect.x + displayedSelectedRect.width}
-                  </div>
-                </>
-              ) : null}
-            </div>
-
-            <div
-              className="canvas-ruler canvas-ruler-left"
-              style={{ left: 0, top: RULER_SIZE, width: RULER_SIZE, height: scaledH }}
-            >
-              {verticalTicks.map((tick) => (
-                <div
-                  key={`left-${tick.value}`}
-                  className={`canvas-ruler-tick vertical ${tick.major ? "major" : ""}`}
-                  style={{ top: tick.offset }}
-                />
-              ))}
-              {showGuides && displayedSelectedRect ? (
-                <>
-                  <div className="canvas-ruler-label vertical left" style={{ top: Math.round(displayedSelectedRect.y * renderZoom) }}>
-                    {displayedSelectedRect.y}
-                  </div>
-                  <div
-                    className="canvas-ruler-label vertical left"
-                    style={{ top: Math.round((displayedSelectedRect.y + displayedSelectedRect.height) * renderZoom) }}
-                  >
-                    {displayedSelectedRect.y + displayedSelectedRect.height}
-                  </div>
-                </>
-              ) : null}
-            </div>
-
-            <div
-              className="canvas-ruler canvas-ruler-right"
-              style={{ left: RULER_SIZE + scaledW, top: RULER_SIZE, width: RULER_SIZE, height: scaledH }}
-            >
-              {verticalTicks.map((tick) => (
-                <div
-                  key={`right-${tick.value}`}
-                  className={`canvas-ruler-tick vertical right ${tick.major ? "major" : ""}`}
-                  style={{ top: tick.offset }}
-                />
-              ))}
-              {showGuides && displayedSelectedRect ? (
-                <>
-                  <div className="canvas-ruler-label vertical right" style={{ top: Math.round(displayedSelectedRect.y * renderZoom) }}>
-                    {displayedSelectedRect.y}
-                  </div>
-                  <div
-                    className="canvas-ruler-label vertical right"
-                    style={{ top: Math.round((displayedSelectedRect.y + displayedSelectedRect.height) * renderZoom) }}
-                  >
-                    {displayedSelectedRect.y + displayedSelectedRect.height}
-                  </div>
-                </>
-              ) : null}
-            </div>
+            <CanvasRulers
+              horizontalTicks={horizontalTicks}
+              verticalTicks={verticalTicks}
+              scaledW={scaledW}
+              scaledH={scaledH}
+              renderZoom={renderZoom}
+              selectionRect={showGuides ? displayedSelectedRect : null}
+              showSelectionLabels={showGuides}
+            />
 
             <div
               className="device-frame"
@@ -964,68 +742,16 @@ export function CanvasWorkspace() {
                 </div>
               ) : null}
               {showGuides && displayedSelectedRect ? (
-                <>
-                  <div
-                    className="canvas-guide vertical"
-                    style={{ left: Math.round(displayedSelectedRect.x * renderZoom), top: 0, height: scaledH }}
-                  />
-                  <div
-                    className="canvas-guide vertical"
-                    style={{ left: Math.round((displayedSelectedRect.x + displayedSelectedRect.width) * renderZoom), top: 0, height: scaledH }}
-                  />
-                  <div
-                    className="canvas-guide horizontal"
-                    style={{ top: Math.round(displayedSelectedRect.y * renderZoom), left: 0, width: scaledW }}
-                  />
-                  <div
-                    className="canvas-guide horizontal"
-                    style={{ top: Math.round((displayedSelectedRect.y + displayedSelectedRect.height) * renderZoom), left: 0, width: scaledW }}
-                  />
-                  {canResizeSelection ? (
-                    <>
-                      <div
-                        className="canvas-selection-handle nw"
-                        style={{ left: Math.round(displayedSelectedRect.x * renderZoom), top: Math.round(displayedSelectedRect.y * renderZoom) }}
-                        onMouseDown={handleResizeMouseDown("nw")}
-                      />
-                      <div
-                        className="canvas-selection-handle ne"
-                        style={{ left: Math.round((displayedSelectedRect.x + displayedSelectedRect.width) * renderZoom), top: Math.round(displayedSelectedRect.y * renderZoom) }}
-                        onMouseDown={handleResizeMouseDown("ne")}
-                      />
-                      <div
-                        className="canvas-selection-handle sw"
-                        style={{ left: Math.round(displayedSelectedRect.x * renderZoom), top: Math.round((displayedSelectedRect.y + displayedSelectedRect.height) * renderZoom) }}
-                        onMouseDown={handleResizeMouseDown("sw")}
-                      />
-                      <div
-                        className="canvas-selection-handle se"
-                        style={{ left: Math.round((displayedSelectedRect.x + displayedSelectedRect.width) * renderZoom), top: Math.round((displayedSelectedRect.y + displayedSelectedRect.height) * renderZoom) }}
-                        onMouseDown={handleResizeMouseDown("se")}
-                      />
-                    </>
-                  ) : null}
-                  {displayedLineEndpoints ? (
-                    <>
-                      <div
-                        className="canvas-line-endpoint-handle start"
-                        style={{
-                          left: Math.round((displayedLineEndpoints.start.x + 0.5) * renderZoom),
-                          top: Math.round((displayedLineEndpoints.start.y + 0.5) * renderZoom),
-                        }}
-                        onMouseDown={handleLineEndpointMouseDown("start")}
-                      />
-                      <div
-                        className="canvas-line-endpoint-handle end"
-                        style={{
-                          left: Math.round((displayedLineEndpoints.end.x + 0.5) * renderZoom),
-                          top: Math.round((displayedLineEndpoints.end.y + 0.5) * renderZoom),
-                        }}
-                        onMouseDown={handleLineEndpointMouseDown("end")}
-                      />
-                    </>
-                  ) : null}
-                </>
+                <SelectionOverlay
+                  rect={displayedSelectedRect}
+                  renderZoom={renderZoom}
+                  scaledW={scaledW}
+                  scaledH={scaledH}
+                  showResizeHandles={canResizeSelection}
+                  lineEndpoints={displayedLineEndpoints}
+                  onResizeHandleMouseDown={handleResizeMouseDown}
+                  onLineEndpointMouseDown={handleLineEndpointMouseDown}
+                />
               ) : null}
 
               <div

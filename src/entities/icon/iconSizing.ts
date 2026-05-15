@@ -1,4 +1,4 @@
-import type { Frame, IconProps, WidgetNode } from "../../ui-ir";
+import type { Frame, IconProps, WidgetNode } from "@entities/ui-project";
 import { getIconDefinition } from "./iconLibrary";
 import type { IconDefinition } from "./iconLibraryData";
 

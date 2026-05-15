@@ -1,4 +1,4 @@
-import type { Frame, LayoutSpec, WidgetNode } from "../ui-ir";
+import type { Frame, LayoutSpec, WidgetNode } from "@entities/ui-project";
 
 /**
  * Layout engine v1.

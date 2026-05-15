@@ -6,8 +6,8 @@ import { PrismLight as SyntaxHighlighter } from "react-syntax-highlighter";
 import json from "react-syntax-highlighter/dist/esm/languages/prism/json";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 
-import { IconButton } from "../../components/IconButton";
-import { useEditorStore } from "../../store/editorStore";
+import { IconButton } from "@shared/ui/IconButton";
+import { useEditorStore } from "@entities/ui-project/model/store";
 
 SyntaxHighlighter.registerLanguage("json", json);
 

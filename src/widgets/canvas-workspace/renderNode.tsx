@@ -6,14 +6,13 @@ import type {
   LineProps,
   PaletteEntry,
   WidgetNode,
-} from "../../ui-ir";
-
-import type { LayoutNode } from "../../layout/layoutEngine";
-import { resolveColor } from "../../layout/color";
-import { BitmapText } from "../fonts/BitmapText";
-import { findFontFace } from "../fonts/fontLibrary";
-import { IconGlyph } from "../icons/iconLibrary";
-import { DEFAULT_ICON_ID, getIconScaleForFrame, getResolvedIconDefinition } from "../icons/iconSizing";
+} from "@entities/ui-project";
+import type { LayoutNode } from "@entities/ui-project/lib/layoutEngine";
+import { resolveColor } from "@entities/ui-project/lib/color";
+import { BitmapText } from "@entities/font/BitmapText";
+import { findFontFace } from "@entities/font/fontLibrary";
+import { IconGlyph } from "@entities/icon/iconLibrary";
+import { DEFAULT_ICON_ID, getIconScaleForFrame, getResolvedIconDefinition } from "@entities/icon/iconSizing";
 
 interface RenderCtx {
   palette: PaletteEntry[] | undefined;

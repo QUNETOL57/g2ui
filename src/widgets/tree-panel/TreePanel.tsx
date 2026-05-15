@@ -1,8 +1,9 @@
 import { useState } from "react";
 import type { DragEvent } from "react";
 
-import type { WidgetNode, WidgetType } from "../../ui-ir";
-import { findNode, findParent, useEditorStore } from "../../store/editorStore";
+import type { WidgetNode, WidgetType } from "@entities/ui-project";
+import { useEditorStore } from "@entities/ui-project/model/store";
+import { findNode, findParent } from "@entities/ui-project/model/tree-ops";
 
 const ADD_TYPES: WidgetType[] = ["panel", "label", "button", "icon", "rect", "line"];
 type DropPosition = "before" | "inside" | "after";

@@ -1,0 +1,44 @@
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  justify-self: start;
+}
+
+.brandMain {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: 30px;
+  padding: 1px 8px 1px 1px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.logo {
+  display: block;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  color: var(--color-accent);
+}
+
+.name {
+  color: var(--color-text);
+  font-family: "Tiny5", ui-monospace, monospace;
+  font-size: 28px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+.accent {
+  color: var(--color-accent);
+}
+
+.white {
+  color: var(--color-text);
+}

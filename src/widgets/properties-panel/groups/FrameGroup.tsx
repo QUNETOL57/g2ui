@@ -2,6 +2,8 @@ import type { Frame, IconProps, WidgetNode } from "@entities/ui-project";
 import { getResolvedIconDefinition } from "@entities/icon/iconSizing";
 import { DraftNumberInput } from "@shared/ui/DraftNumberInput";
 
+import styles from "../PropertiesPanel.module.css";
+
 export function FrameGroup({
   node,
   draftFrame,
@@ -16,9 +18,9 @@ export function FrameGroup({
     ? getResolvedIconDefinition(((node.props ?? {}) as Partial<IconProps>).iconId)
     : null;
   return (
-    <div className="prop-group">
+    <div className={styles.group}>
       <h4>Transform</h4>
-      <div className="transform-grid">
+      <div className={styles.transformGrid}>
         <TransformField label="X" value={f.x} onChange={(v) => updateFrame(node.id, { x: v })} />
         <TransformField label="Y" value={f.y} onChange={(v) => updateFrame(node.id, { y: v })} />
         <TransformField
@@ -50,9 +52,9 @@ function TransformField({
   min?: number;
 }) {
   return (
-    <label className="transform-field">
+    <label className={styles.transformField}>
       <span>{label}</span>
-      <DraftNumberInput value={value} min={min} onChange={onChange} />
+      <DraftNumberInput value={value} min={min} onChange={onChange} variant="bare" />
     </label>
   );
 }

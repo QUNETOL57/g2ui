@@ -1,11 +1,17 @@
 import { useEffect, useState } from "react";
 
+import { cn } from "@shared/lib/cn";
+
+import styles from "./DraftNumberInput.module.css";
+
 interface DraftNumberInputProps {
   value: number;
   onChange: (value: number) => void;
   min?: number;
   max?: number;
   title?: string;
+  className?: string;
+  variant?: "default" | "bare";
 }
 
 export function DraftNumberInput({
@@ -14,6 +20,8 @@ export function DraftNumberInput({
   min,
   max,
   title,
+  className,
+  variant = "default",
 }: DraftNumberInputProps) {
   const [draft, setDraft] = useState(String(value));
 
@@ -45,6 +53,7 @@ export function DraftNumberInput({
       min={min}
       max={max}
       title={title}
+      className={cn(variant === "bare" ? styles.bare : styles.input, className)}
       onChange={(event) => setDraft(event.target.value)}
       onBlur={commit}
       onKeyDown={(event) => {

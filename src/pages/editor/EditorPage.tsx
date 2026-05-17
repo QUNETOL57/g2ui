@@ -1,12 +1,15 @@
 import { useEffect } from "react";
 
 import { useEditorStore } from "@entities/ui-project/model/store";
+import logoUrl from "@shared/assets/logo.svg";
+import { IconButton } from "@shared/ui/IconButton";
+import { TopBar } from "@shared/ui/TopBar";
 import { CanvasWorkspace } from "@widgets/canvas-workspace/CanvasWorkspace";
 import { ExportPanel } from "@widgets/export-panel/ExportPanel";
 import { PropertiesPanel } from "@widgets/properties-panel/PropertiesPanel";
 import { TreePanel } from "@widgets/tree-panel/TreePanel";
-import { IconButton } from "@shared/ui/IconButton";
-import logoUrl from "@shared/assets/logo.svg";
+
+import styles from "./EditorPage.module.css";
 
 interface EditorPageProps {
   onBackToLibrary: () => void;
@@ -58,33 +61,38 @@ export function EditorPage({ onBackToLibrary }: EditorPageProps) {
   }, [deleteNode, redo, selectedNodeId, undo]);
 
   return (
-    <div className="app-shell">
-      <div className="top-bar">
-        <div className="top-bar-brand">
-          <img className="top-bar-logo" src={logoUrl} alt="GuiMintLab Studio" title="GuiMintLab Studio" />
-          <div className="top-bar-brand-main">
+    <div className={styles.appShell}>
+      <TopBar>
+        <div className={styles.brand}>
+          <img
+            className={styles.brandLogo}
+            src={logoUrl}
+            alt="GuiMintLab Studio"
+            title="GuiMintLab Studio"
+          />
+          <div className={styles.brandMain}>
             <IconButton
-              className="library-link-button"
+              className={styles.libraryLink}
               onClick={onBackToLibrary}
               title="Back to project library"
               aria-label="Back to project library"
             >
               ←
             </IconButton>
-            <span className="top-bar-meta">
+            <span className={styles.brandMeta}>
               project <strong>{project.name}</strong> · schema {project.schemaVersion}
             </span>
           </div>
         </div>
-      </div>
-      <div className="left-panel">
+      </TopBar>
+      <div className={styles.leftPanel}>
         <TreePanel />
       </div>
-      <div className="center-panel">
+      <div className={styles.centerPanel}>
         <CanvasWorkspace />
-        {lastError ? <div className="error-banner">{lastError}</div> : null}
+        {lastError ? <div className={styles.errorBanner}>{lastError}</div> : null}
       </div>
-      <div className="right-panel">
+      <div className={styles.rightPanel}>
         <PropertiesPanel />
         <ExportPanel />
       </div>

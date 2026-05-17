@@ -1,5 +1,9 @@
 import type { ReactNode } from "react";
 
+import { cn } from "@shared/lib/cn";
+
+import styles from "../PropertiesPanel.module.css";
+
 export function InspectorCard({
   title,
   subtitle,
@@ -14,16 +18,16 @@ export function InspectorCard({
   children: ReactNode;
 }) {
   const titleContent = (
-    <span className="inspector-card-title-stack">
-      <span className="typography-card-title">{title}</span>
+    <span className={styles.inspectorCardTitleStack}>
+      <span className={styles.typographyCardTitle}>{title}</span>
       {subtitle ? <small>{subtitle}</small> : null}
     </span>
   );
 
   return (
-    <div className="inspector-card">
+    <div className={styles.inspectorCard}>
       {onToggle ? (
-        <label className="inspector-card-head inspector-card-toggle">
+        <label className={cn(styles.inspectorCardHead, styles.inspectorCardToggle)}>
           {titleContent}
           <input
             type="checkbox"
@@ -32,7 +36,7 @@ export function InspectorCard({
           />
         </label>
       ) : (
-        <div className="inspector-card-head">{titleContent}</div>
+        <div className={styles.inspectorCardHead}>{titleContent}</div>
       )}
       {children}
     </div>

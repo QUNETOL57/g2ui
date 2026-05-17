@@ -1,4 +1,7 @@
 import type { WidgetNode } from "@entities/ui-project";
+import { cn } from "@shared/lib/cn";
+
+import styles from "../PropertiesPanel.module.css";
 
 export function SelectedGroup({
   node,
@@ -8,23 +11,24 @@ export function SelectedGroup({
   updateNode: (id: string, patch: Partial<WidgetNode>) => void;
 }) {
   return (
-    <div className="prop-group inspector-summary">
-      <div className="inspector-title-row">
-        <span className="type-pill">{node.type}</span>
-        <span className="inspector-id" title={node.id}>
+    <div className={cn(styles.group, styles.summary)}>
+      <div className={styles.summaryTitleRow}>
+        <span className={styles.typePill}>{node.type}</span>
+        <span className={styles.summaryId} title={node.id}>
           {node.id}
         </span>
       </div>
-      <div className="prop-row">
+      <div className={styles.row}>
         <label>name</label>
         <input
           type="text"
+          className={styles.inputText}
           value={node.name ?? ""}
           placeholder={node.id}
           onChange={(e) => updateNode(node.id, { name: e.target.value || undefined })}
         />
       </div>
-      <label className="visibility-toggle">
+      <label className={styles.visibilityToggle}>
         <input
           type="checkbox"
           checked={node.visible !== false}

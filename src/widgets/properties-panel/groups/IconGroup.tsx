@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 
 import type { IconProps, WidgetNode } from "@entities/ui-project";
 import { ICON_GROUPS, IconGlyph } from "@entities/icon/iconLibrary";
+import { cn } from "@shared/lib/cn";
+
+import styles from "../PropertiesPanel.module.css";
 
 export function IconGroup({
   node,
@@ -44,23 +47,24 @@ export function IconGroup({
   }, [node.id, selectedGroup]);
 
   return (
-    <div className="prop-group">
+    <div className={styles.group}>
       <h4>Icon Library</h4>
-      <div className="prop-row">
+      <div className={styles.row}>
         <label>iconId</label>
         <input
           type="search"
+          className={styles.inputSearch}
           placeholder="search or enter iconId"
           value={iconSearch}
           onChange={(e) => onChange({ iconId: e.target.value })}
         />
       </div>
-      <div className="icon-browser">
+      <div className={styles.iconBrowser}>
         {filteredIconGroups.length > 0 ? (
           filteredIconGroups.map(([group, icons]) => (
             <details
               key={group}
-              className="icon-accordion"
+              className={styles.iconAccordion}
               open={Boolean(openGroups[group]) || Boolean(normalizedIconSearch)}
               onToggle={(event) => {
                 const isOpen = event.currentTarget.open;
@@ -70,7 +74,7 @@ export function IconGroup({
               }}
             >
               <summary>{group}</summary>
-              <div className="icon-grid">
+              <div className={styles.iconGrid}>
                 {icons.map((icon) => {
                   const isSelected = p.iconId === icon.id;
                   return (
@@ -79,13 +83,13 @@ export function IconGroup({
                       type="button"
                       onClick={() => onChange({ iconId: icon.id })}
                       title={icon.id}
-                      className={`icon-tile${isSelected ? " selected" : ""}`}
+                      className={cn(styles.iconTile, isSelected && styles.iconTileSelected)}
                     >
-                      <div className="icon-tile-preview">
+                      <div className={styles.iconTilePreview}>
                         <IconGlyph iconId={icon.id} />
                       </div>
-                      <span className="icon-tile-name">{icon.id}</span>
-                      <span className="icon-tile-size">
+                      <span className={styles.iconTileName}>{icon.id}</span>
+                      <span className={styles.iconTileSize}>
                         {icon.width}x{icon.height}
                       </span>
                     </button>
@@ -95,7 +99,7 @@ export function IconGroup({
             </details>
           ))
         ) : (
-          <p className="field-hint">No icons found for "{iconSearch}".</p>
+          <p className={styles.fieldHint}>No icons found for "{iconSearch}".</p>
         )}
       </div>
     </div>

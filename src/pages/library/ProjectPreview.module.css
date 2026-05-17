@@ -1,0 +1,72 @@
+.preview {
+  position: relative;
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+  padding: 34px 46px 28px;
+  background:
+    linear-gradient(#181818 1px, transparent 1px),
+    linear-gradient(90deg, #181818 1px, transparent 1px),
+    #101010;
+  background-size: 12px 12px;
+  color: var(--color-text-muted);
+}
+
+.previewCompact {
+  flex: initial;
+  height: auto;
+  min-height: 136px;
+  padding: 30px 42px 22px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.canvas {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  overflow: visible;
+}
+
+.screen {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  overflow: hidden;
+  background: #000000;
+  box-shadow:
+    0 0 0 1px rgba(227, 232, 240, 0.42),
+    0 0 0 3px var(--color-border),
+    0 16px 30px rgba(0, 0, 0, 0.36);
+}
+
+.scaledContent {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: top left;
+}
+
+.sizeLabel {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+  color: rgba(227, 232, 240, 0.62);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.sizeLabelWidth {
+  top: calc(50% - var(--preview-screen-height) / 2 - var(--preview-size-label-gap));
+  left: 50%;
+  transform: translate(-50%, -100%);
+}
+
+.sizeLabelHeight {
+  top: 50%;
+  left: calc(50% + var(--preview-screen-width) / 2 + var(--preview-size-label-gap));
+  transform: translateY(-50%);
+}

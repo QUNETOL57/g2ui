@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties } from "react";
 
 import type { Frame, IconProps, LayoutMode } from "@entities/ui-project";
 import { useEditorStore } from "@entities/ui-project/model/store";
@@ -8,8 +7,10 @@ import { layoutTree } from "@entities/ui-project/lib/layoutEngine";
 import type { LayoutNode } from "@entities/ui-project/lib/layoutEngine";
 import { resolveColor } from "@entities/ui-project/lib/color";
 import { normalizeIconFrame } from "@entities/icon/iconSizing";
+import { RangeSlider } from "@shared/ui/RangeSlider";
 
 import { CanvasRulers } from "./CanvasRulers";
+import styles from "./CanvasWorkspace.module.css";
 import { SelectionOverlay } from "./SelectionOverlay";
 import { PreviewNode } from "./renderNode";
 import {
@@ -124,9 +125,9 @@ export function CanvasWorkspace() {
 
   if (!screen || !layout) {
     return (
-      <div className="canvas-wrap">
-        <div className="canvas-toolbar">no screen</div>
-        <div className="canvas-stage" />
+      <div className={styles.wrap}>
+        <div className={styles.toolbar}>no screen</div>
+        <div className={styles.stage} />
       </div>
     );
   }
@@ -667,39 +668,40 @@ export function CanvasWorkspace() {
     };
 
   return (
-    <div className="canvas-wrap">
-      <div className="canvas-toolbar">
-        <div className="canvas-toolbar-meta">
+    <div className={styles.wrap}>
+      <div className={styles.toolbar}>
+        <div className={styles.toolbarMeta}>
           <span>{w} × {h}</span>
           <span>rgb565</span>
         </div>
-        <div className="canvas-zoom-control">
+        <div className={styles.zoomControl}>
           <label>zoom</label>
-          <input
-            type="range"
+          <RangeSlider
             min={MIN_ZOOM}
             max={MAX_ZOOM}
             step={ZOOM_STEP}
             value={zoom}
-            style={{ "--range-progress": `${zoomProgress}%` } as CSSProperties}
+            progress={zoomProgress}
             onChange={(e) => setZoom(normalizeZoom(Number(e.target.value)))}
           />
-          <span>{renderZoom.toFixed(renderZoom % 1 === 0 ? 0 : 1)}×</span>
+          <span className={styles.zoomValue}>
+            {renderZoom.toFixed(renderZoom % 1 === 0 ? 0 : 1)}×
+          </span>
         </div>
       </div>
       <div
-        className="canvas-stage"
+        className={styles.stage}
         ref={stageRef}
         onMouseDown={(e) => {
           if (e.target === e.currentTarget) selectNode(null);
         }}
       >
         <div
-          className="canvas-stage-center"
+          className={styles.stageCenter}
           style={{ width: stageContentWidth, height: stageContentHeight }}
         >
           <div
-            className="canvas-artboard-shell"
+            className={styles.artboardShell}
             style={{
               width: artboardWidth,
               height: artboardHeight,
@@ -718,7 +720,7 @@ export function CanvasWorkspace() {
             />
 
             <div
-              className="device-frame"
+              className={styles.deviceFrame}
               style={{
                 width: scaledW,
                 height: scaledH,
@@ -730,7 +732,7 @@ export function CanvasWorkspace() {
             >
               {showPixelGrid ? (
                 <div
-                  className="canvas-pixel-grid"
+                  className={styles.pixelGrid}
                   style={{
                     backgroundImage:
                       "linear-gradient(#171717 1px, transparent 1px), linear-gradient(90deg, #171717 1px, transparent 1px)",
@@ -738,7 +740,7 @@ export function CanvasWorkspace() {
                     backgroundSize: `${renderZoom}px ${renderZoom}px`,
                   }}
                 >
-                  <div className="canvas-pixel-grid-frame" />
+                  <div className={styles.pixelGridFrame} />
                 </div>
               ) : null}
               {showGuides && displayedSelectedRect ? (
@@ -755,7 +757,7 @@ export function CanvasWorkspace() {
               ) : null}
 
               <div
-                className="canvas-scaled-content"
+                className={styles.scaledContent}
                 style={{
                   position: "relative",
                   width: w,

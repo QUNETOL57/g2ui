@@ -1,5 +1,7 @@
 import type { ButtonProps, WidgetNode } from "@entities/ui-project";
+import { cn } from "@shared/lib/cn";
 
+import styles from "../PropertiesPanel.module.css";
 import { TypographyCard } from "../ui/TypographyCard";
 
 export function ButtonGroup({
@@ -19,13 +21,14 @@ export function ButtonGroup({
   const paddingBottom = p.paddingBottom ?? p.paddingY ?? 0;
   const paddingLeft = p.paddingLeft ?? p.paddingX ?? 0;
   return (
-    <div className="prop-group text-prop-group">
+    <div className={cn(styles.group, styles.textGroup)}>
       <h4>Content</h4>
-      <div className="text-field-stack">
+      <div className={styles.textFieldStack}>
         <label>text</label>
         <input
           aria-label="button text"
           type="text"
+          className={styles.inputText}
           value={p.text ?? ""}
           onChange={(e) => onChange({ text: e.target.value })}
         />

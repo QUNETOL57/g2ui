@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 
 import type { ColorRef } from "@entities/ui-project";
+import { cn } from "@shared/lib/cn";
 import { CustomSelect } from "@shared/ui/CustomSelect";
+
+import styles from "../PropertiesPanel.module.css";
 
 export function ColorField({
   label,
@@ -17,10 +20,10 @@ export function ColorField({
   const current = value ?? { kind: "hex", value: "#FFFFFF" };
   const mode = current.kind;
   return (
-    <div className="prop-row color-field">
+    <div className={cn(styles.row, styles.colorField)}>
       <label>{label}</label>
-      <div className="color-field-control">
-        <div className={`color-mode-row${mode === "hex" ? "" : " full-width"}`}>
+      <div className={styles.colorFieldControl}>
+        <div className={cn(styles.colorModeRow, mode !== "hex" && styles.colorModeRowFull)}>
           <CustomSelect
             ariaLabel={`${label} mode`}
             value={mode}
@@ -108,6 +111,7 @@ function HexColorInput({
   return (
     <input
       type="color"
+      className={styles.hexInput}
       value={draft}
       onChange={(event) => scheduleChange(event.target.value)}
       onBlur={commitLatest}

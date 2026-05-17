@@ -1,9 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { cn } from "@shared/lib/cn";
+
+import styles from "./CustomSelect.module.css";
+
 export interface SelectOption {
   value: string;
   label: string;
   color?: string;
+}
+
+interface CustomSelectProps {
+  value: string;
+  options: SelectOption[];
+  onChange: (value: string) => void;
+  ariaLabel?: string;
+  className?: string;
+  triggerClassName?: string;
 }
 
 export function CustomSelect({
@@ -11,12 +24,9 @@ export function CustomSelect({
   options,
   onChange,
   ariaLabel,
-}: {
-  value: string;
-  options: SelectOption[];
-  onChange: (value: string) => void;
-  ariaLabel?: string;
-}) {
+  className,
+  triggerClassName,
+}: CustomSelectProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const selected = useMemo(
@@ -36,10 +46,10 @@ export function CustomSelect({
   }, [open]);
 
   return (
-    <div className="custom-select" ref={rootRef}>
+    <div className={cn(styles.root, className)} ref={rootRef}>
       <button
         type="button"
-        className="custom-select-trigger"
+        className={cn(styles.trigger, triggerClassName)}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={ariaLabel}
@@ -48,20 +58,22 @@ export function CustomSelect({
           if (event.key === "Escape") setOpen(false);
         }}
       >
-        <span className="custom-select-value">
-          {selected?.color ? (
-            <span
-              className="custom-select-swatch"
-              style={{ backgroundColor: selected.color }}
-              aria-hidden="true"
-            />
-          ) : null}
-          <span>{selected?.label ?? value}</span>
+        <span className={styles.triggerValueText}>
+          <span className={styles.value}>
+            {selected?.color ? (
+              <span
+                className={styles.swatch}
+                style={{ backgroundColor: selected.color }}
+                aria-hidden="true"
+              />
+            ) : null}
+            <span>{selected?.label ?? value}</span>
+          </span>
         </span>
-        <span className="custom-select-chevron" aria-hidden="true" />
+        <span className={styles.chevron} aria-hidden="true" />
       </button>
       {open ? (
-        <div className="custom-select-menu" role="listbox">
+        <div className={styles.menu} role="listbox">
           {options.map((option) => {
             const isSelected = option.value === value;
             return (
@@ -70,19 +82,19 @@ export function CustomSelect({
                 type="button"
                 role="option"
                 aria-selected={isSelected}
-                className={`custom-select-option${isSelected ? " selected" : ""}`}
+                className={cn(styles.option, isSelected && styles.optionSelected)}
                 onClick={() => {
                   onChange(option.value);
                   setOpen(false);
                 }}
               >
-                <span className="custom-select-check" aria-hidden="true">
+                <span className={styles.check} aria-hidden="true">
                   {isSelected ? "✓" : ""}
                 </span>
-                <span className="custom-select-value">
+                <span className={styles.value}>
                   {option.color ? (
                     <span
-                      className="custom-select-swatch"
+                      className={styles.swatch}
                       style={{ backgroundColor: option.color }}
                       aria-hidden="true"
                     />

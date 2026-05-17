@@ -1,5 +1,7 @@
 import { DraftNumberInput } from "@shared/ui/DraftNumberInput";
 
+import styles from "../PropertiesPanel.module.css";
+
 export function NumberField({
   label,
   value,
@@ -14,7 +16,7 @@ export function NumberField({
   max?: number;
 }) {
   return (
-    <div className="prop-row">
+    <div className={styles.row}>
       <label>{label}</label>
       <DraftNumberInput value={value} min={min} max={max} onChange={onChange} />
     </div>

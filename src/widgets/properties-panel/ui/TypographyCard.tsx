@@ -16,7 +16,10 @@ import type {
 } from "@entities/ui-project";
 import { findFontFace, getFontFamilyOptions, getFontSizes } from "@entities/font/fontLibrary";
 import type { BitmapFontStyle } from "@entities/font/fontTypes";
+import { cn } from "@shared/lib/cn";
 import { CustomSelect } from "@shared/ui/CustomSelect";
+
+import styles from "../PropertiesPanel.module.css";
 
 import { ColorField } from "./ColorField";
 import { InspectorCard } from "./InspectorCard";
@@ -60,8 +63,8 @@ export function TypographyCard({
   const fillEnabled = backgroundDefaultEnabled ? s.drawBackground !== false : Boolean(s.drawBackground);
 
   return (
-    <div className="typography-card">
-      <div className="typography-card-title">Typography</div>
+    <div className={styles.typographyCard}>
+      <div className={styles.typographyCardTitle}>Typography</div>
       <FontFields props={props} onChange={onPropsChange} compact />
       {align && onAlignChange ? (
         <AlignIconGroup value={align} onChange={onAlignChange} wide />
@@ -78,7 +81,7 @@ export function TypographyCard({
             value={paddingControls.verticalAlign}
             onChange={(verticalAlign) => paddingControls.onChange({ verticalAlign })}
           />
-          <div className="padding-grid-4">
+          <div className={styles.paddingGrid4}>
             <NumberField
               label="top"
               value={paddingControls.top}
@@ -106,7 +109,7 @@ export function TypographyCard({
           </div>
         </InspectorCard>
       ) : null}
-      <div className="typography-color-grid">
+      <div className={styles.typographyColorGrid}>
         <InspectorCard title="Text color">
           <ColorField
             label="color"
@@ -163,8 +166,8 @@ function FontFields({
 
   if (compact) {
     return (
-      <div className="font-fields-compact">
-        <div className="prop-row">
+      <div className={styles.fontFieldsCompact}>
+        <div className={styles.row}>
           <label>font</label>
           <CustomSelect
             ariaLabel="font family"
@@ -180,7 +183,7 @@ function FontFields({
             }}
           />
         </div>
-        <div className="font-toolbar-row">
+        <div className={styles.fontToolbarRow}>
           <StyleIconGroup
             value={selectedStyle}
             availableStyles={styleOptions}
@@ -193,7 +196,7 @@ function FontFields({
             }}
             compact
           />
-          <div className="font-size-control">
+          <div className={styles.fontSizeControl}>
             <label>size</label>
             <CustomSelect
               ariaLabel="font size"
@@ -209,7 +212,7 @@ function FontFields({
 
   return (
     <>
-      <div className="prop-row">
+      <div className={styles.row}>
         <label>font</label>
         <CustomSelect
           ariaLabel="font family"
@@ -236,7 +239,7 @@ function FontFields({
           onChange({ fontStyle: style, fontSize: nextSize, fontFace: undefined });
         }}
       />
-      <div className="prop-row">
+      <div className={styles.row}>
         <label>size</label>
         <CustomSelect
           ariaLabel="font size"
@@ -287,7 +290,7 @@ function StyleIconGroup({
 
   if (compact) {
     return (
-      <div className="font-style-control">
+      <div className={styles.fontStyleControl}>
         <label>style</label>
         {buttons}
       </div>
@@ -295,7 +298,7 @@ function StyleIconGroup({
   }
 
   return (
-    <div className="prop-row">
+    <div className={styles.row}>
       <label>style</label>
       {buttons}
     </div>
@@ -314,7 +317,7 @@ function AlignIconGroup({
   wide?: boolean;
 }) {
   return (
-    <div className={`prop-row align-control-row${wide ? " align-control-row-wide" : ""}`}>
+    <div className={cn(styles.row, wide && styles.alignRowWide)}>
       <label>{label}</label>
       <IconButtonGroup ariaLabel="label align">
         <IconToggleButton label="Align left" active={value === "left"} onClick={() => onChange("left")}>
@@ -339,7 +342,7 @@ function VerticalAlignIconGroup({
   onChange: (align: NonNullable<ButtonProps["verticalAlign"]>) => void;
 }) {
   return (
-    <div className="prop-row align-control-row align-control-row-wide">
+    <div className={cn(styles.row, styles.alignRowWide)}>
       <label>vertical</label>
       <IconButtonGroup ariaLabel="button vertical align">
         <IconToggleButton label="Align top" active={value === "top"} onClick={() => onChange("top")}>
@@ -358,7 +361,7 @@ function VerticalAlignIconGroup({
 
 function IconButtonGroup({ ariaLabel, children }: { ariaLabel: string; children: ReactNode }) {
   return (
-    <div className="icon-toggle-group" role="group" aria-label={ariaLabel}>
+    <div className={styles.iconToggleGroup} role="group" aria-label={ariaLabel}>
       {children}
     </div>
   );
@@ -380,7 +383,7 @@ function IconToggleButton({
   return (
     <button
       type="button"
-      className={`icon-toggle${active ? " active" : ""}`}
+      className={cn(styles.iconToggle, active && styles.iconToggleActive)}
       aria-label={label}
       aria-pressed={active}
       title={label}

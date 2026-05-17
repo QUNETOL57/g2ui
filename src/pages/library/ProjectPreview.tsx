@@ -2,7 +2,10 @@ import type { CSSProperties } from "react";
 
 import type { UiProject } from "@entities/ui-project";
 import { layoutTree } from "@entities/ui-project/lib/layoutEngine";
+import { cn } from "@shared/lib/cn";
 import { PreviewNode } from "@widgets/canvas-workspace/renderNode";
+
+import styles from "./ProjectPreview.module.css";
 
 export function ProjectPreview({
   project,
@@ -21,9 +24,9 @@ export function ProjectPreview({
   const sizeLabelGap = compact ? 8 : 10;
 
   return (
-    <div className={compact ? "project-preview is-compact" : "project-preview"}>
+    <div className={cn(styles.preview, compact && styles.previewCompact)}>
       <div
-        className="project-preview-canvas"
+        className={styles.canvas}
         style={{
           width: maxWidth,
           height: maxHeight,
@@ -32,19 +35,19 @@ export function ProjectPreview({
           "--preview-size-label-gap": `${sizeLabelGap}px`,
         } as CSSProperties}
       >
-        <div className="project-preview-size-label project-preview-size-label-width">
+        <div className={cn(styles.sizeLabel, styles.sizeLabelWidth)}>
           {project.display.width}
         </div>
-        <div className="project-preview-size-label project-preview-size-label-height">
+        <div className={cn(styles.sizeLabel, styles.sizeLabelHeight)}>
           {project.display.height}
         </div>
         <div
-          className="project-preview-screen"
+          className={styles.screen}
           style={{ width: previewWidth, height: previewHeight }}
         >
           {layout ? (
             <div
-              className="project-preview-scaled-content"
+              className={styles.scaledContent}
               style={{
                 width: project.display.width,
                 height: project.display.height,

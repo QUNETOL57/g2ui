@@ -14,4 +14,10 @@ export default defineConfig({
       "@shared": fileURLToPath(new URL("./src/shared", import.meta.url)),
     },
   },
+  css: {
+    modules: {
+      localsConvention: "camelCaseOnly",
+      generateScopedName: "[name]__[local]__[hash:base64:5]",
+    },
+  },
 });

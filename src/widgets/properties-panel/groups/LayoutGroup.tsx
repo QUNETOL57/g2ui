@@ -1,6 +1,8 @@
 import type { LayoutMode, WidgetNode } from "@entities/ui-project";
+import { cn } from "@shared/lib/cn";
 import { CustomSelect } from "@shared/ui/CustomSelect";
 
+import styles from "../PropertiesPanel.module.css";
 import { InspectorCard } from "../ui/InspectorCard";
 import { NumberField } from "../ui/NumberField";
 
@@ -13,10 +15,10 @@ export function LayoutGroup({
 }) {
   const l = node.layout ?? { mode: "absolute" as LayoutMode };
   return (
-    <div className="prop-group layout-group">
+    <div className={cn(styles.group)}>
       <h4>Layout</h4>
       <InspectorCard title="Flow">
-        <div className="prop-row">
+        <div className={styles.row}>
           <label>mode</label>
           <CustomSelect
             ariaLabel="layout mode"
@@ -29,7 +31,7 @@ export function LayoutGroup({
             onChange={(value) => updateLayout(node.id, { mode: value as LayoutMode })}
           />
         </div>
-        <div className="inline-grid-2">
+        <div className={styles.inlineGrid2}>
           <NumberField
             label="padding"
             value={l.padding ?? 0}
@@ -43,7 +45,7 @@ export function LayoutGroup({
             onChange={(v) => updateLayout(node.id, { gap: Math.max(0, v) })}
           />
         </div>
-        <div className="prop-row">
+        <div className={styles.row}>
           <label>align</label>
           <CustomSelect
             ariaLabel="layout align"
@@ -59,7 +61,7 @@ export function LayoutGroup({
             }
           />
         </div>
-        <p className="field-hint">Controls how children are arranged inside this container.</p>
+        <p className={styles.fieldHint}>Controls how children are arranged inside this container.</p>
       </InspectorCard>
     </div>
   );

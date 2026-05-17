@@ -14,6 +14,8 @@ import { findFontFace } from "@entities/font/fontLibrary";
 import { IconGlyph } from "@entities/icon/iconLibrary";
 import { DEFAULT_ICON_ID, getIconScaleForFrame, getResolvedIconDefinition } from "@entities/icon/iconSizing";
 
+import styles from "./renderNode.module.css";
+
 interface RenderCtx {
   palette: PaletteEntry[] | undefined;
   selectedId: string | null;
@@ -61,7 +63,7 @@ export function PreviewNode({
   return (
     <>
       <div
-        className="preview-node"
+        className={styles.previewNode}
         style={style}
         onMouseDown={(e) => {
           e.stopPropagation();

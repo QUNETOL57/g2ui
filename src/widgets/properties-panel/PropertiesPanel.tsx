@@ -1,5 +1,7 @@
 import { useEditorStore } from "@entities/ui-project/model/store";
 import { findNode } from "@entities/ui-project/model/tree-ops";
+import { EmptyState } from "@shared/ui/EmptyState";
+import { SectionTitle } from "@shared/ui/SectionTitle";
 
 import { ButtonGroup } from "./groups/ButtonGroup";
 import { FrameGroup } from "./groups/FrameGroup";
@@ -22,8 +24,8 @@ export function PropertiesPanel() {
   if (!selectedNodeId) {
     return (
       <>
-        <div className="section-title">Properties</div>
-        <div className="empty-state">Select a widget in the tree or canvas.</div>
+        <SectionTitle>Properties</SectionTitle>
+        <EmptyState>Select a widget in the tree or canvas.</EmptyState>
       </>
     );
   }
@@ -33,7 +35,7 @@ export function PropertiesPanel() {
 
   return (
     <>
-      <div className="section-title">Properties · {node.type}</div>
+      <SectionTitle>Properties · {node.type}</SectionTitle>
 
       <SelectedGroup node={node} updateNode={updateNode} />
 

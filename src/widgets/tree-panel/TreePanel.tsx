@@ -4,6 +4,10 @@ import type { DragEvent } from "react";
 import type { WidgetNode, WidgetType } from "@entities/ui-project";
 import { useEditorStore } from "@entities/ui-project/model/store";
 import { findNode, findParent } from "@entities/ui-project/model/tree-ops";
+import { cn } from "@shared/lib/cn";
+import { SectionTitle } from "@shared/ui/SectionTitle";
+
+import styles from "./TreePanel.module.css";
 
 const ADD_TYPES: WidgetType[] = ["panel", "label", "button", "icon", "rect", "line"];
 type DropPosition = "before" | "inside" | "after";
@@ -67,14 +71,14 @@ export function TreePanel() {
 
   return (
     <div>
-      <div className="section-title">Widget tree</div>
-      <div className="tree-add-bar">
+      <SectionTitle>Widget tree</SectionTitle>
+      <div className={styles.addBar}>
         {ADD_TYPES.map((type) => (
           <button key={type} onClick={() => addWidget(parentForAdd, type)}>
             + {type}
           </button>
         ))}
-        <div style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
+        <div className={styles.addBarSpacer}>
           <button
             disabled={!selectedNodeId}
             onClick={() => selectedNodeId && moveNode(selectedNodeId, "up")}
@@ -124,7 +128,7 @@ export function TreePanel() {
           onDrop={handleDrop}
         />
       ) : (
-        <div style={{ padding: 10, color: "var(--muted)" }}>No active screen</div>
+        <div className={styles.emptyScreen}>No active screen</div>
       )}
     </div>
   );
@@ -157,18 +161,23 @@ function TreeNode({
 }) {
   const isSelected = selectedId === node.id;
   const isDraggable = node.id !== activeScreenId;
-  const dropClass =
+  const dragOverClass =
     dropTarget?.nodeId === node.id
       ? dropTarget.position === "before"
-        ? " drag-over-before"
+        ? styles.rowDragOverBefore
         : dropTarget.position === "inside"
-          ? " drag-over-inside"
-        : " drag-over-after"
-      : "";
+          ? styles.rowDragOverInside
+          : styles.rowDragOverAfter
+      : undefined;
   return (
     <div>
       <div
-        className={`tree-row${isSelected ? " selected" : ""}${draggedNodeId === node.id ? " dragging" : ""}${dropClass}`}
+        className={cn(
+          styles.row,
+          isSelected && styles.rowSelected,
+          draggedNodeId === node.id && styles.rowDragging,
+          dragOverClass,
+        )}
         style={{ paddingLeft: 10 + depth * 14 }}
         draggable={isDraggable}
         onClick={() => onSelect(node.id)}
@@ -199,9 +208,9 @@ function TreeNode({
           onDrop(node.id, dropTarget.position);
         }}
       >
-        <span className="type-badge">{node.type}</span>
+        <span className={styles.typeBadge}>{node.type}</span>
         <span>{node.name ?? node.id}</span>
-        <span style={{ marginLeft: "auto", fontSize: 10, color: "var(--muted)" }}>{node.id}</span>
+        <span className={styles.rowId}>{node.id}</span>
       </div>
       {(node.children ?? []).map((child) => (
         <TreeNode

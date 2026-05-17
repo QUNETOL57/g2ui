@@ -4,9 +4,12 @@ import StayCurrentPortraitOutlinedIcon from "@mui/icons-material/StayCurrentPort
 import type { UiProject } from "@entities/ui-project";
 import type { TemplateId } from "@entities/ui-project/lib/projectTemplates";
 import { DISPLAY_PRESETS } from "@shared/config/displayPresets";
+import { cn } from "@shared/lib/cn";
+import { Button } from "@shared/ui/Button";
 import { CustomSelect } from "@shared/ui/CustomSelect";
 import { IconButton } from "@shared/ui/IconButton";
 
+import styles from "./CreateProjectPanel.module.css";
 import type { Orientation } from "./lib/library-helpers";
 import { templateLabel } from "./lib/library-helpers";
 import { ProjectPreview } from "./ProjectPreview";
@@ -43,31 +46,32 @@ export function CreateProjectPanel({
   const isEditing = mode === "edit";
 
   return (
-    <aside className="create-project-panel">
+    <aside className={styles.panel}>
       {isEditing ? (
-        <div className="create-project-panel-title is-edit">
-          <div className="project-library-kicker">Edit project</div>
+        <div className={cn(styles.title, styles.titleEdit)}>
+          <div className={styles.kicker}>Edit project</div>
         </div>
       ) : (
-        <div className="create-project-panel-title">
-          <div className="project-library-kicker">New project</div>
+        <div className={styles.title}>
+          <div className={styles.kicker}>New project</div>
           <p>Choose the display, orientation and starter content before opening the editor.</p>
         </div>
       )}
 
-      <label>
+      <label className={styles.label}>
         Project name
         <input
           type="text"
+          className={styles.input}
           value={projectName}
           onChange={(event) => onProjectNameChange(event.target.value)}
           placeholder="Untitled"
         />
       </label>
 
-      <div className="display-config-group">
-        <div className="display-config-label">Display</div>
-        <div className="display-config-controls">
+      <div className={styles.displayGroup}>
+        <div className={styles.displayLabel}>Display</div>
+        <div className={styles.displayControls}>
           <CustomSelect
             ariaLabel="display size"
             value={selectedPresetId}
@@ -76,13 +80,15 @@ export function CreateProjectPanel({
               label: preset.label,
             }))}
             onChange={onPresetChange}
+            triggerClassName={styles.triggerLg}
           />
 
-          <div className="orientation-picker" role="group" aria-label="orientation">
+          <div className={styles.orientationPicker} role="group" aria-label="orientation">
             <IconButton
-              className={["display-orientation-button", orientation === "landscape" ? "is-active" : ""]
-                .filter(Boolean)
-                .join(" ")}
+              className={cn(
+                styles.orientationButton,
+                orientation === "landscape" && styles.orientationActive,
+              )}
               aria-label="Landscape"
               title="Landscape"
               onClick={() => onOrientationChange("landscape")}
@@ -90,9 +96,10 @@ export function CreateProjectPanel({
               <StayCurrentLandscapeOutlinedIcon fontSize="inherit" />
             </IconButton>
             <IconButton
-              className={["display-orientation-button", orientation === "portrait" ? "is-active" : ""]
-                .filter(Boolean)
-                .join(" ")}
+              className={cn(
+                styles.orientationButton,
+                orientation === "portrait" && styles.orientationActive,
+              )}
               aria-label="Portrait"
               title="Portrait"
               onClick={() => onOrientationChange("portrait")}
@@ -103,7 +110,7 @@ export function CreateProjectPanel({
         </div>
       </div>
 
-      <div className="create-project-field">
+      <div className={styles.field}>
         <div>Template</div>
         <CustomSelect
           ariaLabel="template"
@@ -116,7 +123,7 @@ export function CreateProjectPanel({
         />
       </div>
 
-      <div className="create-project-summary">
+      <div className={styles.summary}>
         <ProjectPreview project={draftProject} compact />
         <div>
           <strong>
@@ -126,9 +133,9 @@ export function CreateProjectPanel({
         </div>
       </div>
 
-      <button className="create-project-submit" onClick={onSubmit}>
+      <Button size="lg" onClick={onSubmit}>
         {isEditing ? "Save changes" : "Create project"}
-      </button>
+      </Button>
     </aside>
   );
 }

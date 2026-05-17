@@ -10,10 +10,14 @@ import {
   resizeProject,
 } from "@entities/ui-project/lib/projectTemplates";
 import { DEFAULT_PRESET_ID, DISPLAY_PRESETS } from "@shared/config/displayPresets";
+import { BrandLogo } from "@shared/ui/BrandLogo";
+import { Button } from "@shared/ui/Button";
 import { IconButton } from "@shared/ui/IconButton";
-import logoUrl from "@shared/assets/logo.svg";
+import { Modal } from "@shared/ui/Modal";
+import { TopBar } from "@shared/ui/TopBar";
 
 import { CreateProjectPanel } from "./CreateProjectPanel";
+import styles from "./LibraryPage.module.css";
 import { ProjectPreview } from "./ProjectPreview";
 import {
   findPresetIdForSize,
@@ -142,28 +146,18 @@ export function LibraryPage({
   };
 
   return (
-    <main className="project-library-page">
-      <header className="top-bar project-library-header">
-        <div className="top-bar-brand">
-          <img className="top-bar-logo" src={logoUrl} alt="GuiMintLab Studio" title="GuiMintLab Studio" />
-          <span className="top-bar-brand-name">
-            <strong>
-              g<span className="top-bar-brand-accent">2</span>
-              <span className="top-bar-brand-white">ui</span>
-            </strong>
-          </span>
-        </div>
-      </header>
+    <main className={styles.libraryPage}>
+      <TopBar>
+        <BrandLogo />
+      </TopBar>
 
-      <section className="project-library-content">
-        <div className="project-grid-section">
-          <div className="section-title">Projects</div>
-
-          <div className="project-card-grid">
+      <section className={styles.libraryContent}>
+        <div className={styles.gridSection}>
+          <div className={styles.cardGrid}>
             {projects.map((item) => (
-              <article className="project-card" key={item.id}>
+              <article className={styles.card} key={item.id}>
                 <IconButton
-                  className="project-edit-button"
+                  className={styles.editButton}
                   title={`Edit ${item.name}`}
                   aria-label={`Edit ${item.name}`}
                   onClick={(event) => {
@@ -174,7 +168,7 @@ export function LibraryPage({
                   <EditRoundedIcon />
                 </IconButton>
                 <IconButton
-                  className="project-delete-button"
+                  className={styles.deleteButton}
                   title={`Delete ${item.name}`}
                   aria-label={`Delete ${item.name}`}
                   onClick={(event) => {
@@ -184,9 +178,13 @@ export function LibraryPage({
                 >
                   <CloseRoundedIcon />
                 </IconButton>
-                <button className="project-card-open" type="button" onClick={() => onOpenProject(item)}>
+                <button
+                  className={styles.cardOpen}
+                  type="button"
+                  onClick={() => onOpenProject(item)}
+                >
                   <ProjectPreview project={item.project} />
-                  <div className="project-card-footer">
+                  <div className={styles.cardFooter}>
                     <div>
                       <strong>{item.name}</strong>
                       <span>
@@ -198,13 +196,13 @@ export function LibraryPage({
                 </button>
               </article>
             ))}
-            <article className="project-card project-create-card">
+            <article className={`${styles.card} ${styles.createCard}`}>
               <button
-                className="project-create-card-button"
+                className={styles.createCardButton}
                 type="button"
                 onClick={() => setIsCreateModalOpen(true)}
               >
-                <span className="project-create-card-icon" aria-hidden="true">
+                <span className={styles.createCardIcon} aria-hidden="true">
                   <AddRoundedIcon />
                 </span>
                 <strong>New project</strong>
@@ -214,60 +212,36 @@ export function LibraryPage({
           </div>
         </div>
 
-        {isCreateModalOpen ? (
-          <div
-            className="project-create-modal-backdrop"
-            role="presentation"
-            onMouseDown={() => setIsCreateModalOpen(false)}
+        <Modal open={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} size="md">
+          <IconButton
+            className={styles.modalClose}
+            aria-label="Close create project"
+            title="Close"
+            onClick={() => setIsCreateModalOpen(false)}
           >
-            <div
-              className="project-create-modal"
-              role="dialog"
-              aria-modal="true"
-              aria-label="Create project"
-              onMouseDown={(event) => event.stopPropagation()}
-            >
-              <IconButton
-                className="project-create-modal-close"
-                aria-label="Close create project"
-                title="Close"
-                onClick={() => setIsCreateModalOpen(false)}
-              >
-                ×
-              </IconButton>
-              <CreateProjectPanel
-                mode="create"
-                selectedPresetId={selectedPresetId}
-                orientation={orientation}
-                template={template}
-                projectName={projectName}
-                createSize={createSize}
-                draftProject={draftProject}
-                onPresetChange={setSelectedPresetId}
-                onOrientationChange={setOrientation}
-                onTemplateChange={setTemplate}
-                onProjectNameChange={setProjectName}
-                onSubmit={handleCreate}
-              />
-            </div>
-          </div>
-        ) : null}
+            ×
+          </IconButton>
+          <CreateProjectPanel
+            mode="create"
+            selectedPresetId={selectedPresetId}
+            orientation={orientation}
+            template={template}
+            projectName={projectName}
+            createSize={createSize}
+            draftProject={draftProject}
+            onPresetChange={setSelectedPresetId}
+            onOrientationChange={setOrientation}
+            onTemplateChange={setTemplate}
+            onProjectNameChange={setProjectName}
+            onSubmit={handleCreate}
+          />
+        </Modal>
 
-        {projectEditing ? (
-          <div
-            className="project-create-modal-backdrop"
-            role="presentation"
-            onMouseDown={closeEditModal}
-          >
-            <div
-              className="project-create-modal"
-              role="dialog"
-              aria-modal="true"
-              aria-label="Edit project"
-              onMouseDown={(event) => event.stopPropagation()}
-            >
+        <Modal open={Boolean(projectEditing)} onClose={closeEditModal} size="md">
+          {projectEditing ? (
+            <>
               <IconButton
-                className="project-create-modal-close"
+                className={styles.modalClose}
                 aria-label="Close edit project"
                 title="Close"
                 onClick={closeEditModal}
@@ -288,43 +262,39 @@ export function LibraryPage({
                 onProjectNameChange={setEditProjectName}
                 onSubmit={saveEditedProject}
               />
-            </div>
-          </div>
-        ) : null}
+            </>
+          ) : null}
+        </Modal>
 
-        {projectPendingDelete ? (
-          <div
-            className="project-create-modal-backdrop"
-            role="presentation"
-            onMouseDown={closeDeleteModal}
-          >
-            <div
-              className="project-delete-modal"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="delete-project-title"
-              aria-describedby="delete-project-description"
-              onMouseDown={(event) => event.stopPropagation()}
-            >
+        <Modal
+          open={Boolean(projectPendingDelete)}
+          onClose={closeDeleteModal}
+          size="sm"
+          className={styles.deleteDialog}
+        >
+          {projectPendingDelete ? (
+            <>
               <h2 id="delete-project-title">Delete project?</h2>
               <p id="delete-project-description">
-                This will delete <strong>{projectPendingDelete.name}</strong> from the project library.
+                This will delete <strong>{projectPendingDelete.name}</strong> from the project
+                library.
               </p>
-              <div className="project-delete-modal-actions">
-                <button type="button" onClick={closeDeleteModal}>
+              <div className={styles.deleteActions}>
+                <Button type="button" size="sm" onClick={closeDeleteModal}>
                   Cancel
-                </button>
-                <button
-                  className="project-delete-confirm-button"
+                </Button>
+                <Button
                   type="button"
+                  size="sm"
+                  variant="danger"
                   onClick={confirmDeleteProject}
                 >
                   Delete
-                </button>
+                </Button>
               </div>
-            </div>
-          </div>
-        ) : null}
+            </>
+          ) : null}
+        </Modal>
       </section>
     </main>
   );

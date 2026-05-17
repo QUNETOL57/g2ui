@@ -6,8 +6,11 @@ import { PrismLight as SyntaxHighlighter } from "react-syntax-highlighter";
 import json from "react-syntax-highlighter/dist/esm/languages/prism/json";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 
-import { IconButton } from "@shared/ui/IconButton";
 import { useEditorStore } from "@entities/ui-project/model/store";
+import { IconButton } from "@shared/ui/IconButton";
+import { SidebarDisclosure } from "@shared/ui/SectionTitle";
+
+import styles from "./ExportPanel.module.css";
 
 SyntaxHighlighter.registerLanguage("json", json);
 
@@ -21,11 +24,10 @@ export function ExportPanel() {
   const output = useMemo(() => exportJson(), [exportJson, project]);
 
   return (
-    <details className="sidebar-disclosure">
-      <summary className="section-title">Project JSON</summary>
-      <div className="prop-group">
+    <SidebarDisclosure summary="Project JSON">
+      <div className={styles.group}>
         <h4>Export</h4>
-        <div className="code-preview" aria-label="Exported project JSON">
+        <div className={styles.codePreview} aria-label="Exported project JSON">
           <SyntaxHighlighter
             language="json"
             style={oneDark}
@@ -41,7 +43,7 @@ export function ExportPanel() {
             {output}
           </SyntaxHighlighter>
         </div>
-        <div className="panel-actions">
+        <div className={styles.actions}>
           <IconButton
             onClick={() => navigator.clipboard?.writeText(output)}
             aria-label="Copy JSON to clipboard"
@@ -67,22 +69,22 @@ export function ExportPanel() {
             <FileDownloadOutlinedIcon />
           </IconButton>
         </div>
-        <p className="hint">
+        <p className={styles.hint}>
           Save this file to your ESP-IDF project and embed it via
           <code>EMBED_FILES</code>. The <code>guimintlab</code> component parses
           it on-device — no C regeneration step.
         </p>
       </div>
 
-      <div className="prop-group">
+      <div className={styles.group}>
         <h4>Import</h4>
         <textarea
-          className="export-output"
+          className={styles.importInput}
           placeholder="paste project.json here"
           value={pasted}
           onChange={(e) => setPasted(e.target.value)}
         />
-        <div className="panel-actions">
+        <div className={styles.actions}>
           <IconButton
             onClick={() => importJson(pasted)}
             aria-label="Load JSON"
@@ -93,6 +95,6 @@ export function ExportPanel() {
           </IconButton>
         </div>
       </div>
-    </details>
+    </SidebarDisclosure>
   );
 }

@@ -1,8 +1,10 @@
 import type { MouseEvent as ReactMouseEvent } from "react";
 
 import type { Frame } from "@entities/ui-project";
+import { cn } from "@shared/lib/cn";
 
 import type { LineHandle, Point, ResizeHandle } from "./lib/geometry";
+import styles from "./SelectionOverlay.module.css";
 
 interface SelectionOverlayProps {
   rect: Frame;
@@ -14,6 +16,13 @@ interface SelectionOverlayProps {
   onResizeHandleMouseDown: (handle: ResizeHandle) => (event: ReactMouseEvent<HTMLDivElement>) => void;
   onLineEndpointMouseDown: (handle: LineHandle) => (event: ReactMouseEvent<HTMLDivElement>) => void;
 }
+
+const resizeHandleClass: Record<ResizeHandle, string> = {
+  nw: styles.handleNw,
+  ne: styles.handleNe,
+  sw: styles.handleSw,
+  se: styles.handleSe,
+};
 
 export function SelectionOverlay({
   rect,
@@ -32,29 +41,29 @@ export function SelectionOverlay({
 
   return (
     <>
-      <div className="canvas-guide vertical" style={{ left, top: 0, height: scaledH }} />
-      <div className="canvas-guide vertical" style={{ left: right, top: 0, height: scaledH }} />
-      <div className="canvas-guide horizontal" style={{ top, left: 0, width: scaledW }} />
-      <div className="canvas-guide horizontal" style={{ top: bottom, left: 0, width: scaledW }} />
+      <div className={cn(styles.guide, styles.guideVertical)} style={{ left, top: 0, height: scaledH }} />
+      <div className={cn(styles.guide, styles.guideVertical)} style={{ left: right, top: 0, height: scaledH }} />
+      <div className={cn(styles.guide, styles.guideHorizontal)} style={{ top, left: 0, width: scaledW }} />
+      <div className={cn(styles.guide, styles.guideHorizontal)} style={{ top: bottom, left: 0, width: scaledW }} />
       {showResizeHandles ? (
         <>
           <div
-            className="canvas-selection-handle nw"
+            className={cn(styles.handle, resizeHandleClass.nw)}
             style={{ left, top }}
             onMouseDown={onResizeHandleMouseDown("nw")}
           />
           <div
-            className="canvas-selection-handle ne"
+            className={cn(styles.handle, resizeHandleClass.ne)}
             style={{ left: right, top }}
             onMouseDown={onResizeHandleMouseDown("ne")}
           />
           <div
-            className="canvas-selection-handle sw"
+            className={cn(styles.handle, resizeHandleClass.sw)}
             style={{ left, top: bottom }}
             onMouseDown={onResizeHandleMouseDown("sw")}
           />
           <div
-            className="canvas-selection-handle se"
+            className={cn(styles.handle, resizeHandleClass.se)}
             style={{ left: right, top: bottom }}
             onMouseDown={onResizeHandleMouseDown("se")}
           />
@@ -63,7 +72,7 @@ export function SelectionOverlay({
       {lineEndpoints ? (
         <>
           <div
-            className="canvas-line-endpoint-handle start"
+            className={styles.endpoint}
             style={{
               left: Math.round((lineEndpoints.start.x + 0.5) * renderZoom),
               top: Math.round((lineEndpoints.start.y + 0.5) * renderZoom),
@@ -71,7 +80,7 @@ export function SelectionOverlay({
             onMouseDown={onLineEndpointMouseDown("start")}
           />
           <div
-            className="canvas-line-endpoint-handle end"
+            className={styles.endpoint}
             style={{
               left: Math.round((lineEndpoints.end.x + 0.5) * renderZoom),
               top: Math.round((lineEndpoints.end.y + 0.5) * renderZoom),

@@ -1,5 +1,7 @@
 import type { ColorRef, WidgetNode } from "@entities/ui-project";
+import { cn } from "@shared/lib/cn";
 
+import styles from "../PropertiesPanel.module.css";
 import { ColorField } from "../ui/ColorField";
 import { InspectorCard } from "../ui/InspectorCard";
 import { NumberField } from "../ui/NumberField";
@@ -30,7 +32,7 @@ export function StyleGroup({
 
   if (node.type === "icon") {
     return (
-      <div className="prop-group appearance-group">
+      <div className={cn(styles.group, styles.appearanceGroup)}>
         <h4>Appearance</h4>
         <InspectorCard title="Icon color">
           <ColorField
@@ -46,7 +48,7 @@ export function StyleGroup({
 
   if (node.type === "line") {
     return (
-      <div className="prop-group appearance-group">
+      <div className={cn(styles.group, styles.appearanceGroup)}>
         <h4>Appearance</h4>
         <InspectorCard title="Stroke">
           <ColorField
@@ -67,7 +69,7 @@ export function StyleGroup({
   }
 
   return (
-    <div className="prop-group appearance-group">
+    <div className={cn(styles.group, styles.appearanceGroup)}>
       <h4>Appearance</h4>
       {showFill ? (
         <InspectorCard

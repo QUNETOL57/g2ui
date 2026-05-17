@@ -1,0 +1,10 @@
+.emptyState {
+  margin: 12px;
+  padding: 12px;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-md);
+  line-height: 1.45;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-2);
+}

@@ -1,0 +1,71 @@
+:root {
+  color-scheme: dark;
+
+  --color-bg: #0b0e13;
+  --color-bg-deep: #0b0b0b;
+  --color-surface: #080808;
+  --color-surface-2: #0d0d0d;
+  --color-surface-3: #111111;
+  --color-surface-4: #131313;
+  --color-panel: #141922;
+  --color-panel-2: #1b2230;
+
+  --color-border: #303030;
+  --color-border-soft: #242424;
+  --color-border-strong: #6f6f6f;
+
+  --color-text: #e3e8f0;
+  --color-text-strong: #f4f4f4;
+  --color-text-soft: #b8b8b8;
+  --color-text-muted: #8e98ab;
+
+  --color-accent: #f74f9e;
+  --color-accent-soft: rgba(247, 79, 158, 0.14);
+  --color-accent-bg: rgba(247, 79, 158, 0.22);
+  --color-accent-overlay: rgba(247, 79, 158, 0.72);
+
+  --color-danger: #ff3347;
+  --color-danger-bg: rgba(255, 51, 71, 0.18);
+
+  --color-shadow: rgba(0, 0, 0, 0.32);
+  --color-shadow-strong: rgba(0, 0, 0, 0.62);
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-pill: 999px;
+
+  --space-1: 4px;
+  --space-2: 6px;
+  --space-3: 8px;
+  --space-4: 10px;
+  --space-5: 12px;
+  --space-6: 14px;
+  --space-7: 18px;
+  --space-8: 24px;
+
+  --font-size-xs: 10px;
+  --font-size-sm: 11px;
+  --font-size-md: 12px;
+  --font-size-base: 13px;
+  --font-size-lg: 14px;
+  --font-size-xl: 18px;
+
+  --font-family-base:
+    ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-family-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Legacy alias-токены — используются в инлайн-стилях и компонентах извне. */
+  --bg: var(--color-bg);
+  --panel: var(--color-panel);
+  --panel-2: var(--color-panel-2);
+  --border: var(--color-border);
+  --fg: var(--color-text);
+  --muted: var(--color-text-muted);
+  --accent: var(--color-accent);
+  --accent-strong: var(--color-accent);
+  --accent-soft: var(--color-accent-soft);
+  --danger: var(--color-danger);
+
+  font-family: var(--font-family-base);
+}

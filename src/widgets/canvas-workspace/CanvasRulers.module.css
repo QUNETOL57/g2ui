@@ -1,0 +1,79 @@
+.ruler {
+  position: absolute;
+  z-index: 4;
+  color: var(--color-text-muted);
+  pointer-events: none;
+  user-select: none;
+}
+
+.tick {
+  position: absolute;
+  background: rgba(227, 232, 240, 0.55);
+}
+
+.tickHorizontal {
+  bottom: 4px;
+  width: 1px;
+  height: 6px;
+}
+
+.tickHorizontal.major {
+  height: 11px;
+}
+
+.tickHorizontalBottom {
+  top: 4px;
+  bottom: auto;
+}
+
+.tickVertical {
+  right: 4px;
+  width: 6px;
+  height: 1px;
+}
+
+.tickVertical.major {
+  width: 11px;
+}
+
+.tickVerticalRight {
+  left: 4px;
+  right: auto;
+}
+
+.label {
+  position: absolute;
+  color: rgba(227, 232, 240, 0.78);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.labelHorizontal {
+  top: 2px;
+  transform: translateX(-50%);
+}
+
+.labelHorizontalBottom {
+  top: 13px;
+  transform: translateX(-50%);
+}
+
+.labelVertical {
+  transform: translateY(-50%);
+}
+
+.labelVerticalLeft {
+  right: 10px;
+  transform: translateY(-50%);
+}
+
+.labelVerticalRight {
+  left: 10px;
+  transform: translateY(-50%);
+}
+
+.major {
+  /* shared modifier */
+}

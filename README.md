@@ -9,13 +9,23 @@ over the `UiProject → ScreenNode → WidgetNode` tree.
 
 ## What lives here
 
-- `src/store/` — Zustand store over IR (tree-first, stable ids).
-- `src/features/tree/` — widget tree panel.
-- `src/features/canvas/` — canvas workspace + preview renderer.
-- `src/features/properties/` — property inspector.
-- `src/features/export/` — IR export + C codegen UI.
-- `src/layout/` — shared layout semantics (mirrors runtime v1).
-- `src/samples/` — starter projects.
+FSD-inspired layout. Dependency direction is `app → pages → widgets → entities → shared`.
+
+- `src/app/` — root composition (providers, view switching, global styles).
+- `src/pages/library/` — project library screen (cards, create/edit/delete modals).
+- `src/pages/editor/` — editor screen shell + keyboard shortcuts.
+- `src/widgets/tree-panel/` — widget tree panel.
+- `src/widgets/canvas-workspace/` — canvas workspace + preview renderer (rulers, selection overlay, pure geometry helpers).
+- `src/widgets/properties-panel/` — property inspector (per-type groups + shared inspector controls).
+- `src/widgets/export-panel/` — IR export + C codegen UI.
+- `src/entities/ui-project/` — canonical IR (`schema`, `types`, `validate`, `defaults`, `ids`), Zustand store (`model/store`), tree ops (`model/tree-ops`), undo/redo (`model/history`), shared layout semantics (`lib/layoutEngine`, `lib/color`), starter projects (`samples/`).
+- `src/entities/icon/` — icon library + sizing helpers.
+- `src/entities/font/` — bitmap font library + `BitmapText` renderer.
+- `src/shared/ui/` — generic UI primitives (IconButton, CustomSelect, DraftNumberInput).
+- `src/shared/config/` — display presets and other configuration data.
+- `src/shared/assets/` — logo, font sources.
+
+Imports use `@app`, `@pages`, `@widgets`, `@entities`, `@shared` aliases — see `vite.config.ts` and `tsconfig.json`.
 
 ## Commands
 

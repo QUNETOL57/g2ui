@@ -3,21 +3,22 @@ name: guimintlab-studio
 services:
   api:
     build:
-      context: ../apps/api
+      context: ./apps/api
       dockerfile: Dockerfile
     image: guimintlab-api:dev
     container_name: guimintlab-api
     restart: unless-stopped
     env_file:
-      - ../.env
+      - path: .env
+        required: false
     environment:
       API_HOST: 0.0.0.0
       API_PORT: 8000
     ports:
-      - "8000:8000"
+      - "58008:8000"
     volumes:
-      - ../apps/api/src:/app/src:ro
-      - ../apps/api/alembic:/app/alembic:ro
+      - ./apps/api/src:/app/src:ro
+      - ./apps/api/alembic:/app/alembic:ro
     command: >
       uvicorn guimintlab_api.main:app
       --host 0.0.0.0
@@ -38,23 +39,32 @@ services:
     working_dir: /app
     command: >
       sh -c "
-        npm install -g pnpm@9.15.0 &&
-        pnpm install --frozen-lockfile &&
-        pnpm --filter web dev --host 0.0.0.0
+        cd apps/web &&
+        npm config set fetch-retries 5 &&
+        npm config set fetch-retry-mintimeout 20000 &&
+        npm config set fetch-retry-maxtimeout 120000 &&
+        npm config set fetch-timeout 300000 &&
+        npm install &&
+        npm run dev -- --host 0.0.0.0
       "
     ports:
-      - "5173:5173"
+      - "58009:5173"
     volumes:
-      - ../:/app
-      - /app/node_modules
-      - /app/apps/web/node_modules
+      - ./:/app
+      - web_node_modules:/app/apps/web/node_modules
+      - web_npm_cache:/root/.npm
     env_file:
-      - ../.env
+      - path: .env
+        required: false
     environment:
-      VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
-      VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:-}
-      VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY:-}
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:58008}
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-}
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING: "true"
     depends_on:
       - api
+
+volumes:
+  web_node_modules:
+  web_npm_cache:

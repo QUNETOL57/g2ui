@@ -1,0 +1,22 @@
+{
+  "name": "guimintlab-studio",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "dev:web": "npm --prefix apps/web run dev",
+    "build:web": "npm --prefix apps/web run build",
+    "test:web": "npm --prefix apps/web run test",
+    "lint:web": "npm --prefix apps/web run lint --if-present",
+    "dev:api": "docker compose up api",
+    "dev:docker": "docker compose up",
+    "dev:docker:full": "docker compose --profile full up",
+    "dev:docker:build": "docker compose --profile full build",
+    "down": "docker compose --profile full down",
+    "gen:types": "openapi-typescript http://localhost:58008/openapi.json -o apps/web/src/shared/api/schema.d.ts"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.7.0",
+    "openapi-typescript": "^7.4.4",
+    "vite": "^6.4.2"
+  }
+}

@@ -30,6 +30,8 @@ import {
 
 interface LibraryPageProps {
   projects: ProjectCard[];
+  status?: "local" | "loading" | "synced" | "saving" | "error";
+  error?: string | null;
   onOpenProject: (project: ProjectCard) => void;
   onCreateProject: (card: ProjectCard) => void;
   onDeleteProject: (projectId: string) => void;
@@ -38,6 +40,8 @@ interface LibraryPageProps {
 
 export function LibraryPage({
   projects,
+  status = "local",
+  error = null,
   onOpenProject,
   onCreateProject,
   onDeleteProject,
@@ -149,6 +153,7 @@ export function LibraryPage({
     <main className={styles.libraryPage}>
       <TopBar>
         <BrandLogo />
+        <span className={styles.syncStatus}>{statusLabel(status, error)}</span>
       </TopBar>
 
       <section className={styles.libraryContent}>
@@ -298,4 +303,12 @@ export function LibraryPage({
       </section>
     </main>
   );
+}
+
+function statusLabel(status: NonNullable<LibraryPageProps["status"]>, error: string | null): string {
+  if (status === "loading") return "Loading canvases...";
+  if (status === "saving") return "Saving...";
+  if (status === "synced") return "Synced with API";
+  if (status === "error") return error ? `API error: ${error}` : "API error";
+  return "Local mode";
 }

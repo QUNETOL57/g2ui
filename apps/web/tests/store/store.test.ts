@@ -274,6 +274,31 @@ describe("store: updateNode / updateFrame / updateProps / updateLayout / updateS
     expect(node?.frame?.height).toBeGreaterThan(0);
   });
 
+  it("can update props without writing history", () => {
+    const id = get().addWidget("screen_main", "label")!;
+    const historyLength = get().historyPast.length;
+    get().updateProps(id, { text: "Draft" }, { history: false });
+    const node = findNode(get().project, id);
+    expect((node?.props as { text: string }).text).toBe("Draft");
+    expect(get().historyPast).toHaveLength(historyLength);
+  });
+
+  it("commits a silent edit batch as one undo step", () => {
+    const id = get().addWidget("screen_main", "label")!;
+    get().beginHistoryBatch();
+    get().updateProps(id, { text: "D" }, { history: false });
+    get().updateProps(id, { text: "Dr" }, { history: false });
+    get().updateProps(id, { text: "Draft" }, { history: false });
+    get().commitHistoryBatch();
+
+    const historyLength = get().historyPast.length;
+    expect(historyLength).toBe(2);
+    expect((findNode(get().project, id)?.props as { text: string }).text).toBe("Draft");
+
+    get().undo();
+    expect((findNode(get().project, id)?.props as { text: string }).text).toBe("Label");
+  });
+
   it("updateLayout merges layout patch with sensible defaults", () => {
     const id = get().addWidget("screen_main", "panel")!;
     get().updateLayout(id, { mode: "row", padding: 4, gap: 2 });

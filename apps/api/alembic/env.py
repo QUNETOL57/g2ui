@@ -1,11 +1,11 @@
 import asyncio
 from logging.config import fileConfig
 
-from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
+from alembic import context
 from guimintlab_api.db import Base
 from guimintlab_api.models import *  # noqa: F401,F403  (load all models)
 from guimintlab_api.settings import settings
@@ -19,9 +19,7 @@ target_metadata = Base.metadata
 
 
 def get_url() -> str:
-    return settings.alembic_database_url or settings.database_url.replace(
-        "postgresql+asyncpg://", "postgresql://"
-    )
+    return settings.async_database_url
 
 
 def run_migrations_offline() -> None:
@@ -48,7 +46,12 @@ async def run_async_migrations() -> None:
     if url.startswith("postgresql://"):
         url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
     cfg["sqlalchemy.url"] = url
-    connectable = async_engine_from_config(cfg, prefix="sqlalchemy.", poolclass=pool.NullPool)
+    connectable = async_engine_from_config(
+        cfg,
+        prefix="sqlalchemy.",
+        poolclass=pool.NullPool,
+        connect_args={"statement_cache_size": 0},
+    )
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)
     await connectable.dispose()

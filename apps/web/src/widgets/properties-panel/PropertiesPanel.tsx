@@ -20,6 +20,8 @@ export function PropertiesPanel() {
   const updateProps = useEditorStore((s) => s.updateProps);
   const updateLayout = useEditorStore((s) => s.updateLayout);
   const updateStyle = useEditorStore((s) => s.updateStyle);
+  const beginHistoryBatch = useEditorStore((s) => s.beginHistoryBatch);
+  const commitHistoryBatch = useEditorStore((s) => s.commitHistoryBatch);
 
   if (!selectedNodeId) {
     return (
@@ -63,8 +65,10 @@ export function PropertiesPanel() {
         <ButtonGroup
           node={node}
           palette={project.palette}
-          onChange={(patch) => updateProps(node.id, patch)}
+          onChange={(patch, options) => updateProps(node.id, patch, options)}
           onStyleChange={(patch) => updateStyle(node.id, patch)}
+          onBeginHistoryBatch={beginHistoryBatch}
+          onCommitHistoryBatch={commitHistoryBatch}
         />
       )}
       {node.type === "icon" && (

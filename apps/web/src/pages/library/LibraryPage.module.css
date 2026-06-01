@@ -13,6 +13,12 @@
   background: var(--color-border);
 }
 
+.syncStatus {
+  margin-left: auto;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
 .gridSection {
   min-height: calc(100vh - 48px);
   background: #121212;

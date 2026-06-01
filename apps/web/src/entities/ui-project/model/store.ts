@@ -36,6 +36,7 @@ interface EditorState {
   activeScreenId: string;
   selectedNodeId: string | null;
   draftFrame: { nodeId: string; frame: Frame } | null;
+  historyBatchBase: HistorySnapshot | null;
   lastError: string | null;
   historyPast: HistorySnapshot[];
   historyFuture: HistorySnapshot[];
@@ -58,10 +59,12 @@ interface EditorState {
 
   updateNode: (id: string, patch: Partial<WidgetNode>) => void;
   updateFrame: (id: string, frame: Partial<NonNullable<WidgetNode["frame"]>>) => void;
-  updateProps: (id: string, patch: Record<string, unknown>) => void;
+  updateProps: (id: string, patch: Record<string, unknown>, options?: { history?: boolean }) => void;
   updateLayout: (id: string, patch: Partial<NonNullable<WidgetNode["layout"]>>) => void;
   updateStyle: (id: string, patch: Partial<NonNullable<WidgetNode["style"]>>) => void;
   setDraftFrame: (draftFrame: { nodeId: string; frame: Frame } | null) => void;
+  beginHistoryBatch: () => void;
+  commitHistoryBatch: () => void;
 
   importJson: (json: string) => boolean;
   exportJson: () => string;
@@ -74,6 +77,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   activeScreenId: initialProject.initialScreenId,
   selectedNodeId: null,
   draftFrame: null,
+  historyBatchBase: null,
   lastError: null,
   historyPast: [],
   historyFuture: [],
@@ -86,6 +90,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       activeScreenId: project.initialScreenId,
       selectedNodeId: null,
       draftFrame: null,
+      historyBatchBase: null,
     }));
   },
 
@@ -124,6 +129,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       activeScreenId: p.initialScreenId,
       selectedNodeId: null,
       draftFrame: null,
+      historyBatchBase: null,
     }));
   },
 
@@ -137,6 +143,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         activeScreenId: previous.activeScreenId,
         selectedNodeId: previous.selectedNodeId,
         draftFrame: null,
+        historyBatchBase: null,
         historyPast: nextPast,
         historyFuture: [snapshotState(state), ...state.historyFuture].slice(0, MAX_HISTORY),
       };
@@ -151,6 +158,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         activeScreenId: next.activeScreenId,
         selectedNodeId: next.selectedNodeId,
         draftFrame: null,
+        historyBatchBase: null,
         historyPast: [...state.historyPast, snapshotState(state)].slice(-MAX_HISTORY),
         historyFuture: state.historyFuture.slice(1),
       };
@@ -282,7 +290,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       return { ...recordHistory(state), project: next, draftFrame: null };
     }),
 
-  updateProps: (id, patch) =>
+  updateProps: (id, patch, options = {}) =>
     set((state) => {
       const next = cloneProject(state.project);
       const node = findNode(next, id);
@@ -305,7 +313,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       if (node.type === "label") {
         node.frame = normalizeTextNodeFrame(node, node.frame ?? defaultFrameFor("label", "", next));
       }
-      return { ...recordHistory(state), project: next, draftFrame: null };
+      const history = options.history === false ? {} : recordHistory(state);
+      return { ...history, project: next, draftFrame: null };
     }),
 
   updateLayout: (id, patch) =>
@@ -336,6 +345,25 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   setDraftFrame: (draftFrame) => set({ draftFrame }),
 
+  beginHistoryBatch: () =>
+    set((state) => {
+      if (state.historyBatchBase) return state;
+      return { historyBatchBase: snapshotState(state) };
+    }),
+
+  commitHistoryBatch: () =>
+    set((state) => {
+      if (!state.historyBatchBase) return state;
+      if (historySnapshotMatchesState(state.historyBatchBase, state)) {
+        return { historyBatchBase: null };
+      }
+      return {
+        historyBatchBase: null,
+        historyPast: [...state.historyPast, state.historyBatchBase].slice(-MAX_HISTORY),
+        historyFuture: [],
+      };
+    }),
+
   importJson: (json) => {
     try {
       const parsed = JSON.parse(json);
@@ -350,6 +378,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         activeScreenId: parsed.initialScreenId,
         selectedNodeId: null,
         draftFrame: null,
+        historyBatchBase: null,
         lastError: null,
       }));
       return true;
@@ -366,4 +395,12 @@ function makeWidgetWithFrame(id: string, type: WidgetType, parentId: string, p: 
   const node = makeWidget(id, type);
   node.frame = defaultFrameFor(type, parentId, p);
   return node;
+}
+
+function historySnapshotMatchesState(snapshot: HistorySnapshot, state: EditorState): boolean {
+  return (
+    snapshot.activeScreenId === state.activeScreenId &&
+    snapshot.selectedNodeId === state.selectedNodeId &&
+    JSON.stringify(snapshot.project) === JSON.stringify(state.project)
+  );
 }

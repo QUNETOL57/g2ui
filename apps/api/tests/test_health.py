@@ -6,4 +6,4 @@ def test_healthz(client) -> None:
 
 def test_me_requires_auth(client) -> None:
     response = client.get("/api/v1/me")
-    assert response.status_code == 403  # HTTPBearer returns 403 without credentials
+    assert response.status_code == 401

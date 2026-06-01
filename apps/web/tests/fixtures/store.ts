@@ -10,6 +10,7 @@ export function resetEditorStore(project?: UiProject) {
     activeScreenId: next.initialScreenId,
     selectedNodeId: null,
     draftFrame: null,
+    historyBatchBase: null,
     lastError: null,
     historyPast: [],
     historyFuture: [],

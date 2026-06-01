@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import type { Frame, IconProps, LayoutMode } from "@entities/ui-project";
+import type { Frame, IconProps, LabelProps, LayoutMode } from "@entities/ui-project";
 import { useEditorStore } from "@entities/ui-project/model/store";
 import { findNode, findParent } from "@entities/ui-project/model/tree-ops";
 import { layoutTree } from "@entities/ui-project/lib/layoutEngine";
@@ -60,6 +60,13 @@ interface DragPreview {
   lineProps?: Partial<import("@entities/ui-project").LineProps>;
 }
 
+interface InlineLabelDraft {
+  nodeId: string | null;
+  text: string;
+}
+
+const TEXT_COMMIT_DELAY_MS = 400;
+
 export function CanvasWorkspace() {
   const project = useEditorStore((s) => s.project);
   const activeScreenId = useEditorStore((s) => s.activeScreenId);
@@ -69,6 +76,8 @@ export function CanvasWorkspace() {
   const updateFrame = useEditorStore((s) => s.updateFrame);
   const updateProps = useEditorStore((s) => s.updateProps);
   const setDraftFrame = useEditorStore((s) => s.setDraftFrame);
+  const beginHistoryBatch = useEditorStore((s) => s.beginHistoryBatch);
+  const commitHistoryBatch = useEditorStore((s) => s.commitHistoryBatch);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const centeredViewKeyRef = useRef<string | null>(null);
   const activeInteractionRef = useRef<ActiveCanvasInteraction | null>(null);
@@ -81,10 +90,16 @@ export function CanvasWorkspace() {
     | { type: "shell"; viewportX: number; viewportY: number; ratioX: number; ratioY: number }
     | null
   >(null);
+  const inlineLabelTimerRef = useRef<number | null>(null);
+  const inlineLabelEditingRef = useRef(false);
 
   const [zoom, setZoom] = useState(2);
   const [stageViewport, setStageViewport] = useState({ width: 0, height: 0 });
   const [dragPreview, setDragPreview] = useState<DragPreview | null>(null);
+  const [inlineLabelDraft, setInlineLabelDraft] = useState<InlineLabelDraft>({
+    nodeId: null,
+    text: "",
+  });
 
   const screen = project.screens.find((s) => s.id === activeScreenId);
   const layout = useMemo(() => {
@@ -122,6 +137,20 @@ export function CanvasWorkspace() {
     () => (selectedNodeId ? findParent(project, selectedNodeId) : null),
     [project, selectedNodeId],
   );
+
+  useEffect(() => {
+    if (selectedNode?.type !== "label") {
+      setInlineLabelDraft({ nodeId: null, text: "" });
+      inlineLabelEditingRef.current = false;
+      return;
+    }
+    if (!inlineLabelEditingRef.current || inlineLabelDraft.nodeId !== selectedNode.id) {
+      setInlineLabelDraft({
+        nodeId: selectedNode.id,
+        text: ((selectedNode.props ?? {}) as LabelProps).text ?? "",
+      });
+    }
+  }, [inlineLabelDraft.nodeId, selectedNode]);
 
   if (!screen || !layout) {
     return (
@@ -303,10 +332,45 @@ export function CanvasWorkspace() {
         window.cancelAnimationFrame(draftFrameRafRef.current);
         draftFrameRafRef.current = null;
       }
+      if (inlineLabelTimerRef.current !== null) {
+        window.clearTimeout(inlineLabelTimerRef.current);
+        inlineLabelTimerRef.current = null;
+      }
       setDraftFrame(null);
       document.body.style.userSelect = "";
     };
   }, [setDraftFrame]);
+
+  const clearInlineLabelTimer = () => {
+    if (inlineLabelTimerRef.current === null) return;
+    window.clearTimeout(inlineLabelTimerRef.current);
+    inlineLabelTimerRef.current = null;
+  };
+
+  const commitInlineLabelText = (nodeId: string, text: string) => {
+    if (!inlineLabelEditingRef.current || inlineLabelDraft.nodeId !== nodeId) return;
+    clearInlineLabelTimer();
+    updateProps(nodeId, { text }, { history: false });
+    commitHistoryBatch();
+    inlineLabelEditingRef.current = false;
+  };
+
+  const scheduleInlineLabelCommit = (nodeId: string, text: string) => {
+    clearInlineLabelTimer();
+    inlineLabelTimerRef.current = window.setTimeout(
+      () => commitInlineLabelText(nodeId, text),
+      TEXT_COMMIT_DELAY_MS,
+    );
+  };
+
+  const updateInlineLabelText = (nodeId: string, text: string) => {
+    if (!inlineLabelEditingRef.current || inlineLabelDraft.nodeId !== nodeId) {
+      beginHistoryBatch();
+      inlineLabelEditingRef.current = true;
+    }
+    setInlineLabelDraft({ nodeId, text });
+    scheduleInlineLabelCommit(nodeId, text);
+  };
 
   const scheduleDragPreview = (preview: DragPreview) => {
     pendingDragPreviewRef.current = preview;
@@ -775,6 +839,12 @@ export function CanvasWorkspace() {
                     dragPreview,
                     onSelect: selectNode,
                     onNodeMouseDown: handleNodeMouseDown,
+                    inlineLabelText: {
+                      nodeId: inlineLabelDraft.nodeId,
+                      text: inlineLabelDraft.text,
+                      onChange: updateInlineLabelText,
+                      onCommit: commitInlineLabelText,
+                    },
                   }}
                 />
               </div>

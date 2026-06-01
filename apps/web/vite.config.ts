@@ -9,9 +9,10 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, rootDir, "");
 
   return {
+    envDir: rootDir,
     define: {
       "import.meta.env.SUPABASE_URL": JSON.stringify(env.SUPABASE_URL ?? ""),
-      "import.meta.env.SUPABASE_ANON_KEY": JSON.stringify(env.SUPABASE_ANON_KEY ?? ""),
+      "import.meta.env.SUPABASE_KEY": JSON.stringify(env.SUPABASE_KEY ?? ""),
     },
     plugins: [react()],
     server: {

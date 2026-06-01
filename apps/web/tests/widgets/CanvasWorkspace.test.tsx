@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { useEditorStore } from "@entities/ui-project/model/store";
@@ -63,5 +63,39 @@ describe("CanvasWorkspace: selection", () => {
     const node = screen.getByLabelText("Pick me");
     await userEvent.pointer({ keys: "[MouseLeft]", target: node });
     expect(get().selectedNodeId).toBe("lbl_1");
+  });
+
+  it("edits selected label text inline on the canvas", async () => {
+    const project = withChildren(makeFixtureProject(), [makeLabel("lbl_1", "Old")]);
+    get().setProject(project);
+    get().selectNode("lbl_1");
+    render(<CanvasWorkspace />);
+
+    const input = await screen.findByLabelText("edit label text");
+    fireEvent.change(input, { target: { value: "New" } });
+    expect(input).toHaveValue("New");
+    expect((get().project.screens[0].children?.[0].props as { text: string }).text).toBe("Old");
+
+    fireEvent.blur(input);
+    expect((get().project.screens[0].children?.[0].props as { text: string }).text).toBe("New");
+
+    get().undo();
+    expect((get().project.screens[0].children?.[0].props as { text: string }).text).toBe("Old");
+  });
+
+  it("debounces inline label text commits", async () => {
+    const project = withChildren(makeFixtureProject(), [makeLabel("lbl_1", "Old")]);
+    get().setProject(project);
+    get().selectNode("lbl_1");
+    render(<CanvasWorkspace />);
+
+    const input = await screen.findByLabelText("edit label text");
+    vi.useFakeTimers();
+    fireEvent.change(input, { target: { value: "New" } });
+    expect((get().project.screens[0].children?.[0].props as { text: string }).text).toBe("Old");
+
+    act(() => vi.advanceTimersByTime(400));
+    expect((get().project.screens[0].children?.[0].props as { text: string }).text).toBe("New");
+    vi.useRealTimers();
   });
 });

@@ -23,6 +23,12 @@ interface RenderCtx {
   dragPreview: { nodeId: string; rect: Frame; lineProps?: Partial<LineProps> } | null;
   onSelect: (id: string) => void;
   onNodeMouseDown?: (nodeId: string, event: React.MouseEvent<HTMLDivElement>) => void;
+  inlineLabelText?: {
+    nodeId: string | null;
+    text: string;
+    onChange: (nodeId: string, text: string) => void;
+    onCommit: (nodeId: string, text: string) => void;
+  };
 }
 
 export function PreviewNode({
@@ -181,22 +187,57 @@ function LabelVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; re
     ? resolveColor(node.style?.background, ctx.palette, "#FFFFFF")
     : "transparent";
   const face = findFontFace(props);
+  const canEditInline = ctx.selectedId === node.id && ctx.inlineLabelText?.nodeId === node.id;
+  const text = canEditInline ? ctx.inlineLabelText?.text ?? "" : props.text ?? "";
   return (
     <div
+      className={styles.labelVisual}
       style={{
         width: "100%",
         height: "100%",
         background: bg,
       }}
     >
-      <BitmapText
-        face={face}
-        text={props.text ?? ""}
-        color={color}
-        align={props.align ?? "left"}
-        boxWidth={rect.width}
-        boxHeight={rect.height}
-      />
+      {canEditInline ? (
+        <input
+          aria-label="edit label text"
+          className={styles.inlineTextInput}
+          autoFocus
+          value={text}
+          spellCheck={false}
+          style={{
+            color,
+            caretColor: color,
+            fontFamily: props.fontFamily ?? face.family,
+            fontSize: Math.max(1, face.lineHeight),
+            lineHeight: `${Math.max(1, rect.height)}px`,
+            textAlign: props.align ?? "left",
+          }}
+          onChange={(event) => ctx.inlineLabelText?.onChange(node.id, event.target.value)}
+          onFocus={() => ctx.onSelect(node.id)}
+          onBlur={(event) => ctx.inlineLabelText?.onCommit(node.id, event.target.value)}
+          onMouseDown={(event) => {
+            event.stopPropagation();
+            ctx.onSelect(node.id);
+          }}
+          onDoubleClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.currentTarget.blur();
+            }
+            event.stopPropagation();
+          }}
+        />
+      ) : (
+        <BitmapText
+          face={face}
+          text={text}
+          color={color}
+          align={props.align ?? "left"}
+          boxWidth={rect.width}
+          boxHeight={rect.height}
+        />
+      )}
     </div>
   );
 }

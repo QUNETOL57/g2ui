@@ -1,5 +1,4 @@
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { ButtonGroup } from "@widgets/properties-panel/groups/ButtonGroup";
@@ -15,14 +14,30 @@ describe("ButtonGroup", () => {
     expect(screen.getByLabelText("button text")).toHaveValue("Save");
   });
 
-  it("emits text changes", async () => {
+  it("emits text changes after debounce", () => {
+    vi.useFakeTimers();
     const handler = vi.fn();
+    const commitHistoryBatch = vi.fn();
     const node = makeButton("bt_1", "");
     render(
-      <ButtonGroup node={node} palette={[]} onChange={handler} onStyleChange={() => undefined} />,
+      <ButtonGroup
+        node={node}
+        palette={[]}
+        onChange={handler}
+        onStyleChange={() => undefined}
+        onBeginHistoryBatch={() => undefined}
+        onCommitHistoryBatch={commitHistoryBatch}
+      />,
     );
     const input = screen.getByLabelText("button text");
-    await userEvent.type(input, "S");
-    expect(handler).toHaveBeenLastCalledWith({ text: "S" });
+    fireEvent.change(input, { target: { value: "S" } });
+    expect(input).toHaveValue("S");
+    expect(handler).not.toHaveBeenCalled();
+
+    act(() => vi.advanceTimersByTime(400));
+
+    expect(handler).toHaveBeenLastCalledWith({ text: "S" }, { history: false });
+    expect(commitHistoryBatch).toHaveBeenCalledOnce();
+    vi.useRealTimers();
   });
 });

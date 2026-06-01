@@ -16,19 +16,9 @@ export function LabelGroup({
   onStyleChange: (patch: Partial<NonNullable<WidgetNode["style"]>>) => void;
 }) {
   const p = (node.props ?? {}) as LabelProps;
+
   return (
     <div className={cn(styles.group, styles.textGroup)}>
-      <h4>Content</h4>
-      <div className={styles.textFieldStack}>
-        <label>text</label>
-        <input
-          aria-label="label text"
-          type="text"
-          className={styles.inputText}
-          value={p.text ?? ""}
-          onChange={(e) => onChange({ text: e.target.value })}
-        />
-      </div>
       <TypographyCard
         props={p}
         style={node.style}

@@ -41,7 +41,8 @@ describe("PropertiesPanel: per-type groups", () => {
     selectAndRender("lbl_1");
     expect(screen.getByText(/Properties · label/)).toBeInTheDocument();
     expect(screen.getByText("Transform")).toBeInTheDocument();
-    expect(screen.getByLabelText("label text")).toBeInTheDocument();
+    expect(screen.queryByLabelText("label text")).toBeNull();
+    expect(screen.getByText("Typography")).toBeInTheDocument();
   });
 
   it("for button shows ButtonGroup with text field", () => {

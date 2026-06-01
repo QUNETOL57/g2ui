@@ -16,7 +16,7 @@ export const DISPLAY_PRESETS: DisplayPreset[] = [
   { id: "128x64", label: "128 × 64", width: 128, height: 64 },
   { id: "240x135", label: "240 × 135", width: 240, height: 135 },
   { id: "240x240", label: "240 × 240", width: 240, height: 240 },
-  { id: "240x320", label: "240 × 320", width: 240, height: 320 },
+  { id: "320x170", label: "320 × 170", width: 320, height: 170 },
   { id: "320x240", label: "320 × 240", width: 320, height: 240 },
 ];
 

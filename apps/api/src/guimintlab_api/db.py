@@ -11,7 +11,8 @@ class Base(DeclarativeBase):
 
 
 engine = create_async_engine(
-    settings.database_url,
+    settings.async_database_url,
+    connect_args={"statement_cache_size": 0},
     pool_size=5,
     max_overflow=5,
     pool_pre_ping=True,
@@ -21,7 +22,7 @@ engine = create_async_engine(
 SessionLocal = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 
 
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
+async def get_db() -> AsyncGenerator[AsyncSession]:
     async with SessionLocal() as session:
         try:
             yield session

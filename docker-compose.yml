@@ -19,12 +19,12 @@ services:
     volumes:
       - ./apps/api/src:/app/src:ro
       - ./apps/api/alembic:/app/alembic:ro
-    command: >
-      uvicorn guimintlab_api.main:app
-      --host 0.0.0.0
-      --port 8000
-      --reload
-      --reload-dir /app/src
+    command:
+      - sh
+      - -c
+      - >-
+        alembic upgrade head &&
+        exec uvicorn guimintlab_api.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app/src
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz').read()"]
       interval: 30s
@@ -59,7 +59,7 @@ services:
     environment:
       VITE_API_URL: ${VITE_API_URL:-http://localhost:58008}
       SUPABASE_URL: ${SUPABASE_URL:-}
-      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-}
+      SUPABASE_KEY: ${SUPABASE_KEY:-}
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING: "true"
     depends_on:

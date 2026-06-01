@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+
 import { useEditorStore } from "@entities/ui-project/model/store";
 import { findNode } from "@entities/ui-project/model/tree-ops";
 import { EmptyState } from "@shared/ui/EmptyState";
@@ -23,6 +25,11 @@ export function PropertiesPanel() {
   const beginHistoryBatch = useEditorStore((s) => s.beginHistoryBatch);
   const commitHistoryBatch = useEditorStore((s) => s.commitHistoryBatch);
 
+  const node = useMemo(
+    () => (selectedNodeId ? findNode(project, selectedNodeId) : null),
+    [project, selectedNodeId],
+  );
+
   if (!selectedNodeId) {
     return (
       <>
@@ -32,7 +39,6 @@ export function PropertiesPanel() {
     );
   }
 
-  const node = findNode(project, selectedNodeId);
   if (!node) return null;
 
   return (

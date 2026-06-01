@@ -1,3 +1,5 @@
+import { memo } from "react";
+
 import type {
   ButtonProps,
   Frame,
@@ -31,7 +33,7 @@ interface RenderCtx {
   };
 }
 
-export function PreviewNode({
+function PreviewNodeImpl({
   layoutNode,
   ctx,
   dragOffset = { x: 0, y: 0 },
@@ -85,6 +87,42 @@ export function PreviewNode({
     </>
   );
 }
+
+const PreviewNode = memo(PreviewNodeImpl, (prev, next) => {
+  if (prev.layoutNode !== next.layoutNode) return false;
+  if (prev.dragOffset?.x !== next.dragOffset?.x) return false;
+  if (prev.dragOffset?.y !== next.dragOffset?.y) return false;
+
+  const pc = prev.ctx;
+  const nc = next.ctx;
+
+  if (prev.layoutNode.children.length > 0) {
+    return pc === nc;
+  }
+
+  const nid = prev.layoutNode.node.id;
+
+  if (pc.palette !== nc.palette) return false;
+  if ((pc.selectedId === nid) !== (nc.selectedId === nid)) return false;
+  if ((pc.movableId === nid) !== (nc.movableId === nid)) return false;
+
+  const prevDragged = pc.dragPreview?.nodeId === nid;
+  const nextDragged = nc.dragPreview?.nodeId === nid;
+  if (prevDragged !== nextDragged) return false;
+  if (prevDragged && nextDragged && pc.dragPreview?.rect !== nc.dragPreview?.rect) return false;
+
+  const prevEditing = pc.inlineLabelText?.nodeId === nid;
+  const nextEditing = nc.inlineLabelText?.nodeId === nid;
+  if (prevEditing !== nextEditing) return false;
+  if (prevEditing && nextEditing && pc.inlineLabelText?.text !== nc.inlineLabelText?.text) return false;
+
+  if (pc.onSelect !== nc.onSelect) return false;
+  if (pc.onNodeMouseDown !== nc.onNodeMouseDown) return false;
+
+  return true;
+});
+
+export { PreviewNode };
 
 function NodeVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; rect: Frame }) {
   switch (node.type) {

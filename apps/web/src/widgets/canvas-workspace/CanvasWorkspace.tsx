@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { Frame, IconProps, LabelProps, LayoutMode } from "@entities/ui-project";
 import { useEditorStore } from "@entities/ui-project/model/store";
@@ -92,6 +92,9 @@ export function CanvasWorkspace() {
   >(null);
   const inlineLabelTimerRef = useRef<number | null>(null);
   const inlineLabelEditingRef = useRef(false);
+  const editingNodeIdRef = useRef<string | null>(null);
+  const layoutRef = useRef<LayoutNode | null>(null);
+  const startInteractionRef = useRef<(interaction: ActiveCanvasInteraction) => void>(() => {});
 
   const [zoom, setZoom] = useState(2);
   const [stageViewport, setStageViewport] = useState({ width: 0, height: 0 });
@@ -106,20 +109,27 @@ export function CanvasWorkspace() {
     if (!screen) return null;
     return layoutTree(screen, project.display.width, project.display.height);
   }, [screen, project.display.width, project.display.height]);
+  layoutRef.current = layout;
   const w = project.display.width;
   const h = project.display.height;
   const renderZoom = zoom >= PIXEL_GRID_VISIBLE_ZOOM ? Math.round(zoom) : zoom;
   const zoomProgress = ((zoom - MIN_ZOOM) / (MAX_ZOOM - MIN_ZOOM)) * 100;
-  const horizontalTicks = Array.from({ length: w + 1 }, (_, index) => ({
-    value: index,
-    offset: Math.round(index * renderZoom),
-    major: index % 8 === 0,
-  }));
-  const verticalTicks = Array.from({ length: h + 1 }, (_, index) => ({
-    value: index,
-    offset: Math.round(index * renderZoom),
-    major: index % 8 === 0,
-  }));
+  const horizontalTicks = useMemo(
+    () => Array.from({ length: w + 1 }, (_, index) => ({
+      value: index,
+      offset: Math.round(index * renderZoom),
+      major: index % 8 === 0,
+    })),
+    [w, renderZoom],
+  );
+  const verticalTicks = useMemo(
+    () => Array.from({ length: h + 1 }, (_, index) => ({
+      value: index,
+      offset: Math.round(index * renderZoom),
+      major: index % 8 === 0,
+    })),
+    [h, renderZoom],
+  );
 
   const selectedLayoutNode = useMemo(() => {
     if (!layout || !selectedNodeId) return null;
@@ -140,17 +150,22 @@ export function CanvasWorkspace() {
 
   useEffect(() => {
     if (selectedNode?.type !== "label") {
-      setInlineLabelDraft({ nodeId: null, text: "" });
+      if (editingNodeIdRef.current !== null) {
+        setInlineLabelDraft({ nodeId: null, text: "" });
+      }
       inlineLabelEditingRef.current = false;
+      editingNodeIdRef.current = null;
       return;
     }
-    if (!inlineLabelEditingRef.current || inlineLabelDraft.nodeId !== selectedNode.id) {
+    if (editingNodeIdRef.current !== selectedNode.id) {
+      editingNodeIdRef.current = selectedNode.id;
+      inlineLabelEditingRef.current = false;
       setInlineLabelDraft({
         nodeId: selectedNode.id,
         text: ((selectedNode.props ?? {}) as LabelProps).text ?? "",
       });
     }
-  }, [inlineLabelDraft.nodeId, selectedNode]);
+  }, [selectedNode]);
 
   if (!screen || !layout) {
     return (
@@ -341,19 +356,20 @@ export function CanvasWorkspace() {
     };
   }, [setDraftFrame]);
 
-  const clearInlineLabelTimer = () => {
+  const clearInlineLabelTimer = useCallback(() => {
     if (inlineLabelTimerRef.current === null) return;
     window.clearTimeout(inlineLabelTimerRef.current);
     inlineLabelTimerRef.current = null;
-  };
+  }, []);
 
-  const commitInlineLabelText = (nodeId: string, text: string) => {
-    if (!inlineLabelEditingRef.current || inlineLabelDraft.nodeId !== nodeId) return;
+  const commitInlineLabelText = useCallback((nodeId: string, text: string) => {
+    if (!inlineLabelEditingRef.current || editingNodeIdRef.current !== nodeId) return;
     clearInlineLabelTimer();
     updateProps(nodeId, { text }, { history: false });
     commitHistoryBatch();
     inlineLabelEditingRef.current = false;
-  };
+    editingNodeIdRef.current = null;
+  }, [clearInlineLabelTimer, updateProps, commitHistoryBatch]);
 
   const scheduleInlineLabelCommit = (nodeId: string, text: string) => {
     clearInlineLabelTimer();
@@ -362,15 +378,18 @@ export function CanvasWorkspace() {
       TEXT_COMMIT_DELAY_MS,
     );
   };
+  const scheduleInlineLabelCommitRef = useRef(scheduleInlineLabelCommit);
+  scheduleInlineLabelCommitRef.current = scheduleInlineLabelCommit;
 
-  const updateInlineLabelText = (nodeId: string, text: string) => {
-    if (!inlineLabelEditingRef.current || inlineLabelDraft.nodeId !== nodeId) {
+  const updateInlineLabelText = useCallback((nodeId: string, text: string) => {
+    if (!inlineLabelEditingRef.current || editingNodeIdRef.current !== nodeId) {
       beginHistoryBatch();
       inlineLabelEditingRef.current = true;
+      editingNodeIdRef.current = nodeId;
     }
     setInlineLabelDraft({ nodeId, text });
-    scheduleInlineLabelCommit(nodeId, text);
-  };
+    scheduleInlineLabelCommitRef.current(nodeId, text);
+  }, [beginHistoryBatch]);
 
   const scheduleDragPreview = (preview: DragPreview) => {
     pendingDragPreviewRef.current = preview;
@@ -598,6 +617,7 @@ export function CanvasWorkspace() {
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
   };
+  startInteractionRef.current = startInteraction;
 
   const makeAbsoluteChildFrames = (parentLayout: LayoutNode) =>
     parentLayout.children.map((child) => ({
@@ -610,11 +630,11 @@ export function CanvasWorkspace() {
       },
     }));
 
-  const handleNodeMouseDown = (nodeId: string, event: React.MouseEvent<HTMLDivElement>) => {
+  const handleNodeMouseDown = useCallback((nodeId: string, event: React.MouseEvent<HTMLDivElement>) => {
     const node = findNode(project, nodeId);
     const parentNode = findParent(project, nodeId);
-    const nodeLayout = findLayoutNode(layout, nodeId);
-    const parentLayout = findParentLayoutNode(layout, nodeId);
+    const nodeLayout = layout ? findLayoutNode(layout, nodeId) : null;
+    const parentLayout = layout ? findParentLayoutNode(layout, nodeId) : null;
     if (!node || !node.frame || !nodeLayout || !parentLayout || node.id === screen.id) return;
     if (event.button !== 0) return;
     event.preventDefault();
@@ -642,7 +662,7 @@ export function CanvasWorkspace() {
                   ? child.rect.x + Math.round(child.rect.width / 2)
                   : child.rect.y + Math.round(child.rect.height / 2),
             }));
-    startInteraction({
+    startInteractionRef.current({
       type: "move",
       nodeId,
       startClientX: event.clientX,
@@ -654,7 +674,7 @@ export function CanvasWorkspace() {
       parentMode: "absolute",
       siblingCenters,
     });
-  };
+  }, [project, layout, screen?.id, absolutizeLayout]);
 
   const handleResizeMouseDown =
     (handle: ResizeHandle) => (event: React.MouseEvent<HTMLDivElement>) => {
@@ -730,6 +750,35 @@ export function CanvasWorkspace() {
         startLineEnd: endpoints.end,
       });
     };
+
+  const renderCtx = useMemo(
+    () => ({
+      palette: project.palette,
+      selectedId: selectedNodeId,
+      movableId: canMoveSelection ? selectedNodeId : null,
+      dragPreview,
+      onSelect: selectNode,
+      onNodeMouseDown: handleNodeMouseDown,
+      inlineLabelText: {
+        nodeId: inlineLabelDraft.nodeId,
+        text: inlineLabelDraft.text,
+        onChange: updateInlineLabelText,
+        onCommit: commitInlineLabelText,
+      },
+    }),
+    [
+      project.palette,
+      selectedNodeId,
+      canMoveSelection,
+      dragPreview,
+      selectNode,
+      handleNodeMouseDown,
+      inlineLabelDraft.nodeId,
+      inlineLabelDraft.text,
+      updateInlineLabelText,
+      commitInlineLabelText,
+    ],
+  );
 
   return (
     <div className={styles.wrap}>
@@ -832,20 +881,7 @@ export function CanvasWorkspace() {
               >
                 <PreviewNode
                   layoutNode={layout}
-                  ctx={{
-                    palette: project.palette,
-                    selectedId: selectedNodeId,
-                    movableId: canMoveSelection ? selectedNodeId : null,
-                    dragPreview,
-                    onSelect: selectNode,
-                    onNodeMouseDown: handleNodeMouseDown,
-                    inlineLabelText: {
-                      nodeId: inlineLabelDraft.nodeId,
-                      text: inlineLabelDraft.text,
-                      onChange: updateInlineLabelText,
-                      onCommit: commitInlineLabelText,
-                    },
-                  }}
+                  ctx={renderCtx}
                 />
               </div>
             </div>

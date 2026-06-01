@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { DragEvent } from "react";
 
 import type { WidgetNode, WidgetType } from "@entities/ui-project";
@@ -26,7 +26,10 @@ export function TreePanel() {
   const [dropTarget, setDropTarget] = useState<TreeDropTarget>(null);
 
   const screen = project.screens.find((s) => s.id === activeScreenId);
-  const selectedNode = selectedNodeId ? findNode(project, selectedNodeId) : null;
+  const selectedNode = useMemo(
+    () => (selectedNodeId ? findNode(project, selectedNodeId) : null),
+    [project, selectedNodeId],
+  );
   const parentForAdd =
     selectedNode?.type === "screen" || selectedNode?.type === "panel"
       ? selectedNode.id

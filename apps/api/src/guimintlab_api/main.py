@@ -9,7 +9,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="Guimintlab API",
         version="0.1.0",
-        description="Backend API for Guimintlab Studio. Auth via Supabase JWT.",
+        description="Backend API for Guimintlab Studio.",
     )
 
     app.add_middleware(

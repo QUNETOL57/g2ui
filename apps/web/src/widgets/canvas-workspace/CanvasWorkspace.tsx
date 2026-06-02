@@ -79,6 +79,7 @@ export function CanvasWorkspace() {
   const beginHistoryBatch = useEditorStore((s) => s.beginHistoryBatch);
   const commitHistoryBatch = useEditorStore((s) => s.commitHistoryBatch);
   const stageRef = useRef<HTMLDivElement | null>(null);
+  const deviceFrameRef = useRef<HTMLDivElement | null>(null);
   const centeredViewKeyRef = useRef<string | null>(null);
   const activeInteractionRef = useRef<ActiveCanvasInteraction | null>(null);
   const pendingDragPreviewRef = useRef<DragPreview | null>(null);
@@ -806,7 +807,10 @@ export function CanvasWorkspace() {
         className={styles.stage}
         ref={stageRef}
         onMouseDown={(e) => {
-          if (e.target === e.currentTarget) selectNode(null);
+          if (e.button !== 0) return;
+          const target = e.target;
+          if (!(target instanceof Node)) return;
+          if (!deviceFrameRef.current?.contains(target)) selectNode(null);
         }}
       >
         <div
@@ -834,6 +838,7 @@ export function CanvasWorkspace() {
 
             <div
               className={styles.deviceFrame}
+              ref={deviceFrameRef}
               style={{
                 width: scaledW,
                 height: scaledH,
@@ -841,7 +846,10 @@ export function CanvasWorkspace() {
                 left: RULER_SIZE,
                 top: RULER_SIZE,
               }}
-              onMouseDown={(e) => e.stopPropagation()}
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                if (e.button === 0) selectNode(null);
+              }}
             >
               {showPixelGrid ? (
                 <div

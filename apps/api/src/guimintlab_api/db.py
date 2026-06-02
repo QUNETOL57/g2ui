@@ -12,7 +12,6 @@ class Base(DeclarativeBase):
 
 engine = create_async_engine(
     settings.async_database_url,
-    connect_args={"statement_cache_size": 0},
     pool_size=5,
     max_overflow=5,
     pool_pre_ping=True,

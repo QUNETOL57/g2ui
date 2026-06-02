@@ -22,7 +22,7 @@ def get_current_user(
     try:
         payload = jwt.decode(
             credentials.credentials,
-            settings.supabase_jwt_secret,
+            settings.auth_jwt_secret,
             algorithms=["HS256"],
             audience="authenticated",
         )

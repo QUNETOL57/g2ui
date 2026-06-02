@@ -120,6 +120,7 @@ export function CreateProjectPanel({
             { value: "hello", label: "Hello" },
           ]}
           onChange={(nextTemplate) => onTemplateChange(nextTemplate as TemplateId)}
+          triggerClassName={styles.triggerLg}
         />
       </div>
 

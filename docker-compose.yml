@@ -1,6 +1,24 @@
 name: guimintlab-studio
 
 services:
+  db:
+    image: postgres:17-alpine
+    container_name: guimintlab-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-guimintlab}
+      POSTGRES_USER: ${POSTGRES_USER:-guimintlab}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-guimintlab}
+    ports:
+      - "${POSTGRES_PORT:-55432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   api:
     build:
       context: ./apps/api
@@ -14,8 +32,12 @@ services:
     environment:
       API_HOST: 0.0.0.0
       API_PORT: 8000
+      DATABASE_URL: ${LOCAL_DATABASE_URL:-postgresql+asyncpg://guimintlab:guimintlab@db:5432/guimintlab}
     ports:
       - "58008:8000"
+    depends_on:
+      db:
+        condition: service_healthy
     volumes:
       - ./apps/api/src:/app/src:ro
       - ./apps/api/alembic:/app/alembic:ro
@@ -58,13 +80,12 @@ services:
         required: false
     environment:
       VITE_API_URL: ${VITE_API_URL:-http://localhost:58008}
-      SUPABASE_URL: ${SUPABASE_URL:-}
-      SUPABASE_KEY: ${SUPABASE_KEY:-}
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING: "true"
     depends_on:
       - api
 
 volumes:
+  postgres_data:
   web_node_modules:
   web_npm_cache:

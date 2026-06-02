@@ -217,7 +217,12 @@ export function LibraryPage({
           </div>
         </div>
 
-        <Modal open={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} size="md">
+        <Modal
+          open={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          size="md"
+          closeOnBackdrop={false}
+        >
           <IconButton
             className={styles.modalClose}
             aria-label="Close create project"
@@ -242,7 +247,12 @@ export function LibraryPage({
           />
         </Modal>
 
-        <Modal open={Boolean(projectEditing)} onClose={closeEditModal} size="md">
+        <Modal
+          open={Boolean(projectEditing)}
+          onClose={closeEditModal}
+          size="md"
+          closeOnBackdrop={false}
+        >
           {projectEditing ? (
             <>
               <IconButton
@@ -276,6 +286,7 @@ export function LibraryPage({
           onClose={closeDeleteModal}
           size="sm"
           className={styles.deleteDialog}
+          closeOnBackdrop={false}
         >
           {projectPendingDelete ? (
             <>

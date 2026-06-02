@@ -6,7 +6,8 @@ Visual editor for embedded UI projects.
 
 ```text
 guimintlab-studio/
-├── docker-compose.yml       Local dev stack
+├── docker-compose.yml       Local dev stack with PostgreSQL
+├── docker-compose.prod.yml  Production API stack with external PostgreSQL
 ├── apps/
 │   ├── web/        Vite + React + TypeScript frontend
 │   └── api/        FastAPI backend (Python 3.14 + uv)
@@ -16,25 +17,24 @@ guimintlab-studio/
 ## Prerequisites
 
 - Node.js 20+ and npm
-- Docker Desktop (for running the API locally)
-- A Supabase project (Cloud) — get the URL, anon key and JWT secret
+- Docker Desktop (for running the API and PostgreSQL locally)
 
 ## Quick start
 
 ```bash
 git clone <repo>
 cd guimintlab-studio
-cp .env.example .env       # fill in Supabase credentials
+cp .env.example .env
 npm install
 npm --prefix apps/web install
 ```
 
 ### Mode A — Fast dev (recommended on macOS)
 
-API in Docker, web runs natively (sub-100ms HMR).
+API and PostgreSQL run in Docker, web runs natively (sub-100ms HMR).
 
 ```bash
-npm run dev:docker   # terminal 1 — API at http://localhost:58008
+npm run dev:docker   # terminal 1 — API at http://localhost:58008, PostgreSQL at localhost:55432
 npm run dev:web      # terminal 2 — web at http://localhost:5173
 ```
 
@@ -42,7 +42,7 @@ For Mode A, keep `VITE_API_URL=http://localhost:58008` in `.env`.
 
 ### Mode B — Full Docker
 
-Both services in containers. One command for everything — useful for onboarding or if you prefer container isolation.
+API, web and PostgreSQL all run in containers. One command for everything — useful for onboarding or if you prefer container isolation.
 The web container keeps its own Linux `node_modules` in a Docker volume, so it
 does not reuse macOS dependencies from your host.
 
@@ -64,22 +64,22 @@ npm run down
 ## Stack
 
 - **Frontend**: React 18, Vite, Vitest, Zustand, custom UI primitives
-- **Backend**: FastAPI, SQLAlchemy 2.0 async, Alembic, Supabase JWT
-- **Database**: Supabase Postgres (managed)
-- **Auth**: Supabase Auth (the API verifies JWTs)
+- **Backend**: FastAPI, SQLAlchemy 2.0 async, Alembic
+- **Database**: PostgreSQL
+- **Auth**: Bearer JWT verification
 - **Deploy**: Dokploy (Docker)
 
 ---
 
 ## API app (apps/api)
 
-FastAPI backend for Guimintlab Studio. It verifies Supabase JWTs and talks to
-Supabase Postgres via SQLAlchemy.
+FastAPI backend for Guimintlab Studio. It verifies bearer JWTs and talks to
+PostgreSQL via SQLAlchemy.
 
 ### API Structure
 
 - `apps/api/src/guimintlab_api/main.py` — app factory, CORS, router registration.
-- `apps/api/src/guimintlab_api/auth.py` — Supabase JWT verification.
+- `apps/api/src/guimintlab_api/auth.py` — bearer JWT verification.
 - `apps/api/src/guimintlab_api/db.py` — async SQLAlchemy engine and session.
 - `apps/api/src/guimintlab_api/routers/` — API endpoints.
 - `apps/api/src/guimintlab_api/models/` — SQLAlchemy models.
@@ -107,6 +107,15 @@ uv run alembic upgrade head
 
 Docker Compose publishes the API at <http://localhost:58008>; Swagger is
 available at `/docs`.
+
+### Production Compose
+
+Production does not start a database container. Provide `DATABASE_URL` for an
+external PostgreSQL instance and run the production compose file:
+
+```bash
+docker compose -f docker-compose.prod.yml up -d --build
+```
 
 ---
 

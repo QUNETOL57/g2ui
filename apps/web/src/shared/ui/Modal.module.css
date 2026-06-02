@@ -30,6 +30,10 @@
   width: min(420px, calc(100vw - 48px));
 }
 
+.sizeLg {
+  width: min(760px, calc(100vw - 48px));
+}
+
 .closeButton {
   position: absolute;
   z-index: 2;

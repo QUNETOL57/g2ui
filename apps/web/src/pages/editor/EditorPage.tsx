@@ -12,10 +12,16 @@ import { TreePanel } from "@widgets/tree-panel/TreePanel";
 import styles from "./EditorPage.module.css";
 
 interface EditorPageProps {
+  autosaveStatus?: "local" | "saved" | "saving" | "unsynced" | "error";
+  autosaveError?: string | null;
   onBackToLibrary: () => void;
 }
 
-export function EditorPage({ onBackToLibrary }: EditorPageProps) {
+export function EditorPage({
+  autosaveStatus = "local",
+  autosaveError = null,
+  onBackToLibrary,
+}: EditorPageProps) {
   const lastError = useEditorStore((s) => s.lastError);
   const project = useEditorStore((s) => s.project);
   const selectedNodeId = useEditorStore((s) => s.selectedNodeId);
@@ -84,6 +90,10 @@ export function EditorPage({ onBackToLibrary }: EditorPageProps) {
             </span>
           </div>
         </div>
+        <TopBar.Controls>
+          <span className={styles.saveStatus}>{autosaveStatusLabel(autosaveStatus, autosaveError)}</span>
+          <ExportPanel />
+        </TopBar.Controls>
       </TopBar>
       <div className={styles.leftPanel}>
         <TreePanel />
@@ -94,8 +104,15 @@ export function EditorPage({ onBackToLibrary }: EditorPageProps) {
       </div>
       <div className={styles.rightPanel}>
         <PropertiesPanel />
-        <ExportPanel />
       </div>
     </div>
   );
+}
+
+function autosaveStatusLabel(status: NonNullable<EditorPageProps["autosaveStatus"]>, error: string | null): string {
+  if (status === "local") return "local draft";
+  if (status === "saved") return "saved";
+  if (status === "saving") return "saving...";
+  if (status === "unsynced") return "unsynced";
+  return error ? `save error: ${error}` : "save error";
 }

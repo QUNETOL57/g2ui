@@ -1,5 +1,68 @@
-.group {
+.exportButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-3);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.exportButton:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.exportButton:focus-visible {
+  outline: 1px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+.exportButton svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.modalHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px 12px;
   border-bottom: 1px solid var(--color-border);
+  background: linear-gradient(90deg, rgba(247, 79, 158, 0.08), transparent 42%);
+}
+
+.modalHeader h2 {
+  margin: 4px 0 0;
+  color: var(--color-text);
+  font-size: var(--font-size-lg);
+}
+
+.kicker {
+  color: var(--color-text-soft);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.modalBody {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(220px, 0.8fr);
+  gap: 1px;
+  background: var(--color-border);
+}
+
+.group {
   padding: 12px;
   background: var(--color-surface);
 }
@@ -61,4 +124,10 @@
 
 .hint code {
   color: var(--color-accent);
+}
+
+@media (max-width: 720px) {
+  .modalBody {
+    grid-template-columns: 1fr;
+  }
 }

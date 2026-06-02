@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 
 import { ExportPanel } from "@widgets/export-panel/ExportPanel";
 
+import { openExportModal } from "../fixtures/exportPanel";
 import { resetEditorStore } from "../fixtures/store";
 
 beforeEach(() => {
@@ -27,7 +28,7 @@ describe("ExportPanel: download JSON", () => {
     });
 
     render(<ExportPanel />);
-    await userEvent.click(screen.getByText("Project JSON"));
+    await openExportModal();
     await userEvent.click(screen.getByRole("button", { name: /Download JSON/i }));
 
     expect(createSpy).toHaveBeenCalled();

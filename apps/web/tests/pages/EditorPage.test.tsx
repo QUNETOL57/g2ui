@@ -31,11 +31,11 @@ describe("EditorPage", () => {
     expect(back).toHaveBeenCalled();
   });
 
-  it("renders TreePanel, PropertiesPanel and ExportPanel", () => {
+  it("renders TreePanel, PropertiesPanel and Export trigger", () => {
     render(<EditorPage onBackToLibrary={() => undefined} />);
     expect(screen.getByText("Widget tree")).toBeInTheDocument();
     expect(screen.getByText(/Properties/)).toBeInTheDocument();
-    expect(screen.getByText("Project JSON")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Export$/ })).toBeInTheDocument();
   });
 
   it("renders the error banner when lastError is set", () => {

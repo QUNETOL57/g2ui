@@ -1,6 +1,7 @@
-import type { Frame, ScreenNode, UiProject, WidgetNode, WidgetType } from "..";
+import type { Frame, LabelProps, ScreenNode, UiProject, WidgetNode, WidgetType } from "..";
 import { makeWidget } from "..";
-import { findFontFace } from "@entities/font/fontLibrary";
+import { defaultProps } from "../defaults";
+import { findFontFace, measureTextWidth } from "@entities/font/fontLibrary";
 import { DEFAULT_ICON_ID, getResolvedIconDefinition } from "@entities/icon/iconSizing";
 
 export function cloneProject(p: UiProject): UiProject {
@@ -92,13 +93,16 @@ export function defaultFrameFor(type: WidgetType, parentId: string, p: UiProject
   const parentW = (parent?.frame?.width ?? p.display.width) || 240;
   const parentH = (parent?.frame?.height ?? p.display.height) || 240;
   switch (type) {
-    case "label":
-      return normalizeTextNodeFrame(makeWidget("label_measure", "label"), {
+    case "label": {
+      const measureNode = makeWidget("label_measure", "label");
+      measureNode.props = defaultProps("label");
+      return normalizeTextNodeFrame(measureNode, {
         x: 8,
         y: 8,
-        width: Math.min(120, parentW - 16),
-        height: findFontFace({ fontFamily: "BDF", fontSize: 7 }).lineHeight,
+        width: 1,
+        height: 1,
       });
+    }
     case "button":
       return { x: 8, y: 8, width: 80, height: 24 };
     case "icon": {
@@ -118,10 +122,28 @@ export function defaultFrameFor(type: WidgetType, parentId: string, p: UiProject
   }
 }
 
+export function measureLabelTextBounds(node: WidgetNode): { width: number; height: number } {
+  const props = (node.props ?? {}) as LabelProps;
+  const face = findFontFace(props);
+  const text = props.text ?? "";
+  return {
+    width: Math.max(1, measureTextWidth(face, text) + 1),
+    height: face.lineHeight,
+  };
+}
+
 export function normalizeTextNodeFrame(node: WidgetNode, frame: Frame): Frame {
   if (node.type !== "label") return frame;
-  const face = findFontFace((node.props ?? {}) as Parameters<typeof findFontFace>[0]);
-  return { ...frame, height: face.lineHeight };
+  const props = (node.props ?? {}) as LabelProps;
+  const { width, height } = measureLabelTextBounds(node);
+  if (props.textAutoSize === false) {
+    return {
+      ...frame,
+      width: Math.max(frame.width, width),
+      height: Math.max(frame.height, height),
+    };
+  }
+  return { ...frame, width, height };
 }
 
 export function normalizeProjectTextFrames(project: UiProject): UiProject {

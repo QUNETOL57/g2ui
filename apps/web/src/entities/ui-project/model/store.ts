@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type {
   Frame,
   IconProps,
+  LabelProps,
   UiProject,
   WidgetNode,
   WidgetType,
@@ -35,6 +36,7 @@ interface EditorState {
   project: UiProject;
   activeScreenId: string;
   selectedNodeId: string | null;
+  editingLabelId: string | null;
   draftFrame: { nodeId: string; frame: Frame } | null;
   historyBatchBase: HistorySnapshot | null;
   lastError: string | null;
@@ -44,6 +46,9 @@ interface EditorState {
   setProject: (project: UiProject) => void;
   setActiveScreen: (screenId: string) => void;
   selectNode: (id: string | null) => void;
+  beginLabelTextEdit: (nodeId: string) => void;
+  commitLabelText: (nodeId: string, text: string, frame?: Frame) => void;
+  cancelLabelTextEdit: () => void;
   setDisplaySize: (width: number, height: number) => void;
   loadHelloSample: () => void;
   undo: () => void;
@@ -76,6 +81,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   project: initialProject,
   activeScreenId: initialProject.initialScreenId,
   selectedNodeId: null,
+  editingLabelId: null,
   draftFrame: null,
   historyBatchBase: null,
   lastError: null,
@@ -89,14 +95,49 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       project,
       activeScreenId: project.initialScreenId,
       selectedNodeId: null,
+      editingLabelId: null,
       draftFrame: null,
       historyBatchBase: null,
     }));
   },
 
-  setActiveScreen: (screenId) => set({ activeScreenId: screenId, selectedNodeId: null, draftFrame: null }),
+  setActiveScreen: (screenId) =>
+    set({ activeScreenId: screenId, selectedNodeId: null, editingLabelId: null, draftFrame: null }),
 
   selectNode: (id) => set({ selectedNodeId: id, draftFrame: null }),
+
+  beginLabelTextEdit: (nodeId) => {
+    const node = findNode(get().project, nodeId);
+    if (!node || node.type !== "label") return;
+    get().selectNode(nodeId);
+    get().beginHistoryBatch();
+    set({ editingLabelId: nodeId });
+  },
+
+  commitLabelText: (nodeId, text, frame) => {
+    set((state) => {
+      const next = cloneProject(state.project);
+      const node = findNode(next, nodeId);
+      if (node?.type !== "label") {
+        return { editingLabelId: null, draftFrame: null };
+      }
+
+      node.props = { ...(node.props ?? {}), text } as LabelProps;
+      node.frame = normalizeTextNodeFrame(
+        node,
+        frame ?? node.frame ?? defaultFrameFor("label", "", next),
+      );
+
+      return {
+        project: next,
+        editingLabelId: null,
+        draftFrame: null,
+      };
+    });
+    get().commitHistoryBatch();
+  },
+
+  cancelLabelTextEdit: () => set({ editingLabelId: null }),
 
   setDisplaySize: (width, height) =>
     set((state) => {
@@ -187,6 +228,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         ...recordHistory(state),
         project: next,
         selectedNodeId: state.selectedNodeId === id ? null : state.selectedNodeId,
+        editingLabelId: state.editingLabelId === id ? null : state.editingLabelId,
         draftFrame: null,
       };
     }),
@@ -287,6 +329,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       if (!node) return state;
       const nextFrame = { x: 0, y: 0, width: 0, height: 0, ...(node.frame ?? {}), ...framePatch };
       node.frame = normalizeIconNodeFrame(node, nextFrame);
+      if (
+        node.type === "label" &&
+        (framePatch.width !== undefined || framePatch.height !== undefined)
+      ) {
+        node.props = { ...(node.props ?? {}), textAutoSize: false } as LabelProps;
+      }
       return { ...recordHistory(state), project: next, draftFrame: null };
     }),
 

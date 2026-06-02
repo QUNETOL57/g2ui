@@ -68,10 +68,12 @@ describe("CanvasWorkspace: selection", () => {
   it("edits selected label text inline on the canvas", async () => {
     const project = withChildren(makeFixtureProject(), [makeLabel("lbl_1", "Old")]);
     get().setProject(project);
-    get().selectNode("lbl_1");
     render(<CanvasWorkspace />);
 
-    const input = await screen.findByLabelText("edit label text");
+    const node = screen.getByLabelText("Old");
+    fireEvent.doubleClick(node);
+
+    const input = screen.getByLabelText("edit label text");
     fireEvent.change(input, { target: { value: "New" } });
     expect(input).toHaveValue("New");
     expect((get().project.screens[0].children?.[0].props as { text: string }).text).toBe("Old");
@@ -83,19 +85,26 @@ describe("CanvasWorkspace: selection", () => {
     expect((get().project.screens[0].children?.[0].props as { text: string }).text).toBe("Old");
   });
 
-  it("debounces inline label text commits", async () => {
+  it("keeps inline label text local while typing and commits it on blur", async () => {
     const project = withChildren(makeFixtureProject(), [makeLabel("lbl_1", "Old")]);
     get().setProject(project);
-    get().selectNode("lbl_1");
     render(<CanvasWorkspace />);
 
-    const input = await screen.findByLabelText("edit label text");
-    vi.useFakeTimers();
-    fireEvent.change(input, { target: { value: "New" } });
-    expect((get().project.screens[0].children?.[0].props as { text: string }).text).toBe("Old");
+    fireEvent.doubleClick(screen.getByLabelText("Old"));
+    const input = screen.getByLabelText("edit label text");
+    fireEvent.change(input, { target: { value: "New label that grows" } });
 
-    act(() => vi.advanceTimersByTime(400));
-    expect((get().project.screens[0].children?.[0].props as { text: string }).text).toBe("New");
-    vi.useRealTimers();
+    expect((get().project.screens[0].children?.[0].props as { text: string }).text).toBe("Old");
+    await act(async () => {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    });
+    expect(get().draftFrame?.nodeId).toBe("lbl_1");
+    expect(get().draftFrame?.frame.width).toBeGreaterThan(
+      get().project.screens[0].children?.[0].frame?.width ?? 0,
+    );
+
+    fireEvent.blur(input);
+    expect((get().project.screens[0].children?.[0].props as { text: string }).text).toBe("New label that grows");
+    expect(get().draftFrame).toBeNull();
   });
 });

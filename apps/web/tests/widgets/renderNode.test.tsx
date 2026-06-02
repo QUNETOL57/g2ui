@@ -67,6 +67,36 @@ describe("PreviewNode: per-type rendering", () => {
 });
 
 describe("PreviewNode: behavior", () => {
+  it("renders earlier siblings above later siblings like the widget tree", () => {
+    const panel = {
+      ...makePanel("pan_1"),
+      frame: { x: 8, y: 8, width: 80, height: 24 },
+    };
+    const label = {
+      ...makeLabel("lbl_1", "Under"),
+      frame: { x: 8, y: 8, width: 80, height: 7 },
+    };
+    const project = withChildren(makeFixtureProject(), [panel, label]);
+    const layout = layoutTree(project.screens[0], project.display.width, project.display.height);
+
+    const { container } = render(
+      <PreviewNode
+        layoutNode={layout}
+        ctx={{
+          palette: project.palette,
+          selectedId: null,
+          movableId: null,
+          dragPreview: null,
+          onSelect: vi.fn(),
+        }}
+      />,
+    );
+
+    const [, panelEl, labelEl] = [...container.querySelectorAll('[class*="previewNode"]')] as HTMLElement[];
+    expect(panelEl.style.zIndex).toBe("2");
+    expect(labelEl.style.zIndex).toBe("1");
+  });
+
   it("hides nodes with visible=false", () => {
     const hidden = { ...makeLabel("lbl_1", "Hidden"), visible: false };
     renderProject([hidden]);

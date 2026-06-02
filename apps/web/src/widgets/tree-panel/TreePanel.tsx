@@ -18,6 +18,7 @@ export function TreePanel() {
   const activeScreenId = useEditorStore((s) => s.activeScreenId);
   const selectedNodeId = useEditorStore((s) => s.selectedNodeId);
   const selectNode = useEditorStore((s) => s.selectNode);
+  const beginLabelTextEdit = useEditorStore((s) => s.beginLabelTextEdit);
   const addWidget = useEditorStore((s) => s.addWidget);
   const deleteNode = useEditorStore((s) => s.deleteNode);
   const moveNode = useEditorStore((s) => s.moveNode);
@@ -111,6 +112,7 @@ export function TreePanel() {
           depth={0}
           selectedId={selectedNodeId}
           onSelect={selectNode}
+          onLabelEdit={beginLabelTextEdit}
           activeScreenId={activeScreenId}
           draggedNodeId={draggedNodeId}
           dropTarget={dropTarget}
@@ -142,6 +144,7 @@ function TreeNode({
   depth,
   selectedId,
   onSelect,
+  onLabelEdit,
   activeScreenId,
   draggedNodeId,
   dropTarget,
@@ -154,6 +157,7 @@ function TreeNode({
   depth: number;
   selectedId: string | null;
   onSelect: (id: string) => void;
+  onLabelEdit: (id: string) => void;
   activeScreenId: string;
   draggedNodeId: string | null;
   dropTarget: TreeDropTarget;
@@ -184,6 +188,10 @@ function TreeNode({
         style={{ paddingLeft: 10 + depth * 14 }}
         draggable={isDraggable}
         onClick={() => onSelect(node.id)}
+        onDoubleClick={(event) => {
+          event.stopPropagation();
+          if (node.type === "label") onLabelEdit(node.id);
+        }}
         onDragStart={(event) => {
           if (!isDraggable) return;
           event.dataTransfer.effectAllowed = "move";
@@ -222,6 +230,7 @@ function TreeNode({
           depth={depth + 1}
           selectedId={selectedId}
           onSelect={onSelect}
+          onLabelEdit={onLabelEdit}
           activeScreenId={activeScreenId}
           draggedNodeId={draggedNodeId}
           dropTarget={dropTarget}

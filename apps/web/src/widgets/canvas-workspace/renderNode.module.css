@@ -17,6 +17,28 @@
   border: 0;
   outline: 0;
   background: transparent;
+  color: transparent;
+  caret-color: transparent;
   font-weight: 700;
   letter-spacing: 0;
+  resize: none;
+}
+
+.textCaret {
+  position: absolute;
+  width: 1px;
+  pointer-events: none;
+  animation: textCaretBlink 1s step-end infinite;
+}
+
+@keyframes textCaretBlink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+
+  50%,
+  100% {
+    opacity: 0;
+  }
 }

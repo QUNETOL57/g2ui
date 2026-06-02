@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 
 import { useEditorStore } from "@entities/ui-project/model/store";
+import { findNode } from "@entities/ui-project/model/tree-ops";
 import logoUrl from "@shared/assets/logo.svg";
 import { IconButton } from "@shared/ui/IconButton";
 import { TopBar } from "@shared/ui/TopBar";
@@ -26,6 +27,7 @@ export function EditorPage({
   const project = useEditorStore((s) => s.project);
   const selectedNodeId = useEditorStore((s) => s.selectedNodeId);
   const deleteNode = useEditorStore((s) => s.deleteNode);
+  const beginLabelTextEdit = useEditorStore((s) => s.beginLabelTextEdit);
   const undo = useEditorStore((s) => s.undo);
   const redo = useEditorStore((s) => s.redo);
 
@@ -49,6 +51,20 @@ export function EditorPage({
         return;
       }
 
+      if (
+        event.key === "Enter" &&
+        !isModifier &&
+        !isEditingText &&
+        selectedNodeId
+      ) {
+        const node = findNode(useEditorStore.getState().project, selectedNodeId);
+        if (node?.type === "label") {
+          event.preventDefault();
+          beginLabelTextEdit(selectedNodeId);
+          return;
+        }
+      }
+
       const isDeleteKey =
         event.key === "Delete" ||
         event.key === "Backspace" ||
@@ -64,7 +80,7 @@ export function EditorPage({
 
     window.addEventListener("keydown", handleKeyDown, { capture: true });
     return () => window.removeEventListener("keydown", handleKeyDown, { capture: true });
-  }, [deleteNode, redo, selectedNodeId, undo]);
+  }, [beginLabelTextEdit, deleteNode, redo, selectedNodeId, undo]);
 
   return (
     <div className={styles.appShell}>

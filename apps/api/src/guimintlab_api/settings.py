@@ -1,7 +1,5 @@
 from functools import lru_cache
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -13,11 +11,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    supabase_url: str = Field(
-        default="",
-        validation_alias="SUPABASE_URL",
-    )
-    supabase_jwt_secret: str = "change-me-in-production"
+    auth_jwt_secret: str = "change-me-in-production"
 
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/postgres"
 
@@ -34,16 +28,7 @@ class Settings(BaseSettings):
         url = self.database_url
         if url.startswith("postgresql://"):
             url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
-        if url.startswith("postgresql+asyncpg://"):
-            return with_asyncpg_pooler_options(url)
         return url
-
-
-def with_asyncpg_pooler_options(url: str) -> str:
-    parts = urlsplit(url)
-    query = dict(parse_qsl(parts.query, keep_blank_values=True))
-    query.setdefault("prepared_statement_cache_size", "0")
-    return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), parts.fragment))
 
 
 @lru_cache

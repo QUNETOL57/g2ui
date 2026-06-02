@@ -1,19 +1,11 @@
 /// <reference types="vitest" />
 import { fileURLToPath, URL } from "node:url";
-import { defineConfig, loadEnv } from "vite";
+import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-const rootDir = fileURLToPath(new URL("../..", import.meta.url));
-
-export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, rootDir, "");
-
+export default defineConfig(() => {
   return {
-    envDir: rootDir,
-    define: {
-      "import.meta.env.SUPABASE_URL": JSON.stringify(env.SUPABASE_URL ?? ""),
-      "import.meta.env.SUPABASE_KEY": JSON.stringify(env.SUPABASE_KEY ?? ""),
-    },
+    envDir: fileURLToPath(new URL("../..", import.meta.url)),
     plugins: [react()],
     server: {
       port: 5173,

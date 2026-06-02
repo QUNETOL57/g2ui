@@ -13,12 +13,12 @@ test.describe("label inline editing", () => {
     await page.getByRole("button", { name: "+ label" }).click();
     await expect(treeRow(page, "lab_1")).toBeVisible();
 
-    const label = canvasWidget(page, "lab_1");
-    await label.dblclick();
+    await page.getByTestId("selection-mask").dblclick();
 
     const input = page.getByLabel("edit label text");
     await expect(input).toBeVisible();
 
+    const label = canvasWidget(page, "lab_1");
     const widthBefore = await label.evaluate((el) => el.getBoundingClientRect().width);
     await input.fill("A much longer label string");
     await expect
@@ -30,7 +30,7 @@ test.describe("label inline editing", () => {
     await expect(treeRow(page, "lab_1")).toContainText("lab_1");
     await expect(page.getByText("Properties · label")).toBeVisible();
 
-    await label.click();
+    await page.getByTestId("selection-mask").click();
     await expect(page.getByText("Properties · label")).toBeVisible();
   });
 

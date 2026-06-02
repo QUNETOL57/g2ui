@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react";
+import { fireEvent, render } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { SelectionOverlay } from "@widgets/canvas-workspace/SelectionOverlay";
@@ -13,6 +13,7 @@ describe("SelectionOverlay", () => {
         renderZoom={2}
         scaledW={200}
         scaledH={200}
+        showMoveMask={false}
         showResizeHandles={false}
         lineEndpoints={null}
         onResizeHandleMouseDown={() => () => undefined}
@@ -30,6 +31,7 @@ describe("SelectionOverlay", () => {
         renderZoom={2}
         scaledW={200}
         scaledH={200}
+        showMoveMask={false}
         showResizeHandles
         lineEndpoints={null}
         onResizeHandleMouseDown={() => () => undefined}
@@ -49,6 +51,7 @@ describe("SelectionOverlay", () => {
         renderZoom={2}
         scaledW={200}
         scaledH={200}
+        showMoveMask={false}
         showResizeHandles={false}
         lineEndpoints={{ start: { x: 5, y: 10 }, end: { x: 15, y: 12 } }}
         onResizeHandleMouseDown={() => () => undefined}
@@ -67,6 +70,7 @@ describe("SelectionOverlay", () => {
         renderZoom={1}
         scaledW={100}
         scaledH={100}
+        showMoveMask={false}
         showResizeHandles
         lineEndpoints={null}
         onResizeHandleMouseDown={factory as never}
@@ -78,5 +82,25 @@ describe("SelectionOverlay", () => {
     expect(factory).toHaveBeenCalledWith("sw");
     expect(factory).toHaveBeenCalledWith("se");
     expect(container).toBeDefined();
+  });
+
+  it("renders a move mask and forwards mousedown", () => {
+    const onMove = vi.fn();
+    const { getByTestId } = render(
+      <SelectionOverlay
+        rect={rect}
+        renderZoom={2}
+        scaledW={200}
+        scaledH={200}
+        showMoveMask
+        showResizeHandles={false}
+        lineEndpoints={null}
+        onMoveMouseDown={onMove}
+        onResizeHandleMouseDown={() => () => undefined}
+        onLineEndpointMouseDown={() => () => undefined}
+      />,
+    );
+    fireEvent.mouseDown(getByTestId("selection-mask"));
+    expect(onMove).toHaveBeenCalled();
   });
 });

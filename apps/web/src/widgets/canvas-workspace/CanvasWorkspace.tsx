@@ -656,6 +656,28 @@ export function CanvasWorkspace() {
       });
     };
 
+  const handleSelectionMoveMouseDown = useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      if (!selectedNodeId) return;
+      handleNodeMouseDown(selectedNodeId, event);
+    },
+    [handleNodeMouseDown, selectedNodeId],
+  );
+
+  const handleSelectionMaskDoubleClick = useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      if (!selectedNodeId || event.button !== 0) return;
+      const node = findNode(project, selectedNodeId);
+      if (node?.type === "label") {
+        beginLabelTextEdit(selectedNodeId);
+      }
+    },
+    [beginLabelTextEdit, project, selectedNodeId],
+  );
+
+  const showSelectionMoveMask =
+    canMoveSelection && editingLabelId !== selectedNodeId;
+
   const handleLineEndpointMouseDown =
     (lineHandle: LineHandle) => (event: React.MouseEvent<HTMLDivElement>) => {
       if (!selectedNodeId || selectedNode?.type !== "line" || !selectedRect || !selectedParentLayoutNode) return;
@@ -804,23 +826,9 @@ export function CanvasWorkspace() {
                   <div className={styles.pixelGridFrame} />
                 </div>
               ) : null}
-              {showGuides && displayedSelectedRect ? (
-                <SelectionOverlay
-                  rect={displayedSelectedRect}
-                  renderZoom={renderZoom}
-                  scaledW={scaledW}
-                  scaledH={scaledH}
-                  showResizeHandles={canResizeSelection}
-                  lineEndpoints={displayedLineEndpoints}
-                  onResizeHandleMouseDown={handleResizeMouseDown}
-                  onLineEndpointMouseDown={handleLineEndpointMouseDown}
-                />
-              ) : null}
-
               <div
                 className={styles.scaledContent}
                 style={{
-                  position: "relative",
                   width: w,
                   height: h,
                   transformOrigin: "top left",
@@ -832,6 +840,23 @@ export function CanvasWorkspace() {
                   ctx={renderCtx}
                 />
               </div>
+              {showGuides && displayedSelectedRect ? (
+                <div className={styles.selectionLayer}>
+                  <SelectionOverlay
+                    rect={displayedSelectedRect}
+                    renderZoom={renderZoom}
+                    scaledW={scaledW}
+                    scaledH={scaledH}
+                    showMoveMask={showSelectionMoveMask}
+                    showResizeHandles={canResizeSelection}
+                    lineEndpoints={displayedLineEndpoints}
+                    onMoveMouseDown={handleSelectionMoveMouseDown}
+                    onMoveMaskDoubleClick={handleSelectionMaskDoubleClick}
+                    onResizeHandleMouseDown={handleResizeMouseDown}
+                    onLineEndpointMouseDown={handleLineEndpointMouseDown}
+                  />
+                </div>
+              ) : null}
             </div>
           </div>
         </div>

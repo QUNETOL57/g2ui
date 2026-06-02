@@ -108,6 +108,17 @@ describe("canvas layer order (feature)", () => {
     expect(get().selectedNodeId).toBe("pan_1");
   });
 
+  it("keeps a covered label under the panel but shows a selection mask", () => {
+    get().setProject(overlappingPanelOverLabel());
+    get().selectNode("lbl_1");
+    const { container } = render(<CanvasWorkspace />);
+
+    const labelEl = container.querySelector('[data-widget-id="lbl_1"]') as HTMLElement;
+    const panelEl = container.querySelector('[data-widget-id="pan_1"]') as HTMLElement;
+    expect(Number(labelEl.style.zIndex)).toBeLessThan(Number(panelEl.style.zIndex));
+    expect(container.querySelector('[data-testid="selection-mask"]')).toBeTruthy();
+  });
+
   it("swaps stacking when the label moves up in the tree", () => {
     get().setProject(overlappingPanelOverLabel());
     get().selectNode("lbl_1");

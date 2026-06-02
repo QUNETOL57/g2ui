@@ -185,6 +185,9 @@ function TreeNode({
           draggedNodeId === node.id && styles.rowDragging,
           dragOverClass,
         )}
+        data-testid="tree-node-row"
+        data-tree-node-id={node.id}
+        data-tree-node-type={node.type}
         style={{ paddingLeft: 10 + depth * 14 }}
         draggable={isDraggable}
         onClick={() => onSelect(node.id)}

@@ -150,7 +150,14 @@ Imports use `@app`, `@pages`, `@widgets`, `@entities`, `@shared` aliases — see
 ```bash
 npm run dev:web      # Vite prints the local dev server URL
 npm run build:web    # production build
-npm run test:web     # vitest run
+npm run test:web     # vitest run (unit + feature tests in jsdom)
+npm run test:e2e     # Playwright browser tests (starts Vite dev server)
+```
+
+First-time Playwright setup (Chromium only):
+
+```bash
+npm --prefix apps/web run test:e2e:install
 ```
 
 ### Boundaries

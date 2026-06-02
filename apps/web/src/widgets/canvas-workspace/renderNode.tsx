@@ -77,6 +77,9 @@ function PreviewNodeImpl({
     <>
       <div
         className={styles.previewNode}
+        data-testid="canvas-widget"
+        data-widget-id={node.id}
+        data-widget-type={node.type}
         style={style}
         onMouseDown={(e) => {
           e.stopPropagation();
@@ -363,6 +366,8 @@ function LabelInlineEditor({
     <div
       ref={rootRef}
       className={styles.labelVisual}
+      data-testid="label-inline-editor"
+      data-widget-id={nodeId}
       style={{
         width: "100%",
         height: "100%",

@@ -19,6 +19,12 @@ build/
 coverage/
 .vite/
 
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
 # OS / IDE
 .DS_Store
 .idea/

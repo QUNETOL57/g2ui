@@ -6,6 +6,7 @@
     "dev:web": "npm --prefix apps/web run dev",
     "build:web": "npm --prefix apps/web run build",
     "test:web": "npm --prefix apps/web run test",
+    "test:e2e": "npm --prefix apps/web run test:e2e",
     "lint:web": "npm --prefix apps/web run lint --if-present",
     "dev:api": "docker compose up api",
     "dev:docker": "docker compose up",

@@ -777,6 +777,7 @@ export function CanvasWorkspace() {
 
             <div
               className={styles.deviceFrame}
+              data-testid="canvas-device-frame"
               ref={deviceFrameRef}
               style={{
                 width: scaledW,

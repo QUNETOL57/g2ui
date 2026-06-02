@@ -4,7 +4,7 @@ import { cn } from "@shared/lib/cn";
 
 import styles from "./Modal.module.css";
 
-export type ModalSize = "sm" | "md";
+export type ModalSize = "sm" | "md" | "lg";
 
 interface ModalProps {
   open: boolean;
@@ -20,6 +20,7 @@ interface ModalProps {
 const sizeClass: Record<ModalSize, string> = {
   sm: styles.sizeSm,
   md: styles.sizeMd,
+  lg: styles.sizeLg,
 };
 
 export function Modal({

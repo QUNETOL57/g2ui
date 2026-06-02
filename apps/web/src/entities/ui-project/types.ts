@@ -83,6 +83,8 @@ export interface LabelProps {
   fontSize?: number;
   fontStyle?: "regular" | "bold" | "oblique" | "boldOblique";
   fontFace?: string;
+  /** When true (default), frame width/height follow text metrics. Set false after manual resize. */
+  textAutoSize?: boolean;
 }
 
 export interface ButtonProps {

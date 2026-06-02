@@ -98,3 +98,10 @@
   top: 0;
   z-index: 2;
 }
+
+.selectionLayer {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+}

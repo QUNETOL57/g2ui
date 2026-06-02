@@ -10,6 +10,7 @@ test.describe("widget tree layer order on canvas", () => {
   test("sibling order controls z-index and hit-testing at overlap", async ({ page }) => {
     await page.getByRole("button", { name: "+ label" }).click();
     await page.getByRole("button", { name: "+ panel" }).click();
+    await treeRow(page, "screen_main").click();
 
     const label = canvasWidget(page, "lab_1");
     const panel = canvasWidget(page, "pan_1");
@@ -36,6 +37,7 @@ test.describe("widget tree layer order on canvas", () => {
 
     await treeRow(page, "lab_1").click();
     await page.getByRole("button", { name: "↓" }).click();
+    await treeRow(page, "screen_main").click();
 
     await expect(panel).toHaveCSS("z-index", "2");
     await expect(label).toHaveCSS("z-index", "1");
@@ -48,5 +50,17 @@ test.describe("widget tree layer order on canvas", () => {
 
     await page.mouse.click(x, y);
     await expect(treeRow(page, "pan_1")).toHaveClass(/rowSelected/);
+
+    await treeRow(page, "lab_1").click();
+    await expect(label).toHaveCSS("z-index", "1");
+    await expect(panel).toHaveCSS("z-index", "2");
+    await expect(page.getByTestId("selection-mask")).toBeVisible();
+
+    const topWhenLabelSelected = await page.evaluate(({ px, py }) => {
+      const el = document.elementFromPoint(px, py);
+      if (el?.closest('[data-testid="selection-mask"]')) return "selection-mask";
+      return el?.closest("[data-widget-id]")?.getAttribute("data-widget-id") ?? null;
+    }, { px: x, py: y });
+    expect(topWhenLabelSelected).toBe("selection-mask");
   });
 });

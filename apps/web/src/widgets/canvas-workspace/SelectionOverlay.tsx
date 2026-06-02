@@ -11,8 +11,11 @@ interface SelectionOverlayProps {
   renderZoom: number;
   scaledW: number;
   scaledH: number;
+  showMoveMask: boolean;
   showResizeHandles: boolean;
   lineEndpoints: { start: Point; end: Point } | null;
+  onMoveMouseDown?: (event: ReactMouseEvent<HTMLDivElement>) => void;
+  onMoveMaskDoubleClick?: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onResizeHandleMouseDown: (handle: ResizeHandle) => (event: ReactMouseEvent<HTMLDivElement>) => void;
   onLineEndpointMouseDown: (handle: LineHandle) => (event: ReactMouseEvent<HTMLDivElement>) => void;
 }
@@ -29,8 +32,11 @@ export function SelectionOverlay({
   renderZoom,
   scaledW,
   scaledH,
+  showMoveMask,
   showResizeHandles,
   lineEndpoints,
+  onMoveMouseDown,
+  onMoveMaskDoubleClick,
   onResizeHandleMouseDown,
   onLineEndpointMouseDown,
 }: SelectionOverlayProps) {
@@ -38,6 +44,8 @@ export function SelectionOverlay({
   const right = Math.round((rect.x + rect.width) * renderZoom);
   const top = Math.round(rect.y * renderZoom);
   const bottom = Math.round((rect.y + rect.height) * renderZoom);
+  const maskWidth = Math.max(1, right - left);
+  const maskHeight = Math.max(1, bottom - top);
 
   return (
     <>
@@ -45,6 +53,21 @@ export function SelectionOverlay({
       <div className={cn(styles.guide, styles.guideVertical)} style={{ left: right, top: 0, height: scaledH }} />
       <div className={cn(styles.guide, styles.guideHorizontal)} style={{ top, left: 0, width: scaledW }} />
       <div className={cn(styles.guide, styles.guideHorizontal)} style={{ top: bottom, left: 0, width: scaledW }} />
+      {showMoveMask && onMoveMouseDown ? (
+        <div
+          className={styles.selectionMask}
+          data-testid="selection-mask"
+          style={{ left, top, width: maskWidth, height: maskHeight }}
+          onMouseDown={(event) => {
+            event.stopPropagation();
+            onMoveMouseDown(event);
+          }}
+          onDoubleClick={(event) => {
+            event.stopPropagation();
+            onMoveMaskDoubleClick?.(event);
+          }}
+        />
+      ) : null}
       {showResizeHandles ? (
         <>
           <div

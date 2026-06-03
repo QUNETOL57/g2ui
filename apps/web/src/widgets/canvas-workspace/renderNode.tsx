@@ -88,7 +88,7 @@ function PreviewNodeImpl({
         }}
         onDoubleClick={(e) => {
           e.stopPropagation();
-          if (node.type === "label") {
+          if (node.type === "label" || node.type === "button") {
             ctx.onLabelEditStart?.(node.id);
           }
         }}
@@ -252,6 +252,7 @@ function labelTextOrigin(
   align: BitmapTextAlign,
   boxWidth: number,
   boxHeight: number,
+  verticalAlign: "top" | "center" | "bottom" = "center",
 ) {
   const textWidth = measureTextWidth(face, text);
   const textHeight = face.lineHeight;
@@ -261,7 +262,12 @@ function labelTextOrigin(
   } else if (align === "right") {
     originX = boxWidth - textWidth;
   }
-  const originY = Math.floor((boxHeight - textHeight) / 2);
+  let originY = Math.floor((boxHeight - textHeight) / 2);
+  if (verticalAlign === "top") {
+    originY = 0;
+  } else if (verticalAlign === "bottom") {
+    originY = boxHeight - textHeight;
+  }
   return { originX, originY, textWidth, textHeight };
 }
 
@@ -287,6 +293,7 @@ function LabelInlineEditor({
   color,
   bg,
   align,
+  verticalAlign = "center",
   rect,
   onCommit,
   onDraftFrame,
@@ -298,6 +305,7 @@ function LabelInlineEditor({
   color: string;
   bg: string;
   align: BitmapTextAlign;
+  verticalAlign?: "top" | "center" | "bottom";
   rect: Frame;
   onCommit: (nodeId: string, text: string, frame?: Frame) => void;
   onDraftFrame?: (nodeId: string, frame: Frame) => void;
@@ -358,7 +366,7 @@ function LabelInlineEditor({
     return () => window.removeEventListener("mousedown", handleMouseDown, { capture: true });
   }, [nodeId, onCommit]);
 
-  const { originX, originY } = labelTextOrigin(face, text, align, rect.width, rect.height);
+  const { originX, originY } = labelTextOrigin(face, text, align, rect.width, rect.height, verticalAlign);
   const rawCaretLeft = originX + measureTextWidth(face, text.slice(0, caretIndex));
   const caretLeft = Math.max(0, Math.min(rawCaretLeft, Math.max(0, rect.width - 1)));
 
@@ -379,6 +387,7 @@ function LabelInlineEditor({
         text={text}
         color={color}
         align={align}
+        verticalAlign={verticalAlign}
         boxWidth={rect.width}
         boxHeight={rect.height}
       />
@@ -504,6 +513,11 @@ function ButtonVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; r
   const paddingBottom = Math.max(0, props.paddingBottom ?? props.paddingY ?? 0);
   const contentWidth = Math.max(0, rect.width - bw * 2 - paddingLeft - paddingRight);
   const contentHeight = Math.max(0, rect.height - bw * 2 - paddingTop - paddingBottom);
+  const face = findFontFace(props);
+  const horizontalAlign = props.horizontalAlign ?? "center";
+  const verticalAlign = props.verticalAlign ?? "center";
+  const isEditing = ctx.editingLabelId === node.id;
+
   return (
     <div
       style={{
@@ -514,15 +528,30 @@ function ButtonVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; r
         padding: `${paddingTop}px ${paddingRight}px ${paddingBottom}px ${paddingLeft}px`,
       }}
     >
-      <BitmapText
-        face={findFontFace(props)}
-        text={props.text ?? ""}
-        color={fg}
-        align={props.horizontalAlign ?? "center"}
-        verticalAlign={props.verticalAlign ?? "center"}
-        boxWidth={contentWidth}
-        boxHeight={contentHeight}
-      />
+      {isEditing && ctx.onLabelTextCommit ? (
+        <LabelInlineEditor
+          nodeId={node.id}
+          face={face}
+          initialText={props.text ?? ""}
+          color={fg}
+          bg="transparent"
+          align={horizontalAlign}
+          verticalAlign={verticalAlign}
+          rect={{ x: 0, y: 0, width: contentWidth, height: contentHeight }}
+          onCommit={ctx.onLabelTextCommit}
+          onSelect={ctx.onSelect}
+        />
+      ) : (
+        <BitmapText
+          face={face}
+          text={props.text ?? ""}
+          color={fg}
+          align={horizontalAlign}
+          verticalAlign={verticalAlign}
+          boxWidth={contentWidth}
+          boxHeight={contentHeight}
+        />
+      )}
     </div>
   );
 }

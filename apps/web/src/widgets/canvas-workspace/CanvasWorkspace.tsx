@@ -682,7 +682,7 @@ export function CanvasWorkspace({
     (event: React.MouseEvent<HTMLDivElement>) => {
       if (!selectedNodeId || event.button !== 0) return;
       const node = findNode(project, selectedNodeId);
-      if (node?.type === "label") {
+      if (node?.type === "label" || node?.type === "button") {
         beginLabelTextEdit(selectedNodeId);
       }
     },

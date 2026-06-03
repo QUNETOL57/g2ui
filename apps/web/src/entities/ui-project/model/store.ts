@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type {
+  ButtonProps,
   Frame,
   IconProps,
   LabelProps,
@@ -108,7 +109,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   beginLabelTextEdit: (nodeId) => {
     const node = findNode(get().project, nodeId);
-    if (!node || node.type !== "label") return;
+    if (!node || (node.type !== "label" && node.type !== "button")) return;
     get().selectNode(nodeId);
     get().beginHistoryBatch();
     set({ editingLabelId: nodeId });
@@ -118,15 +119,19 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set((state) => {
       const next = cloneProject(state.project);
       const node = findNode(next, nodeId);
-      if (node?.type !== "label") {
+      if (node?.type !== "label" && node?.type !== "button") {
         return { editingLabelId: null, draftFrame: null };
       }
 
-      node.props = { ...(node.props ?? {}), text } as LabelProps;
-      node.frame = normalizeTextNodeFrame(
-        node,
-        frame ?? node.frame ?? defaultFrameFor("label", "", next),
-      );
+      if (node.type === "label") {
+        node.props = { ...(node.props ?? {}), text } as LabelProps;
+        node.frame = normalizeTextNodeFrame(
+          node,
+          frame ?? node.frame ?? defaultFrameFor("label", "", next),
+        );
+      } else {
+        node.props = { ...(node.props ?? {}), text } as ButtonProps;
+      }
 
       return {
         project: next,

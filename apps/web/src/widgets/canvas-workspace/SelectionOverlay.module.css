@@ -2,8 +2,7 @@
   position: absolute;
   z-index: 6;
   box-sizing: border-box;
-  border: 1px dashed rgba(227, 232, 240, 0.65);
-  background: rgba(227, 232, 240, 0.04);
+  background: transparent;
   cursor: move;
   pointer-events: auto;
 }

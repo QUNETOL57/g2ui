@@ -122,4 +122,26 @@ describe("PreviewNode: behavior", () => {
     await userEvent.pointer({ keys: "[MouseLeft]", target: screen.getByLabelText("X") });
     expect(onSelect).toHaveBeenCalled();
   });
+
+  it("starts text editing for a button on double-click", async () => {
+    const project = withChildren(makeFixtureProject(), [makeButton("bt_1", "Tap")]);
+    const layout = layoutTree(project.screens[0], project.display.width, project.display.height);
+    const onLabelEditStart = vi.fn();
+    render(
+      <PreviewNode
+        layoutNode={layout}
+        ctx={{
+          palette: project.palette,
+          selectedId: null,
+          movableId: null,
+          dragPreview: null,
+          onSelect: vi.fn(),
+          onLabelEditStart,
+        }}
+      />,
+    );
+
+    await userEvent.dblClick(screen.getByLabelText("Tap"));
+    expect(onLabelEditStart).toHaveBeenCalledWith("bt_1");
+  });
 });

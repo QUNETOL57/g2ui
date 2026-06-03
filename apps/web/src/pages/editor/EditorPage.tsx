@@ -60,7 +60,7 @@ export function EditorPage({
         selectedNodeId
       ) {
         const node = findNode(useEditorStore.getState().project, selectedNodeId);
-        if (node?.type === "label") {
+        if (node?.type === "label" || node?.type === "button") {
           event.preventDefault();
           beginLabelTextEdit(selectedNodeId);
           return;

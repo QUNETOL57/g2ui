@@ -45,11 +45,14 @@ describe("PropertiesPanel: per-type groups", () => {
     expect(screen.getByText("Typography")).toBeInTheDocument();
   });
 
-  it("for button shows ButtonGroup with text field", () => {
+  it("for button shows typography controls without a separate text field", () => {
     const project = withChildren(makeFixtureProject(), [makeButton("bt_1", "Save")]);
     get().setProject(project);
     selectAndRender("bt_1");
-    expect(screen.getByLabelText("button text")).toHaveValue("Save");
+    expect(screen.getByText(/Properties · button/)).toBeInTheDocument();
+    expect(screen.getByText("Typography")).toBeInTheDocument();
+    expect(screen.getByText("Padding")).toBeInTheDocument();
+    expect(screen.queryByLabelText("button text")).toBeNull();
   });
 
   it("for icon shows IconGroup search input", () => {

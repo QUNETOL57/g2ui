@@ -9,6 +9,7 @@ import { CanvasWorkspace } from "@widgets/canvas-workspace/CanvasWorkspace";
 import { TreePanel } from "@widgets/tree-panel/TreePanel";
 
 import {
+  makeButton,
   makeFixtureProject,
   makeLabel,
   makePanel,
@@ -35,6 +36,18 @@ describe("label text editing (feature)", () => {
     expect(get().selectedNodeId).toBe("lbl_1");
   });
 
+  it("opens inline edit for a button from tree double-click", () => {
+    const project = withChildren(makeFixtureProject(), [makeButton("bt_1", "Tree button")]);
+    get().setProject(project);
+    const { container } = render(<TreePanel />);
+
+    const row = container.querySelector('[data-tree-node-id="bt_1"]');
+    expect(row).toBeTruthy();
+    fireEvent.doubleClick(row!);
+    expect(get().editingLabelId).toBe("bt_1");
+    expect(get().selectedNodeId).toBe("bt_1");
+  });
+
   it("opens inline edit with Enter when a label is selected", async () => {
     const project = withChildren(makeFixtureProject(), [makeLabel("lbl_1", "Key")]);
     get().setProject(project);
@@ -44,6 +57,17 @@ describe("label text editing (feature)", () => {
     await userEvent.keyboard("{Enter}");
     expect(screen.getByLabelText("edit label text")).toBeInTheDocument();
     expect(get().editingLabelId).toBe("lbl_1");
+  });
+
+  it("opens inline edit with Enter when a button is selected", async () => {
+    const project = withChildren(makeFixtureProject(), [makeButton("bt_1", "Key button")]);
+    get().setProject(project);
+    get().selectNode("bt_1");
+    render(<EditorPage onBackToLibrary={() => undefined} />);
+
+    await userEvent.keyboard("{Enter}");
+    expect(screen.getByLabelText("edit label text")).toBeInTheDocument();
+    expect(get().editingLabelId).toBe("bt_1");
   });
 
   it("commits expanded frame and text on blur", async () => {
@@ -67,6 +91,23 @@ describe("label text editing (feature)", () => {
     const after = get().project.screens[0].children?.[0];
     expect((after?.props as { text: string }).text).toBe("Longer label text");
     expect(after?.frame?.width).toBeGreaterThan(80);
+    expect(get().editingLabelId).toBeNull();
+    expect(get().draftFrame).toBeNull();
+  });
+
+  it("commits button text on blur without resizing the button frame", () => {
+    const project = withChildren(makeFixtureProject(), [makeButton("bt_1", "Tap")]);
+    get().setProject(project);
+    render(<CanvasWorkspace />);
+
+    const before = findNode(get().project, "bt_1")?.frame;
+    fireEvent.doubleClick(screen.getByLabelText("Tap"));
+    fireEvent.change(screen.getByLabelText("edit label text"), { target: { value: "Submit" } });
+    fireEvent.blur(screen.getByLabelText("edit label text"));
+
+    const after = findNode(get().project, "bt_1");
+    expect((after?.props as { text: string }).text).toBe("Submit");
+    expect(after?.frame).toEqual(before);
     expect(get().editingLabelId).toBeNull();
     expect(get().draftFrame).toBeNull();
   });
@@ -176,6 +217,20 @@ describe("store: label text edit", () => {
     const node = findNode(get().project, "lbl_1");
     expect((node?.props as { text: string }).text).toBe("Much longer text");
     expect(node?.frame?.width).toBeGreaterThan(widthBefore);
+    expect(get().editingLabelId).toBeNull();
+  });
+
+  it("commitLabelText persists button text without changing its frame", () => {
+    const project = withChildren(makeFixtureProject(), [makeButton("bt_1", "Hi")]);
+    get().setProject(project);
+    const frameBefore = findNode(get().project, "bt_1")?.frame;
+
+    get().beginLabelTextEdit("bt_1");
+    get().commitLabelText("bt_1", "Longer button text", { x: 0, y: 0, width: 200, height: 24 });
+
+    const node = findNode(get().project, "bt_1");
+    expect((node?.props as { text: string }).text).toBe("Longer button text");
+    expect(node?.frame).toEqual(frameBefore);
     expect(get().editingLabelId).toBeNull();
   });
 });

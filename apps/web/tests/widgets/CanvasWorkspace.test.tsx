@@ -6,6 +6,7 @@ import { useEditorStore } from "@entities/ui-project/model/store";
 import { CanvasWorkspace } from "@widgets/canvas-workspace/CanvasWorkspace";
 
 import {
+  makeButton,
   makeFixtureProject,
   makeLabel,
   withChildren,
@@ -119,5 +120,25 @@ describe("CanvasWorkspace: selection", () => {
     fireEvent.blur(input);
     expect((get().project.screens[0].children?.[0].props as { text: string }).text).toBe("New label that grows");
     expect(get().draftFrame).toBeNull();
+  });
+
+  it("edits selected button text inline on the canvas", async () => {
+    const project = withChildren(makeFixtureProject(), [makeButton("bt_1", "Save")]);
+    get().setProject(project);
+    render(<CanvasWorkspace />);
+
+    fireEvent.doubleClick(screen.getByLabelText("Save"));
+    const input = screen.getByLabelText("edit label text");
+    fireEvent.change(input, { target: { value: "Send" } });
+
+    expect(input).toHaveValue("Send");
+    expect((get().project.screens[0].children?.[0].props as { text: string }).text).toBe("Save");
+    expect(get().draftFrame).toBeNull();
+
+    fireEvent.blur(input);
+    expect((get().project.screens[0].children?.[0].props as { text: string }).text).toBe("Send");
+
+    get().undo();
+    expect((get().project.screens[0].children?.[0].props as { text: string }).text).toBe("Save");
   });
 });

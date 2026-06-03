@@ -192,7 +192,7 @@ function TreeNode({
         onClick={() => onSelect(node.id)}
         onDoubleClick={(event) => {
           event.stopPropagation();
-          if (node.type === "label") onLabelEdit(node.id);
+          if (node.type === "label" || node.type === "button") onLabelEdit(node.id);
         }}
         onDragStart={(event) => {
           if (!isDraggable) return;

@@ -7,7 +7,7 @@ export const WHEEL_ZOOM_STEP = 0.25;
 export const PIXEL_GRID_VISIBLE_ZOOM = 5;
 export const RULER_SIZE = 24;
 
-export type ResizeHandle = "nw" | "ne" | "sw" | "se";
+export type ResizeHandle = "n" | "e" | "s" | "w" | "nw" | "ne" | "sw" | "se";
 export type LineHandle = "start" | "end";
 
 export interface Point {

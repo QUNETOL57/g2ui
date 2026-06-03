@@ -141,4 +141,33 @@ describe("CanvasWorkspace: selection", () => {
     get().undo();
     expect((get().project.screens[0].children?.[0].props as { text: string }).text).toBe("Save");
   });
+
+  it("shows full-edge resize handles for the selected widget", async () => {
+    const project = withChildren(makeFixtureProject(), [makeButton("bt_1", "Save")]);
+    get().setProject(project);
+    render(<CanvasWorkspace />);
+
+    await userEvent.pointer({ keys: "[MouseLeft]", target: screen.getByLabelText("Save") });
+
+    expect(screen.getByTestId("resize-handle-n")).toBeInTheDocument();
+    expect(screen.getByTestId("resize-handle-e")).toBeInTheDocument();
+    expect(screen.getByTestId("resize-handle-s")).toBeInTheDocument();
+    expect(screen.getByTestId("resize-handle-w")).toBeInTheDocument();
+    expect(screen.getByTestId("resize-handle-e")).toHaveStyle({ height: "48px" });
+  });
+
+  it("resizes the selected widget from the right edge", async () => {
+    const project = withChildren(makeFixtureProject(), [makeButton("bt_1", "Save")]);
+    get().setProject(project);
+    render(<CanvasWorkspace />);
+
+    await userEvent.pointer({ keys: "[MouseLeft]", target: screen.getByLabelText("Save") });
+    fireEvent.mouseDown(screen.getByTestId("resize-handle-e"), { button: 0, clientX: 0, clientY: 0 });
+    fireEvent.mouseMove(window, { clientX: 20, clientY: 0 });
+    fireEvent.mouseUp(window);
+
+    const frame = get().project.screens[0].children?.[0].frame;
+    expect(frame?.x).toBe(8);
+    expect(frame?.width).toBe(90);
+  });
 });

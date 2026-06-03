@@ -1,5 +1,6 @@
 import type { ColorRef, WidgetNode } from "@entities/ui-project";
 import { cn } from "@shared/lib/cn";
+import { RangeSlider } from "@shared/ui/RangeSlider";
 
 import styles from "../PropertiesPanel.module.css";
 import { ColorField } from "../ui/ColorField";
@@ -23,6 +24,14 @@ export function StyleGroup({
   const fillEnabled = s.drawBackground !== false;
   const borderEnabled = Boolean(s.drawBorder);
   const showFill = node.type !== "label";
+  const showRadius = node.type === "button" || node.type === "panel" || node.type === "rect";
+  const radius = Math.max(0, s.borderRadius ?? 0);
+  const radiusMax = Math.max(
+    1,
+    radius,
+    Math.floor(Math.min(node.frame?.width ?? 32, node.frame?.height ?? 32) / 2),
+  );
+  const radiusProgress = (radius / radiusMax) * 100;
   const showText =
     node.type !== "screen" &&
     node.type !== "panel" &&
@@ -90,6 +99,37 @@ export function StyleGroup({
               onChange={(v) => updateStyle(node.id, { background: v, drawBackground: true })}
             />
           ) : null}
+        </InspectorCard>
+      ) : null}
+      {showRadius ? (
+        <InspectorCard title="Corners">
+          <div className={cn(styles.row, styles.radiusRow)}>
+            <label htmlFor={`${node.id}-corner-radius`}>radius</label>
+            <div className={styles.radiusControl}>
+              <RangeSlider
+                aria-label="corner radius"
+                min={0}
+                max={radiusMax}
+                step={1}
+                value={radius}
+                progress={radiusProgress}
+                onChange={(event) =>
+                  updateStyle(node.id, { borderRadius: Math.max(0, Number(event.target.value) || 0) })
+                }
+              />
+              <input
+                id={`${node.id}-corner-radius`}
+                className={styles.inputText}
+                type="number"
+                min={0}
+                max={radiusMax}
+                value={radius}
+                onChange={(event) =>
+                  updateStyle(node.id, { borderRadius: Math.max(0, Number(event.target.value) || 0) })
+                }
+              />
+            </div>
+          </div>
         </InspectorCard>
       ) : null}
       <InspectorCard

@@ -101,14 +101,40 @@ describe("PreviewNode: per-type rendering", () => {
     expect(container.querySelector("svg")).toBeTruthy();
   });
 
+  it("renders button corner radius", () => {
+    const button = makeButton("bt_1", "Save");
+    button.style = { ...(button.style ?? {}), borderRadius: 6 };
+    const { container } = renderProject([button]);
+    const pixelBox = container.querySelector('[data-widget-type="button"] [data-testid="pixel-rounded-box"]') as SVGElement;
+    expect(pixelBox).toBeTruthy();
+    expect(pixelBox.getAttribute("shape-rendering")).toBe("crispEdges");
+    expect(screen.getByLabelText("Save")).toBeInTheDocument();
+  });
+
   it("renders rect as a styled div", () => {
     const { container } = renderProject([makeRect("rc_1")]);
     expect(container.querySelectorAll("div").length).toBeGreaterThan(0);
   });
 
+  it("renders rect corner radius", () => {
+    const rect = makeRect("rc_1");
+    rect.style = { ...(rect.style ?? {}), borderRadius: 5 };
+    const { container } = renderProject([rect]);
+    const pixelBox = container.querySelector('[data-widget-type="rect"] [data-testid="pixel-rounded-box"]');
+    expect(pixelBox).toBeTruthy();
+  });
+
   it("renders panel container", () => {
     renderProject([makePanel("pn_1")]);
     expect(true).toBe(true);
+  });
+
+  it("renders panel corner radius", () => {
+    const panel = makePanel("pn_1");
+    panel.style = { ...(panel.style ?? {}), borderRadius: 4 };
+    const { container } = renderProject([panel]);
+    const pixelBox = container.querySelector('[data-widget-type="panel"] [data-testid="pixel-rounded-box"]');
+    expect(pixelBox).toBeTruthy();
   });
 
   it("renders line", () => {

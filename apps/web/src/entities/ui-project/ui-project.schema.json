@@ -93,6 +93,7 @@
             "background": { "$ref": "#/definitions/color" },
             "borderColor": { "$ref": "#/definitions/color" },
             "borderWidth": { "type": "integer", "minimum": 0 },
+            "borderRadius": { "type": "integer", "minimum": 0 },
             "textColor": { "$ref": "#/definitions/color" },
             "drawBackground": { "type": "boolean" },
             "drawBorder": { "type": "boolean" }

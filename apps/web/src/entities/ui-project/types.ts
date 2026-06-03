@@ -29,6 +29,7 @@ export interface StyleRef {
   background?: ColorRef;
   borderColor?: ColorRef;
   borderWidth?: number;
+  borderRadius?: number;
   textColor?: ColorRef;
   drawBackground?: boolean;
   drawBorder?: boolean;

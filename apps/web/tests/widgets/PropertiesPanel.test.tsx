@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { useEditorStore } from "@entities/ui-project/model/store";
@@ -110,5 +110,22 @@ describe("PropertiesPanel: writes to store via shared inputs", () => {
     const visibleCheckbox = screen.getByLabelText(/Visible on canvas/i);
     await userEvent.click(visibleCheckbox);
     expect(get().project.screens[0].children?.[0].visible).toBe(false);
+  });
+
+  it("corner radius update persists to button style", async () => {
+    const project = withChildren(makeFixtureProject(), [makeButton("bt_1", "Save")]);
+    get().setProject(project);
+    selectAndRender("bt_1");
+
+    const cornersCard = screen.getByText("Corners").closest("div")!.parentElement!;
+    const radiusSlider = within(cornersCard).getByRole("slider", { name: "corner radius" });
+    const radiusInput = within(cornersCard).getByLabelText("radius");
+    fireEvent.change(radiusSlider, { target: { value: "6" } });
+
+    expect(get().project.screens[0].children?.[0].style?.borderRadius).toBe(6);
+
+    await userEvent.clear(radiusInput);
+    await userEvent.type(radiusInput, "4");
+    expect(get().project.screens[0].children?.[0].style?.borderRadius).toBe(4);
   });
 });

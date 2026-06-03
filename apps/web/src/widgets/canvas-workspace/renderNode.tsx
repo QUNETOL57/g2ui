@@ -7,6 +7,7 @@ import type {
   LabelProps,
   LineProps,
   PaletteEntry,
+  RectProps,
   WidgetNode,
 } from "@entities/ui-project";
 import type { LayoutNode } from "@entities/ui-project/lib/layoutEngine";
@@ -156,9 +157,9 @@ function NodeVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; rec
   switch (node.type) {
     case "screen":
     case "panel":
-      return <PanelVisual node={node} ctx={ctx} />;
+      return <PanelVisual node={node} ctx={ctx} rect={rect} />;
     case "rect":
-      return <PanelVisual node={node} ctx={ctx} rectMode />;
+      return <PanelVisual node={node} ctx={ctx} rect={rect} />;
     case "label":
       return <LabelVisual node={node} ctx={ctx} rect={rect} />;
     case "button":
@@ -216,11 +217,11 @@ function rasterLine(x1: number, y1: number, x2: number, y2: number): PixelPoint[
 function PanelVisual({
   node,
   ctx,
-  rectMode,
+  rect,
 }: {
   node: WidgetNode;
   ctx: RenderCtx;
-  rectMode?: boolean;
+  rect: Frame;
 }) {
   const defaultBg = node.type === "screen" ? "transparent" : "#FFFFFF";
   const bg = node.type === "screen"
@@ -233,6 +234,21 @@ function PanelVisual({
     node.style?.drawBorder && borderWidth > 0
       ? resolveColor(node.style?.borderColor, ctx.palette, "#FFFFFF")
       : "transparent";
+  const rectProps = (node.props ?? {}) as Partial<RectProps>;
+  const borderRadius = Math.max(0, node.style?.borderRadius ?? rectProps.radius ?? 0);
+  if (borderRadius > 0) {
+    return (
+      <PixelRoundedBox
+        width={rect.width}
+        height={rect.height}
+        radius={borderRadius}
+        background={bg}
+        borderColor={borderColor}
+        borderWidth={borderWidth}
+      />
+    );
+  }
+
   return (
     <div
       style={{
@@ -240,9 +256,90 @@ function PanelVisual({
         height: "100%",
         background: bg,
         border: `${borderWidth}px solid ${borderColor}`,
-        borderRadius: rectMode ? undefined : 0,
       }}
     />
+  );
+}
+
+function roundedRowInset(y: number, width: number, height: number, radius: number): number {
+  const r = Math.min(Math.floor(radius), Math.floor(width / 2), Math.floor(height / 2));
+  if (r <= 0) return 0;
+  const cornerY = y < r ? r - y - 0.5 : y >= height - r ? y - (height - r) + 0.5 : -1;
+  if (cornerY < 0) return 0;
+  const inset = r - Math.sqrt(Math.max(0, r * r - cornerY * cornerY));
+  return Math.max(0, Math.ceil(inset));
+}
+
+function PixelRoundedBox({
+  width,
+  height,
+  radius,
+  background,
+  borderColor,
+  borderWidth = 0,
+}: {
+  width: number;
+  height: number;
+  radius: number;
+  background: string;
+  borderColor: string;
+  borderWidth?: number;
+}) {
+  const w = Math.max(0, Math.round(width));
+  const h = Math.max(0, Math.round(height));
+  const bw = Math.max(0, Math.round(borderWidth));
+  const hasBorder = bw > 0 && borderColor !== "transparent";
+  const hasFill = background !== "transparent";
+  const outerColor = hasBorder ? borderColor : background;
+  const innerW = Math.max(0, w - bw * 2);
+  const innerH = Math.max(0, h - bw * 2);
+  const innerRadius = Math.max(0, radius - bw);
+
+  return (
+    <svg
+      data-testid="pixel-rounded-box"
+      aria-hidden
+      viewBox={`0 0 ${w} ${h}`}
+      preserveAspectRatio="none"
+      shapeRendering="crispEdges"
+      style={{
+        display: "block",
+        width: "100%",
+        height: "100%",
+        shapeRendering: "crispEdges",
+      }}
+    >
+      {(hasBorder || hasFill) && outerColor !== "transparent"
+        ? Array.from({ length: h }, (_, y) => {
+            const inset = roundedRowInset(y, w, h, radius);
+            return (
+              <rect
+                key={`outer-${y}`}
+                x={inset}
+                y={y}
+                width={Math.max(0, w - inset * 2)}
+                height={1}
+                fill={outerColor}
+              />
+            );
+          })
+        : null}
+      {hasBorder && hasFill
+        ? Array.from({ length: innerH }, (_, y) => {
+            const inset = roundedRowInset(y, innerW, innerH, innerRadius);
+            return (
+              <rect
+                key={`inner-${y}`}
+                x={bw + inset}
+                y={bw + y}
+                width={Math.max(0, innerW - inset * 2)}
+                height={1}
+                fill={background}
+              />
+            );
+          })
+        : null}
+    </svg>
   );
 }
 
@@ -623,108 +720,140 @@ function ButtonVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; r
   const textBoxHeight = !isIconVertical || iconPosition === "top"
     ? Math.max(0, contentHeight - textTop)
     : Math.max(0, iconTop - iconGap - textTop);
+  const borderRadius = Math.max(0, node.style?.borderRadius ?? 0);
 
   return (
     <div
       style={{
+        position: "relative",
         width: "100%",
         height: "100%",
-        background: bg,
-        border: `${bw}px solid ${bc}`,
-        padding: `${paddingTop}px ${paddingRight}px ${paddingBottom}px ${paddingLeft}px`,
+        overflow: "hidden",
       }}
     >
-      {!icon ? (
-        isEditing && ctx.onLabelTextCommit ? (
-          <LabelInlineEditor
-            nodeId={node.id}
-            face={face}
-            initialText={text}
-            color={fg}
-            bg="transparent"
-            align={horizontalAlign}
-            verticalAlign={verticalAlign}
-            rect={{ x: 0, y: 0, width: contentWidth, height: contentHeight }}
-            onCommit={ctx.onLabelTextCommit}
-            onSelect={ctx.onSelect}
+      {borderRadius > 0 ? (
+        <div aria-hidden style={{ position: "absolute", inset: 0 }}>
+          <PixelRoundedBox
+            width={rect.width}
+            height={rect.height}
+            radius={borderRadius}
+            background={bg}
+            borderColor={bc}
+            borderWidth={bw}
           />
-        ) : (
-          <BitmapText
-            face={face}
-            text={text}
-            color={fg}
-            align={horizontalAlign}
-            verticalAlign={verticalAlign}
-            boxWidth={contentWidth}
-            boxHeight={contentHeight}
-          />
-        )
+        </div>
       ) : (
-        <div style={{ position: "relative", width: contentWidth, height: contentHeight, overflow: "hidden" }}>
-          <div
-            style={{
-              position: "absolute",
-              left: iconLeft,
-              top: iconTop,
-              width: iconWidth,
-              height: iconHeight,
-            }}
-          >
-            <IconGlyph iconId={icon.id} color={fg} pixelSize={iconPixelSize} />
-          </div>
-          {isEditing && ctx.onLabelTextCommit ? (
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: bg,
+            border: `${bw}px solid ${bc}`,
+          }}
+        />
+      )}
+      <div
+        style={{
+          position: "relative",
+          width: contentWidth,
+          height: contentHeight,
+          margin: `${bw + paddingTop}px ${bw + paddingRight}px ${bw + paddingBottom}px ${bw + paddingLeft}px`,
+          overflow: "hidden",
+        }}
+      >
+        {!icon ? (
+          isEditing && ctx.onLabelTextCommit ? (
+            <LabelInlineEditor
+              nodeId={node.id}
+              face={face}
+              initialText={text}
+              color={fg}
+              bg="transparent"
+              align={horizontalAlign}
+              verticalAlign={verticalAlign}
+              rect={{ x: 0, y: 0, width: contentWidth, height: contentHeight }}
+              onCommit={ctx.onLabelTextCommit}
+              onSelect={ctx.onSelect}
+            />
+          ) : (
+            <BitmapText
+              face={face}
+              text={text}
+              color={fg}
+              align={horizontalAlign}
+              verticalAlign={verticalAlign}
+              boxWidth={contentWidth}
+              boxHeight={contentHeight}
+            />
+          )
+        ) : (
+          <>
             <div
               style={{
                 position: "absolute",
-                left: textLeft,
-                top: textTop,
-                width: textBoxWidth,
-                height: Math.max(textBoxHeight, face.lineHeight),
-                overflow: "hidden",
+                left: iconLeft,
+                top: iconTop,
+                width: iconWidth,
+                height: iconHeight,
               }}
             >
-              <LabelInlineEditor
-                nodeId={node.id}
-                face={face}
-                initialText={text}
-                color={fg}
-                bg="transparent"
-                align="left"
-                verticalAlign="top"
-                rect={{
-                  x: 0,
-                  y: 0,
+              <IconGlyph iconId={icon.id} color={fg} pixelSize={iconPixelSize} />
+            </div>
+            {isEditing && ctx.onLabelTextCommit ? (
+              <div
+                style={{
+                  position: "absolute",
+                  left: textLeft,
+                  top: textTop,
                   width: textBoxWidth,
                   height: Math.max(textBoxHeight, face.lineHeight),
+                  overflow: "hidden",
                 }}
-                onCommit={ctx.onLabelTextCommit}
-                onSelect={ctx.onSelect}
-              />
-            </div>
-          ) : text ? (
-            <div
-              style={{
-                position: "absolute",
-                left: textLeft,
-                top: textTop,
-                width: textBoxWidth,
-                height: Math.max(textBoxHeight, textHeight),
-                overflow: "hidden",
-              }}
-            >
-              <BitmapText
-                face={face}
-                text={text}
-                color={fg}
-                align="left"
-                verticalAlign="top"
-                boxWidth={textBoxWidth}
-                boxHeight={Math.max(textBoxHeight, textHeight)}
-              />
-            </div>
-          ) : null}
-        </div>
-      )}
+              >
+                <LabelInlineEditor
+                  nodeId={node.id}
+                  face={face}
+                  initialText={text}
+                  color={fg}
+                  bg="transparent"
+                  align="left"
+                  verticalAlign="top"
+                  rect={{
+                    x: 0,
+                    y: 0,
+                    width: textBoxWidth,
+                    height: Math.max(textBoxHeight, face.lineHeight),
+                  }}
+                  onCommit={ctx.onLabelTextCommit}
+                  onSelect={ctx.onSelect}
+                />
+              </div>
+            ) : text ? (
+              <div
+                style={{
+                  position: "absolute",
+                  left: textLeft,
+                  top: textTop,
+                  width: textBoxWidth,
+                  height: Math.max(textBoxHeight, textHeight),
+                  overflow: "hidden",
+                }}
+              >
+                <BitmapText
+                  face={face}
+                  text={text}
+                  color={fg}
+                  align="left"
+                  verticalAlign="top"
+                  boxWidth={textBoxWidth}
+                  boxHeight={Math.max(textBoxHeight, textHeight)}
+                />
+              </div>
+            ) : null}
+          </>
+        )}
+      </div>
     </div>
   );
 }

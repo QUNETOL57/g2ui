@@ -349,6 +349,22 @@
   gap: 8px;
 }
 
+.radiusControl {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 58px;
+  gap: 8px;
+  align-items: center;
+}
+
+.radiusRow {
+  margin-bottom: 0;
+}
+
+.radiusControl input[type="number"] {
+  min-width: 0;
+  text-align: right;
+}
+
 .iconBrowser {
   display: grid;
   gap: 4px;

@@ -21,6 +21,10 @@ interface SelectionOverlayProps {
 }
 
 const resizeHandleClass: Record<ResizeHandle, string> = {
+  n: styles.handleN,
+  e: styles.handleE,
+  s: styles.handleS,
+  w: styles.handleW,
   nw: styles.handleNw,
   ne: styles.handleNe,
   sw: styles.handleSw,
@@ -71,22 +75,50 @@ export function SelectionOverlay({
       {showResizeHandles ? (
         <>
           <div
+            className={cn(styles.handle, resizeHandleClass.n)}
+            data-testid="resize-handle-n"
+            style={{ left, top, width: maskWidth }}
+            onMouseDown={onResizeHandleMouseDown("n")}
+          />
+          <div
+            className={cn(styles.handle, resizeHandleClass.e)}
+            data-testid="resize-handle-e"
+            style={{ left: right, top, height: maskHeight }}
+            onMouseDown={onResizeHandleMouseDown("e")}
+          />
+          <div
+            className={cn(styles.handle, resizeHandleClass.s)}
+            data-testid="resize-handle-s"
+            style={{ left, top: bottom, width: maskWidth }}
+            onMouseDown={onResizeHandleMouseDown("s")}
+          />
+          <div
+            className={cn(styles.handle, resizeHandleClass.w)}
+            data-testid="resize-handle-w"
+            style={{ left, top, height: maskHeight }}
+            onMouseDown={onResizeHandleMouseDown("w")}
+          />
+          <div
             className={cn(styles.handle, resizeHandleClass.nw)}
+            data-testid="resize-handle-nw"
             style={{ left, top }}
             onMouseDown={onResizeHandleMouseDown("nw")}
           />
           <div
             className={cn(styles.handle, resizeHandleClass.ne)}
+            data-testid="resize-handle-ne"
             style={{ left: right, top }}
             onMouseDown={onResizeHandleMouseDown("ne")}
           />
           <div
             className={cn(styles.handle, resizeHandleClass.sw)}
+            data-testid="resize-handle-sw"
             style={{ left, top: bottom }}
             onMouseDown={onResizeHandleMouseDown("sw")}
           />
           <div
             className={cn(styles.handle, resizeHandleClass.se)}
+            data-testid="resize-handle-se"
             style={{ left: right, top: bottom }}
             onMouseDown={onResizeHandleMouseDown("se")}
           />

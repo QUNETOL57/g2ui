@@ -6,38 +6,47 @@
 }
 
 .toolbar {
+  box-sizing: border-box;
+  height: var(--workspace-subheader-height);
+  min-height: var(--workspace-subheader-height);
+  padding: 0 8px;
   background: var(--color-bg-deep);
   border-bottom: 1px solid var(--color-border-soft);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  min-height: 34px;
-  padding: 4px 10px 4px 12px;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
-.toolbarMeta {
+.toolbarStart,
+.toolbarEnd {
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding-left: 9px;
-  border-left: 3px solid var(--color-accent);
-  color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
-  white-space: nowrap;
+  gap: 8px;
 }
 
-.toolbarMeta span:first-child {
-  color: var(--color-text);
-  font-weight: 600;
+.toolbarEnd {
+  margin-left: auto;
+}
+
+.panelToggle {
+  width: 26px;
+  min-width: 26px;
+  height: 24px;
+  color: var(--color-text-muted);
+}
+
+.panelToggle svg {
+  width: 14px;
+  height: 14px;
 }
 
 .zoomControl {
   display: grid;
-  grid-template-columns: auto minmax(90px, 160px) 38px;
+  grid-template-columns: auto minmax(72px, 120px) auto;
   align-items: center;
-  gap: 8px;
-  margin-left: auto;
+  gap: 6px;
 }
 
 .zoomControl label {
@@ -48,14 +57,18 @@
 }
 
 .zoomValue {
-  min-width: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
   padding: 2px 6px;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-sm);
   background: var(--color-surface-3);
   color: var(--color-text);
   font-size: var(--font-size-sm);
-  text-align: center;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .stage {

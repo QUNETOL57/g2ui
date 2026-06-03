@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import type { DragEvent } from "react";
-
 import type { WidgetNode, WidgetType } from "@entities/ui-project";
 import { useEditorStore } from "@entities/ui-project/model/store";
 import { findNode, findParent } from "@entities/ui-project/model/tree-ops";

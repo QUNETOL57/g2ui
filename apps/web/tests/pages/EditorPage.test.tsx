@@ -16,32 +16,53 @@ beforeEach(() => {
 });
 
 describe("EditorPage", () => {
-  it("renders project name and schema in the top bar", () => {
+  it("renders project name and display size in the top bar", () => {
     const project = makeFixtureProject({ name: "MyApp" });
     get().setProject(project);
     render(<EditorPage onBackToLibrary={() => undefined} />);
     expect(screen.getByText("MyApp")).toBeInTheDocument();
-    expect(screen.getByText(/· schema/)).toBeInTheDocument();
+    expect(
+      screen.getByText(`${project.display.width} × ${project.display.height}`, { exact: false }),
+    ).toBeInTheDocument();
   });
 
-  it("calls onBackToLibrary when the back button is clicked", async () => {
+  it("calls onBackToLibrary when the brand logo is clicked", async () => {
     const back = vi.fn();
     render(<EditorPage onBackToLibrary={back} />);
     await userEvent.click(screen.getByRole("button", { name: /Back to project library/i }));
     expect(back).toHaveBeenCalled();
   });
 
-  it("renders TreePanel, PropertiesPanel and Export trigger", () => {
-    render(<EditorPage onBackToLibrary={() => undefined} />);
+  it("renders TreePanel, PropertiesPanel and status bar actions", () => {
+    render(<EditorPage onBackToLibrary={() => undefined} autosaveStatus="saved" />);
     expect(screen.getByText("Widget tree")).toBeInTheDocument();
     expect(screen.getByText(/Properties/)).toBeInTheDocument();
+    expect(screen.getByText("Saved")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^Export$/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Import$/ })).toBeInTheDocument();
   });
 
   it("renders the error banner when lastError is set", () => {
     useEditorStore.setState({ lastError: "Oops" });
     render(<EditorPage onBackToLibrary={() => undefined} />);
     expect(screen.getByText("Oops")).toBeInTheDocument();
+  });
+
+  it("toggles the left and right panels with icon buttons", async () => {
+    render(<EditorPage onBackToLibrary={() => undefined} />);
+    expect(screen.getByText("Widget tree")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Hide widget tree" }));
+    expect(screen.queryByText("Widget tree")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Show widget tree" }));
+    expect(screen.getByText("Widget tree")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Hide properties" }));
+    expect(screen.queryByText(/Select a widget/)).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Show properties" }));
+    expect(screen.getByText(/Select a widget/)).toBeInTheDocument();
   });
 });
 

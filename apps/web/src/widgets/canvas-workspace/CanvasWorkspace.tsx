@@ -7,7 +7,9 @@ import { layoutTree } from "@entities/ui-project/lib/layoutEngine";
 import type { LayoutNode } from "@entities/ui-project/lib/layoutEngine";
 import { resolveColor } from "@entities/ui-project/lib/color";
 import { normalizeIconFrame } from "@entities/icon/iconSizing";
+import { IconButton } from "@shared/ui/IconButton";
 import { RangeSlider } from "@shared/ui/RangeSlider";
+import { SidebarPanelIcon } from "@shared/ui/SidebarPanelIcon";
 
 import { CanvasRulers } from "./CanvasRulers";
 import styles from "./CanvasWorkspace.module.css";
@@ -60,7 +62,19 @@ interface DragPreview {
   lineProps?: Partial<import("@entities/ui-project").LineProps>;
 }
 
-export function CanvasWorkspace() {
+interface CanvasWorkspaceProps {
+  leftPanelOpen?: boolean;
+  rightPanelOpen?: boolean;
+  onToggleLeftPanel?: () => void;
+  onToggleRightPanel?: () => void;
+}
+
+export function CanvasWorkspace({
+  leftPanelOpen = true,
+  rightPanelOpen = true,
+  onToggleLeftPanel,
+  onToggleRightPanel,
+}: CanvasWorkspaceProps) {
   const project = useEditorStore((s) => s.project);
   const activeScreenId = useEditorStore((s) => s.activeScreenId);
   const selectedNodeId = useEditorStore((s) => s.selectedNodeId);
@@ -745,23 +759,43 @@ export function CanvasWorkspace() {
   return (
     <div className={styles.wrap}>
       <div className={styles.toolbar}>
-        <div className={styles.toolbarMeta}>
-          <span>{w} × {h}</span>
-          <span>rgb565</span>
+        <div className={styles.toolbarStart}>
+          {onToggleLeftPanel ? (
+            <IconButton
+              className={styles.panelToggle}
+              onClick={onToggleLeftPanel}
+              aria-label={leftPanelOpen ? "Hide widget tree" : "Show widget tree"}
+              title={leftPanelOpen ? "Hide widget tree" : "Show widget tree"}
+            >
+              <SidebarPanelIcon side="left" />
+            </IconButton>
+          ) : null}
         </div>
-        <div className={styles.zoomControl}>
-          <label>zoom</label>
-          <RangeSlider
-            min={MIN_ZOOM}
-            max={MAX_ZOOM}
-            step={ZOOM_STEP}
-            value={zoom}
-            progress={zoomProgress}
-            onChange={(e) => setZoom(normalizeZoom(Number(e.target.value)))}
-          />
-          <span className={styles.zoomValue}>
-            {renderZoom.toFixed(renderZoom % 1 === 0 ? 0 : 1)}×
-          </span>
+        <div className={styles.toolbarEnd}>
+          <div className={styles.zoomControl}>
+            <label>zoom</label>
+            <RangeSlider
+              min={MIN_ZOOM}
+              max={MAX_ZOOM}
+              step={ZOOM_STEP}
+              value={zoom}
+              progress={zoomProgress}
+              onChange={(e) => setZoom(normalizeZoom(Number(e.target.value)))}
+            />
+            <span className={styles.zoomValue}>
+              {renderZoom.toFixed(renderZoom % 1 === 0 ? 0 : 1)}×
+            </span>
+          </div>
+          {onToggleRightPanel ? (
+            <IconButton
+              className={styles.panelToggle}
+              onClick={onToggleRightPanel}
+              aria-label={rightPanelOpen ? "Hide properties" : "Show properties"}
+              title={rightPanelOpen ? "Hide properties" : "Show properties"}
+            >
+              <SidebarPanelIcon side="right" />
+            </IconButton>
+          ) : null}
         </div>
       </div>
       <div

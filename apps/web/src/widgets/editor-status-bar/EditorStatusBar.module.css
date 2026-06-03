@@ -1,0 +1,84 @@
+.statusBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 22px;
+  padding: 0 8px;
+  border-top: 1px solid var(--color-border-soft);
+  background: var(--color-bg-deep);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.statusItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 0 4px;
+  white-space: nowrap;
+}
+
+.statusItem svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  fill: currentColor;
+}
+
+.statusItem[data-status="saved"] {
+  color: var(--color-text);
+}
+
+.statusItem[data-status="saving"] svg {
+  animation: statusSpin 1s linear infinite;
+}
+
+.statusItem[data-status="error"] {
+  color: var(--color-danger);
+}
+
+.statusActions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+}
+
+.statusButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  line-height: 1;
+}
+
+.statusButton:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--color-text);
+}
+
+.statusButton:focus-visible {
+  outline: 1px solid var(--color-accent);
+  outline-offset: -1px;
+}
+
+.statusButton svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+@keyframes statusSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}

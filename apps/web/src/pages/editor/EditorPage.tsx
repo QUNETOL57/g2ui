@@ -1,12 +1,12 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { useEditorStore } from "@entities/ui-project/model/store";
+import { cn } from "@shared/lib/cn";
 import { findNode } from "@entities/ui-project/model/tree-ops";
 import logoUrl from "@shared/assets/logo.svg";
-import { IconButton } from "@shared/ui/IconButton";
 import { TopBar } from "@shared/ui/TopBar";
 import { CanvasWorkspace } from "@widgets/canvas-workspace/CanvasWorkspace";
-import { ExportPanel } from "@widgets/export-panel/ExportPanel";
+import { EditorStatusBar } from "@widgets/editor-status-bar/EditorStatusBar";
 import { PropertiesPanel } from "@widgets/properties-panel/PropertiesPanel";
 import { TreePanel } from "@widgets/tree-panel/TreePanel";
 
@@ -30,6 +30,8 @@ export function EditorPage({
   const beginLabelTextEdit = useEditorStore((s) => s.beginLabelTextEdit);
   const undo = useEditorStore((s) => s.undo);
   const redo = useEditorStore((s) => s.redo);
+  const [leftPanelOpen, setLeftPanelOpen] = useState(true);
+  const [rightPanelOpen, setRightPanelOpen] = useState(true);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -83,52 +85,60 @@ export function EditorPage({
   }, [beginLabelTextEdit, deleteNode, redo, selectedNodeId, undo]);
 
   return (
-    <div className={styles.appShell}>
+    <div
+      className={cn(
+        styles.appShell,
+        !leftPanelOpen && styles.appShellLeftCollapsed,
+        !rightPanelOpen && styles.appShellRightCollapsed,
+      )}
+    >
       <TopBar>
         <div className={styles.brand}>
-          <img
-            className={styles.brandLogo}
-            src={logoUrl}
-            alt="GuiMintLab Studio"
-            title="GuiMintLab Studio"
-          />
+          <button
+            type="button"
+            className={styles.brandLogoButton}
+            onClick={onBackToLibrary}
+            title="Back to project library"
+            aria-label="Back to project library"
+          >
+            <img
+              className={styles.brandLogo}
+              src={logoUrl}
+              alt=""
+              aria-hidden
+            />
+          </button>
           <div className={styles.brandMain}>
-            <IconButton
-              className={styles.libraryLink}
-              onClick={onBackToLibrary}
-              title="Back to project library"
-              aria-label="Back to project library"
-            >
-              ←
-            </IconButton>
             <span className={styles.brandMeta}>
-              project <strong>{project.name}</strong> · schema {project.schemaVersion}
+              <strong>{project.name}</strong> · {project.display.width} × {project.display.height}
             </span>
           </div>
         </div>
-        <TopBar.Controls>
-          <span className={styles.saveStatus}>{autosaveStatusLabel(autosaveStatus, autosaveError)}</span>
-          <ExportPanel />
-        </TopBar.Controls>
       </TopBar>
-      <div className={styles.leftPanel}>
-        <TreePanel />
-      </div>
+      <aside
+        className={cn(styles.leftPanel, !leftPanelOpen && styles.panelCollapsed)}
+        aria-hidden={!leftPanelOpen}
+      >
+        {leftPanelOpen ? <TreePanel /> : null}
+      </aside>
       <div className={styles.centerPanel}>
-        <CanvasWorkspace />
+        <CanvasWorkspace
+          leftPanelOpen={leftPanelOpen}
+          rightPanelOpen={rightPanelOpen}
+          onToggleLeftPanel={() => setLeftPanelOpen((open) => !open)}
+          onToggleRightPanel={() => setRightPanelOpen((open) => !open)}
+        />
         {lastError ? <div className={styles.errorBanner}>{lastError}</div> : null}
       </div>
-      <div className={styles.rightPanel}>
-        <PropertiesPanel />
+      <aside
+        className={cn(styles.rightPanel, !rightPanelOpen && styles.panelCollapsed)}
+        aria-hidden={!rightPanelOpen}
+      >
+        {rightPanelOpen ? <PropertiesPanel /> : null}
+      </aside>
+      <div className={styles.statusBarSlot}>
+        <EditorStatusBar autosaveStatus={autosaveStatus} autosaveError={autosaveError} />
       </div>
     </div>
   );
-}
-
-function autosaveStatusLabel(status: NonNullable<EditorPageProps["autosaveStatus"]>, error: string | null): string {
-  if (status === "local") return "local draft";
-  if (status === "saved") return "saved";
-  if (status === "saving") return "saving...";
-  if (status === "unsynced") return "unsynced";
-  return error ? `save error: ${error}` : "save error";
 }

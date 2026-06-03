@@ -89,6 +89,9 @@ export interface LabelProps {
 
 export interface ButtonProps {
   text: string;
+  iconId?: string;
+  iconPosition?: "left" | "right" | "top" | "bottom";
+  iconGap?: number;
   fontFamily?: string;
   fontSize?: number;
   fontStyle?: "regular" | "bold" | "oblique" | "boldOblique";

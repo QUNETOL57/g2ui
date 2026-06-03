@@ -66,4 +66,54 @@ describe("ButtonGroup", () => {
     expect(handler).toHaveBeenCalled();
     expect(handler.mock.calls.at(-1)?.[0]).toMatchObject({ fontFace: undefined });
   });
+
+  it("enables a button icon", async () => {
+    const handler = vi.fn();
+    const node = makeButton("bt_1", "Save");
+    render(
+      <ButtonGroup
+        node={node}
+        palette={[]}
+        onChange={handler}
+        onStyleChange={() => undefined}
+      />,
+    );
+
+    await userEvent.click(screen.getByLabelText("Show icon"));
+    expect(handler).toHaveBeenLastCalledWith({ iconId: "earth" });
+  });
+
+  it("emits icon layout changes", async () => {
+    const handler = vi.fn();
+    const button = makeButton("bt_1", "Save");
+    const node = { ...button, props: { ...(button.props ?? {}), iconId: "earth" } };
+    render(
+      <ButtonGroup
+        node={node}
+        palette={[]}
+        onChange={handler}
+        onStyleChange={() => undefined}
+      />,
+    );
+
+    await userEvent.selectOptions(screen.getByLabelText("Position"), "right");
+    expect(handler).toHaveBeenLastCalledWith({ iconPosition: "right" });
+  });
+
+  it("clears the icon search without removing the selected icon", async () => {
+    const handler = vi.fn();
+    const button = makeButton("bt_1", "Save");
+    const node = { ...button, props: { ...(button.props ?? {}), iconId: "earth" } };
+    render(
+      <ButtonGroup
+        node={node}
+        palette={[]}
+        onChange={handler}
+        onStyleChange={() => undefined}
+      />,
+    );
+
+    await userEvent.clear(screen.getByLabelText("iconId"));
+    expect(handler).not.toHaveBeenCalledWith({ iconId: "" });
+  });
 });

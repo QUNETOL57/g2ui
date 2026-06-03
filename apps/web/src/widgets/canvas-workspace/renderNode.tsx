@@ -286,6 +286,31 @@ function expandedLabelFrameForText(
   };
 }
 
+function caretIndexForClientX(
+  face: BitmapFontFace,
+  text: string,
+  align: BitmapTextAlign,
+  boxWidth: number,
+  localX: number,
+): number {
+  const { originX } = labelTextOrigin(face, text, align, boxWidth, face.lineHeight, "top");
+  const textX = localX - originX;
+  const chars = Array.from(text);
+  let width = 0;
+  let codeUnitIndex = 0;
+
+  for (const char of chars) {
+    const nextWidth = width + measureTextWidth(face, char);
+    if (textX < width + (nextWidth - width) / 2) {
+      return codeUnitIndex;
+    }
+    width = nextWidth;
+    codeUnitIndex += char.length;
+  }
+
+  return text.length;
+}
+
 function LabelInlineEditor({
   nodeId,
   face,
@@ -315,9 +340,11 @@ function LabelInlineEditor({
   const inputRef = useRef<HTMLInputElement | null>(null);
   const textRef = useRef(initialText);
   const frameRef = useRef(rect);
+  const visualRectRef = useRef(rect);
   const [text, setText] = useState(initialText);
   const [caretIndex, setCaretIndex] = useState(initialText.length);
   textRef.current = text;
+  visualRectRef.current = rect;
 
   const expandForText = useCallback(
     (nextText: string, nextCaretIndex: number) => {
@@ -338,6 +365,32 @@ function LabelInlineEditor({
     const nextIndex = input.selectionStart ?? text.length;
     setCaretIndex((current) => (current === nextIndex ? current : nextIndex));
   }, [text.length]);
+
+  const placeCaretAtClientX = useCallback(
+    (clientX: number) => {
+      const input = inputRef.current;
+      const root = rootRef.current;
+      if (!input || !root) return;
+      const bounds = root.getBoundingClientRect();
+      const visualRect = visualRectRef.current;
+      const scaleX = bounds.width > 0 && visualRect.width > 0
+        ? bounds.width / visualRect.width
+        : 1;
+      const localX = (clientX - bounds.left) / scaleX;
+      const nextIndex = caretIndexForClientX(
+        face,
+        textRef.current,
+        align,
+        visualRect.width,
+        localX,
+      );
+      input.focus({ preventScroll: true });
+      input.setSelectionRange(nextIndex, nextIndex);
+      setCaretIndex(nextIndex);
+      expandForText(textRef.current, nextIndex);
+    },
+    [align, expandForText, face],
+  );
 
   useEffect(() => {
     frameRef.current = rect;
@@ -422,12 +475,13 @@ function LabelInlineEditor({
         onBlur={(event) => onCommit(nodeId, event.target.value, frameRef.current)}
         onMouseDown={(event) => {
           event.stopPropagation();
+          event.preventDefault();
           onSelect(nodeId);
+          placeCaretAtClientX(event.clientX);
         }}
-        onClick={() => {
-          syncCaret();
-          const input = inputRef.current;
-          expandForText(text, input?.selectionStart ?? text.length);
+        onClick={(event) => {
+          event.preventDefault();
+          placeCaretAtClientX(event.clientX);
         }}
         onKeyUp={() => {
           syncCaret();
@@ -498,6 +552,22 @@ function LabelVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; re
   );
 }
 
+function alignedOffset(align: "left" | "center" | "right", outerWidth: number, innerWidth: number): number {
+  if (align === "center") return Math.floor((outerWidth - innerWidth) / 2);
+  if (align === "right") return outerWidth - innerWidth;
+  return 0;
+}
+
+function verticalOffset(
+  align: "top" | "center" | "bottom",
+  outerHeight: number,
+  innerHeight: number,
+): number {
+  if (align === "center") return Math.floor((outerHeight - innerHeight) / 2);
+  if (align === "bottom") return outerHeight - innerHeight;
+  return 0;
+}
+
 function ButtonVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; rect: Frame }) {
   const props = (node.props ?? {}) as ButtonProps;
   const bg = node.style?.drawBackground === false
@@ -517,6 +587,42 @@ function ButtonVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; r
   const horizontalAlign = props.horizontalAlign ?? "center";
   const verticalAlign = props.verticalAlign ?? "center";
   const isEditing = ctx.editingLabelId === node.id;
+  const text = props.text ?? "";
+  const icon = props.iconId !== undefined ? getResolvedIconDefinition(props.iconId) : null;
+  const iconPosition = props.iconPosition ?? "left";
+  const iconGap = text && icon ? Math.max(0, props.iconGap ?? 2) : 0;
+  const isIconVertical = iconPosition === "top" || iconPosition === "bottom";
+  const textWidth = text ? measureTextWidth(face, text) : 0;
+  const textHeight = text ? face.lineHeight : 0;
+  const iconPixelSize = 1;
+  const iconWidth = icon ? icon.width * iconPixelSize : 0;
+  const iconHeight = icon ? icon.height * iconPixelSize : 0;
+  const groupWidth = isIconVertical
+    ? Math.max(iconWidth, textWidth)
+    : iconWidth + (icon ? iconGap : 0) + textWidth;
+  const groupHeight = isIconVertical
+    ? iconHeight + (icon ? iconGap : 0) + textHeight
+    : Math.max(iconHeight, textHeight);
+  const groupLeft = Math.max(0, alignedOffset(horizontalAlign, contentWidth, groupWidth));
+  const groupTop = Math.max(0, verticalOffset(verticalAlign, contentHeight, groupHeight));
+  const iconLeft = isIconVertical
+    ? groupLeft + Math.max(0, Math.floor((groupWidth - iconWidth) / 2))
+    : groupLeft + (iconPosition === "right" ? textWidth + iconGap : 0);
+  const iconTop = isIconVertical
+    ? groupTop + (iconPosition === "bottom" ? textHeight + iconGap : 0)
+    : groupTop + Math.max(0, Math.floor((groupHeight - iconHeight) / 2));
+  const textLeft = isIconVertical
+    ? groupLeft + Math.max(0, Math.floor((groupWidth - textWidth) / 2))
+    : groupLeft + (iconPosition === "left" && icon ? iconWidth + iconGap : 0);
+  const textTop = isIconVertical
+    ? groupTop + (iconPosition === "top" && icon ? iconHeight + iconGap : 0)
+    : groupTop + Math.max(0, Math.floor((groupHeight - textHeight) / 2));
+  const textBoxWidth = isIconVertical || iconPosition === "left"
+    ? Math.max(0, contentWidth - textLeft)
+    : Math.max(0, iconLeft - iconGap - textLeft);
+  const textBoxHeight = !isIconVertical || iconPosition === "top"
+    ? Math.max(0, contentHeight - textTop)
+    : Math.max(0, iconTop - iconGap - textTop);
 
   return (
     <div
@@ -528,29 +634,96 @@ function ButtonVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; r
         padding: `${paddingTop}px ${paddingRight}px ${paddingBottom}px ${paddingLeft}px`,
       }}
     >
-      {isEditing && ctx.onLabelTextCommit ? (
-        <LabelInlineEditor
-          nodeId={node.id}
-          face={face}
-          initialText={props.text ?? ""}
-          color={fg}
-          bg="transparent"
-          align={horizontalAlign}
-          verticalAlign={verticalAlign}
-          rect={{ x: 0, y: 0, width: contentWidth, height: contentHeight }}
-          onCommit={ctx.onLabelTextCommit}
-          onSelect={ctx.onSelect}
-        />
+      {!icon ? (
+        isEditing && ctx.onLabelTextCommit ? (
+          <LabelInlineEditor
+            nodeId={node.id}
+            face={face}
+            initialText={text}
+            color={fg}
+            bg="transparent"
+            align={horizontalAlign}
+            verticalAlign={verticalAlign}
+            rect={{ x: 0, y: 0, width: contentWidth, height: contentHeight }}
+            onCommit={ctx.onLabelTextCommit}
+            onSelect={ctx.onSelect}
+          />
+        ) : (
+          <BitmapText
+            face={face}
+            text={text}
+            color={fg}
+            align={horizontalAlign}
+            verticalAlign={verticalAlign}
+            boxWidth={contentWidth}
+            boxHeight={contentHeight}
+          />
+        )
       ) : (
-        <BitmapText
-          face={face}
-          text={props.text ?? ""}
-          color={fg}
-          align={horizontalAlign}
-          verticalAlign={verticalAlign}
-          boxWidth={contentWidth}
-          boxHeight={contentHeight}
-        />
+        <div style={{ position: "relative", width: contentWidth, height: contentHeight, overflow: "hidden" }}>
+          <div
+            style={{
+              position: "absolute",
+              left: iconLeft,
+              top: iconTop,
+              width: iconWidth,
+              height: iconHeight,
+            }}
+          >
+            <IconGlyph iconId={icon.id} color={fg} pixelSize={iconPixelSize} />
+          </div>
+          {isEditing && ctx.onLabelTextCommit ? (
+            <div
+              style={{
+                position: "absolute",
+                left: textLeft,
+                top: textTop,
+                width: textBoxWidth,
+                height: Math.max(textBoxHeight, face.lineHeight),
+                overflow: "hidden",
+              }}
+            >
+              <LabelInlineEditor
+                nodeId={node.id}
+                face={face}
+                initialText={text}
+                color={fg}
+                bg="transparent"
+                align="left"
+                verticalAlign="top"
+                rect={{
+                  x: 0,
+                  y: 0,
+                  width: textBoxWidth,
+                  height: Math.max(textBoxHeight, face.lineHeight),
+                }}
+                onCommit={ctx.onLabelTextCommit}
+                onSelect={ctx.onSelect}
+              />
+            </div>
+          ) : text ? (
+            <div
+              style={{
+                position: "absolute",
+                left: textLeft,
+                top: textTop,
+                width: textBoxWidth,
+                height: Math.max(textBoxHeight, textHeight),
+                overflow: "hidden",
+              }}
+            >
+              <BitmapText
+                face={face}
+                text={text}
+                color={fg}
+                align="left"
+                verticalAlign="top"
+                boxWidth={textBoxWidth}
+                boxHeight={Math.max(textBoxHeight, textHeight)}
+              />
+            </div>
+          ) : null}
+        </div>
       )}
     </div>
   );

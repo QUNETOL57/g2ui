@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-import { ExportPanel } from "@widgets/export-panel/ExportPanel";
+import { EditorStatusBar } from "@widgets/editor-status-bar/EditorStatusBar";
 
 import { openExportModal } from "../fixtures/exportPanel";
 import { resetEditorStore } from "../fixtures/store";
@@ -11,7 +11,7 @@ beforeEach(() => {
   resetEditorStore();
 });
 
-describe("ExportPanel: download JSON", () => {
+describe("ExportProjectModal: download JSON", () => {
   it("creates a Blob URL and triggers an <a> download", async () => {
     const createSpy = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:test");
     const revokeSpy = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
@@ -27,7 +27,7 @@ describe("ExportPanel: download JSON", () => {
       return el;
     });
 
-    render(<ExportPanel />);
+    render(<EditorStatusBar />);
     await openExportModal();
     await userEvent.click(screen.getByRole("button", { name: /Download JSON/i }));
 

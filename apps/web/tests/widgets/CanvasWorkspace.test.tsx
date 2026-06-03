@@ -19,10 +19,23 @@ beforeEach(() => {
 });
 
 describe("CanvasWorkspace: rendering", () => {
-  it("renders dimensions and color format in the toolbar", () => {
+  it("renders zoom control in the toolbar", () => {
     render(<CanvasWorkspace />);
-    expect(screen.getAllByText(/×/).length).toBeGreaterThan(0);
-    expect(screen.getByText("rgb565")).toBeInTheDocument();
+    expect(screen.getByRole("slider")).toBeInTheDocument();
+    expect(screen.getByText(/×/)).toBeInTheDocument();
+  });
+
+  it("renders panel toggle buttons when handlers are provided", () => {
+    const onToggleLeft = vi.fn();
+    const onToggleRight = vi.fn();
+    render(
+      <CanvasWorkspace
+        onToggleLeftPanel={onToggleLeft}
+        onToggleRightPanel={onToggleRight}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Hide widget tree" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Hide properties" })).toBeInTheDocument();
   });
 
   it("renders zoom slider with default value", () => {

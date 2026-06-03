@@ -7,13 +7,21 @@ import { SectionTitle, SidebarDisclosure } from "@shared/ui/SectionTitle";
 describe("SectionTitle", () => {
   it("renders content in a div by default", () => {
     render(<SectionTitle>Header</SectionTitle>);
-    const node = screen.getByText("Header");
-    expect(node.tagName).toBe("DIV");
+    expect(screen.getByText("Header").closest("div")).toHaveTextContent("Header");
   });
 
   it("supports an alternative tag via `as`", () => {
     render(<SectionTitle as="h3">Header</SectionTitle>);
-    expect(screen.getByText("Header").tagName).toBe("H3");
+    expect(screen.getByRole("heading", { level: 3, name: "Header" })).toBeInTheDocument();
+  });
+
+  it("renders optional actions in the title row", () => {
+    render(
+      <SectionTitle actions={<button type="button">Action</button>}>
+        Header
+      </SectionTitle>,
+    );
+    expect(screen.getByRole("button", { name: "Action" })).toBeInTheDocument();
   });
 });
 

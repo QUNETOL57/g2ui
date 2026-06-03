@@ -3,9 +3,9 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { useEditorStore } from "@entities/ui-project/model/store";
-import { ExportPanel } from "@widgets/export-panel/ExportPanel";
+import { EditorStatusBar } from "@widgets/editor-status-bar/EditorStatusBar";
 
-import { openExportModal } from "../fixtures/exportPanel";
+import { openExportModal, openImportModal } from "../fixtures/exportPanel";
 import { resetEditorStore } from "../fixtures/store";
 
 const get = () => useEditorStore.getState();
@@ -14,20 +14,32 @@ beforeEach(() => {
   resetEditorStore();
 });
 
-describe("ExportPanel", () => {
-  it("renders Export trigger and opens modal with export/import sections", async () => {
-    render(<ExportPanel />);
+describe("EditorStatusBar: project JSON", () => {
+  it("renders save status and separate Export / Import actions", () => {
+    render(<EditorStatusBar autosaveStatus="saved" />);
+    expect(screen.getByText("Saved")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^Export$/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Import$/ })).toBeInTheDocument();
+  });
+
+  it("opens export-only modal", async () => {
+    render(<EditorStatusBar />);
     await openExportModal();
-    expect(screen.getByRole("heading", { name: "Export", level: 4 })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Import", level: 4 })).toBeInTheDocument();
-    expect(screen.getByText("Project JSON")).toBeInTheDocument();
+    expect(screen.getByLabelText("Exported project JSON")).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText("paste project.json here")).not.toBeInTheDocument();
+  });
+
+  it("opens import-only modal", async () => {
+    render(<EditorStatusBar />);
+    await openImportModal();
+    expect(screen.getByPlaceholderText("paste project.json here")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Exported project JSON")).not.toBeInTheDocument();
   });
 
   it("Copy JSON button invokes clipboard with current project JSON", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.assign(navigator, { clipboard: { writeText } });
-    render(<ExportPanel />);
+    render(<EditorStatusBar />);
     await openExportModal();
     await userEvent.click(screen.getByRole("button", { name: /Copy JSON to clipboard/i }));
     expect(writeText).toHaveBeenCalled();
@@ -37,8 +49,8 @@ describe("ExportPanel", () => {
   });
 
   it("Load JSON imports valid project from textarea", async () => {
-    render(<ExportPanel />);
-    await openExportModal();
+    render(<EditorStatusBar />);
+    await openImportModal();
     const next = { ...get().project, id: "imported_id", name: "Imported" };
     const ta = screen.getByPlaceholderText("paste project.json here");
     await userEvent.click(ta);
@@ -48,8 +60,8 @@ describe("ExportPanel", () => {
   });
 
   it("Load JSON sets lastError on invalid input", async () => {
-    render(<ExportPanel />);
-    await openExportModal();
+    render(<EditorStatusBar />);
+    await openImportModal();
     const ta = screen.getByPlaceholderText("paste project.json here");
     await userEvent.click(ta);
     await userEvent.paste("not json");

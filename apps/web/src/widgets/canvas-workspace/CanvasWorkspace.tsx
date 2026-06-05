@@ -24,13 +24,16 @@ import {
   borderInsetFor,
   clamp,
   clampPointToContent,
+  formatZoomLabel,
   lineEndpointsForRect,
   lineFrameFromEndpoints,
   lineStrokeWidthFor,
   nextWheelZoom,
   normalizeZoom,
+  renderZoomFor,
   sameFrame,
   visualRectForNode,
+  zoomToProgress,
 } from "./lib/geometry";
 import type { LineHandle, Point, ResizeHandle } from "./lib/geometry";
 import { findLayoutNode, findParentLayoutNode } from "./lib/layoutNodeOps";
@@ -115,8 +118,8 @@ export function CanvasWorkspace({
   layoutRef.current = layout;
   const w = project.display.width;
   const h = project.display.height;
-  const renderZoom = zoom >= PIXEL_GRID_VISIBLE_ZOOM ? Math.round(zoom) : zoom;
-  const zoomProgress = ((zoom - MIN_ZOOM) / (MAX_ZOOM - MIN_ZOOM)) * 100;
+  const renderZoom = renderZoomFor(zoom);
+  const zoomProgress = zoomToProgress(zoom);
   const horizontalTicks = useMemo(
     () => Array.from({ length: w + 1 }, (_, index) => ({
       value: index,
@@ -782,9 +785,7 @@ export function CanvasWorkspace({
               progress={zoomProgress}
               onChange={(e) => setZoom(normalizeZoom(Number(e.target.value)))}
             />
-            <span className={styles.zoomValue}>
-              {renderZoom.toFixed(renderZoom % 1 === 0 ? 0 : 1)}×
-            </span>
+            <span className={styles.zoomValue}>{formatZoomLabel(zoom)}</span>
           </div>
           {onToggleRightPanel ? (
             <IconButton

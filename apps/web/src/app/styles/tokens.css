@@ -23,6 +23,9 @@
   --color-accent-soft: rgba(247, 79, 158, 0.14);
   --color-accent-bg: rgba(247, 79, 158, 0.22);
   --color-accent-overlay: rgba(247, 79, 158, 0.72);
+  --color-accent-contrast: #ffffff;
+  --hover-border: var(--color-accent);
+  --hover-text: var(--color-accent);
 
   --color-danger: #ff3347;
   --color-danger-bg: rgba(255, 51, 71, 0.18);

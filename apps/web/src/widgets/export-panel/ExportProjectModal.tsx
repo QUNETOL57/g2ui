@@ -28,66 +28,78 @@ export const ExportProjectModal = memo(function ExportProjectModal({
   const output = useMemo(() => (open ? exportJson() : ""), [exportJson, open, project]);
 
   return (
-    <Modal open={open} onClose={onClose} size="lg" closeOnBackdrop={false}>
-      <div className={styles.modalHeader}>
-        <div>
-          <div className={styles.kicker}>Project JSON</div>
-          <h2>Export</h2>
-        </div>
-        <IconButton aria-label="Close export dialog" title="Close" onClick={onClose}>
-          <CloseRoundedIcon />
-        </IconButton>
-      </div>
+    <Modal
+      open={open}
+      onClose={onClose}
+      size="lg"
+      className={styles.exportDialog}
+      closeOnBackdrop={false}
+    >
+      <IconButton
+        className={styles.modalClose}
+        aria-label="Close export dialog"
+        title="Close"
+        onClick={onClose}
+      >
+        <CloseRoundedIcon />
+      </IconButton>
 
-      <div className={styles.modalBodySingle}>
-        <div className={styles.group}>
-          <div className={styles.codePreview} aria-label="Exported project JSON">
-            <SyntaxHighlighter
-              language="json"
-              style={oneDark}
-              customStyle={{
-                margin: 0,
-                padding: 12,
-                background: "transparent",
-                fontSize: 11,
-                lineHeight: 1.35,
-              }}
-              wrapLongLines
-            >
-              {output}
-            </SyntaxHighlighter>
+      <div className={styles.modalPanel}>
+        <div className={styles.modalTitle}>
+          <div className={styles.kicker}>Export</div>
+          <p>Copy or download the project JSON for embedding in your ESP-IDF firmware.</p>
+        </div>
+
+        <div className={styles.modalContent}>
+          <div className={styles.group}>
+            <div className={styles.codePreview} aria-label="Exported project JSON">
+              <SyntaxHighlighter
+                language="json"
+                style={oneDark}
+                customStyle={{
+                  margin: 0,
+                  padding: 12,
+                  background: "transparent",
+                  fontSize: 11,
+                  lineHeight: 1.35,
+                }}
+                wrapLongLines
+              >
+                {output}
+              </SyntaxHighlighter>
+            </div>
+            <div className={styles.actions}>
+              <IconButton
+                onClick={() => navigator.clipboard?.writeText(output)}
+                aria-label="Copy JSON to clipboard"
+                title="Copy JSON to clipboard"
+                tooltip="Copy JSON"
+              >
+                <ContentCopyOutlinedIcon />
+              </IconButton>
+              <IconButton
+                onClick={() => {
+                  const blob = new Blob([output], { type: "application/json" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `${project.id}.project.json`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+                aria-label="Download JSON"
+                title="Download JSON"
+                tooltip="Download JSON"
+              >
+                <FileDownloadOutlinedIcon />
+              </IconButton>
+            </div>
+            <p className={styles.hint}>
+              Save this file to your ESP-IDF project and embed it via
+              <code>EMBED_FILES</code>. The <code>guimintlab</code> component parses it on-device — no C
+              regeneration step.
+            </p>
           </div>
-          <div className={styles.actions}>
-            <IconButton
-              onClick={() => navigator.clipboard?.writeText(output)}
-              aria-label="Copy JSON to clipboard"
-              title="Copy JSON to clipboard"
-              tooltip="Copy JSON"
-            >
-              <ContentCopyOutlinedIcon />
-            </IconButton>
-            <IconButton
-              onClick={() => {
-                const blob = new Blob([output], { type: "application/json" });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = `${project.id}.project.json`;
-                a.click();
-                URL.revokeObjectURL(url);
-              }}
-              aria-label="Download JSON"
-              title="Download JSON"
-              tooltip="Download JSON"
-            >
-              <FileDownloadOutlinedIcon />
-            </IconButton>
-          </div>
-          <p className={styles.hint}>
-            Save this file to your ESP-IDF project and embed it via
-            <code>EMBED_FILES</code>. The <code>guimintlab</code> component parses it on-device — no C
-            regeneration step.
-          </p>
         </div>
       </div>
     </Modal>

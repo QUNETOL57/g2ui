@@ -31,34 +31,46 @@ export const ImportProjectModal = memo(function ImportProjectModal({
   };
 
   return (
-    <Modal open={open} onClose={handleClose} size="md" closeOnBackdrop={false}>
-      <div className={styles.modalHeader}>
-        <div>
-          <div className={styles.kicker}>Project JSON</div>
-          <h2>Import</h2>
-        </div>
-        <IconButton aria-label="Close import dialog" title="Close" onClick={handleClose}>
-          <CloseRoundedIcon />
-        </IconButton>
-      </div>
+    <Modal
+      open={open}
+      onClose={handleClose}
+      size="md"
+      className={styles.importDialog}
+      closeOnBackdrop={false}
+    >
+      <IconButton
+        className={styles.modalClose}
+        aria-label="Close import dialog"
+        title="Close"
+        onClick={handleClose}
+      >
+        <CloseRoundedIcon />
+      </IconButton>
 
-      <div className={styles.modalBodySingle}>
-        <div className={styles.group}>
-          <textarea
-            className={styles.importInput}
-            placeholder="paste project.json here"
-            value={pasted}
-            onChange={(event) => setPasted(event.target.value)}
-          />
-          <div className={styles.actions}>
-            <IconButton
-              onClick={handleLoad}
-              aria-label="Load JSON"
-              title="Load JSON"
-              tooltip="Load JSON"
-            >
-              <FileUploadOutlinedIcon />
-            </IconButton>
+      <div className={styles.modalPanel}>
+        <div className={styles.modalTitle}>
+          <div className={styles.kicker}>Import</div>
+          <p>Paste a project JSON file to replace the current editor state.</p>
+        </div>
+
+        <div className={styles.modalContent}>
+          <div className={styles.group}>
+            <textarea
+              className={styles.importInput}
+              placeholder="paste project.json here"
+              value={pasted}
+              onChange={(event) => setPasted(event.target.value)}
+            />
+            <div className={styles.actions}>
+              <IconButton
+                onClick={handleLoad}
+                aria-label="Load JSON"
+                title="Load JSON"
+                tooltip="Load JSON"
+              >
+                <FileUploadOutlinedIcon />
+              </IconButton>
+            </div>
           </div>
         </div>
       </div>

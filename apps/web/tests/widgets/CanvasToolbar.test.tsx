@@ -29,9 +29,10 @@ describe("CanvasToolbar: create tools", () => {
     expect(panel?.type).toBe("panel");
   });
 
-  it("adds the default widget of a group when its main button is clicked", async () => {
+  it("opens the group menu when its main button is clicked", async () => {
     render(<CanvasToolbar />);
-    await userEvent.click(screen.getByRole("button", { name: "Add rectangle" }));
+    await userEvent.click(screen.getByRole("button", { name: "Shapes" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Rectangle" }));
     const node = get().project.screens[0].children?.[0];
     expect(node?.type).toBe("rect");
   });
@@ -49,7 +50,8 @@ describe("CanvasToolbar: create tools", () => {
     get().setProject(project);
     get().selectNode("pn_1");
     render(<CanvasToolbar />);
-    await userEvent.click(screen.getByRole("button", { name: "Add label" }));
+    await userEvent.click(screen.getByRole("button", { name: "Text" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Label" }));
     const panel = findNode(get().project, "pn_1");
     expect(panel?.children?.length).toBe(1);
     expect(panel?.children?.[0].type).toBe("label");

@@ -10,11 +10,15 @@
   cursor: pointer;
   font-weight: 500;
   white-space: nowrap;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
 }
 
 .button:hover:not(:disabled) {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
+  border-color: var(--hover-border);
+  color: var(--hover-text);
 }
 
 .button:focus-visible {
@@ -76,6 +80,6 @@
 
 .variantGhost:hover:not(:disabled) {
   background: var(--color-surface-3);
-  color: var(--color-accent);
+  color: var(--hover-text);
   border-color: transparent;
 }

@@ -71,6 +71,11 @@
   font-size: var(--font-size-base);
   font-weight: 500;
   box-shadow: none;
+  transition: border-color 120ms ease;
+}
+
+.input:hover {
+  border-color: var(--hover-border);
 }
 
 .input:focus {

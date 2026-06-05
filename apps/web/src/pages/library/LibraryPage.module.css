@@ -91,8 +91,9 @@
   right: 8px;
 }
 
-.deleteButton:hover {
+.deleteButton.deleteButton:hover:not(:disabled) {
   border-color: var(--color-danger);
+  background: var(--color-danger-bg);
   color: var(--color-danger);
 }
 

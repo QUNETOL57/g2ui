@@ -27,26 +27,22 @@
 }
 
 .leftPanel,
-.centerPanel,
-.rightPanel {
-  background: var(--color-panel);
-  overflow: auto;
-}
-
-.leftPanel,
 .rightPanel {
   position: relative;
   background: var(--color-surface);
+  overflow: auto;
+}
+
+.centerPanel {
+  position: relative;
+  min-height: 0;
+  background: #121212;
+  overflow: hidden;
 }
 
 .panelCollapsed {
   overflow: hidden;
   pointer-events: none;
-}
-
-.centerPanel {
-  position: relative;
-  background: #121212;
 }
 
 .brand {

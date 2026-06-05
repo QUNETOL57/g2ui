@@ -8,8 +8,8 @@ test.describe("widget tree layer order on canvas", () => {
   });
 
   test("sibling order controls z-index and hit-testing at overlap", async ({ page }) => {
-    await page.getByRole("button", { name: "+ label" }).click();
-    await page.getByRole("button", { name: "+ panel" }).click();
+    await page.getByRole("button", { name: "Add label" }).click();
+    await page.getByRole("button", { name: "Add panel" }).click();
     await treeRow(page, "screen_main").click();
 
     const label = canvasWidget(page, "lab_1");
@@ -36,7 +36,7 @@ test.describe("widget tree layer order on canvas", () => {
     await expect(treeRow(page, "lab_1")).toHaveClass(/rowSelected/);
 
     await treeRow(page, "lab_1").click();
-    await page.getByRole("button", { name: "↓" }).click();
+    await page.getByRole("button", { name: "Move down" }).click();
     await treeRow(page, "screen_main").click();
 
     await expect(panel).toHaveCSS("z-index", "2");

@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import type { DragEvent } from "react";
-import type { WidgetNode, WidgetType } from "@entities/ui-project";
+import type { WidgetNode } from "@entities/ui-project";
 import { useEditorStore } from "@entities/ui-project/model/store";
 import { findNode, findParent } from "@entities/ui-project/model/tree-ops";
 import { cn } from "@shared/lib/cn";
@@ -8,7 +8,6 @@ import { SectionTitle } from "@shared/ui/SectionTitle";
 
 import styles from "./TreePanel.module.css";
 
-const ADD_TYPES: WidgetType[] = ["panel", "label", "button", "icon", "rect", "line"];
 type DropPosition = "before" | "inside" | "after";
 type TreeDropTarget = { nodeId: string; position: DropPosition } | null;
 
@@ -18,22 +17,11 @@ export function TreePanel() {
   const selectedNodeId = useEditorStore((s) => s.selectedNodeId);
   const selectNode = useEditorStore((s) => s.selectNode);
   const beginLabelTextEdit = useEditorStore((s) => s.beginLabelTextEdit);
-  const addWidget = useEditorStore((s) => s.addWidget);
-  const deleteNode = useEditorStore((s) => s.deleteNode);
-  const moveNode = useEditorStore((s) => s.moveNode);
   const moveNodeToParentIndex = useEditorStore((s) => s.moveNodeToParentIndex);
   const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<TreeDropTarget>(null);
 
   const screen = project.screens.find((s) => s.id === activeScreenId);
-  const selectedNode = useMemo(
-    () => (selectedNodeId ? findNode(project, selectedNodeId) : null),
-    [project, selectedNodeId],
-  );
-  const parentForAdd =
-    selectedNode?.type === "screen" || selectedNode?.type === "panel"
-      ? selectedNode.id
-      : activeScreenId;
 
   const canDrop = (sourceId: string | null, targetId: string, position: DropPosition) => {
     if (!sourceId || sourceId === targetId || sourceId === activeScreenId) {
@@ -75,36 +63,6 @@ export function TreePanel() {
   return (
     <div>
       <SectionTitle>Widget tree</SectionTitle>
-      <div className={styles.addBar}>
-        {ADD_TYPES.map((type) => (
-          <button key={type} onClick={() => addWidget(parentForAdd, type)}>
-            + {type}
-          </button>
-        ))}
-        <div className={styles.addBarSpacer}>
-          <button
-            disabled={!selectedNodeId}
-            onClick={() => selectedNodeId && moveNode(selectedNodeId, "up")}
-            title="Move up"
-          >
-            ↑
-          </button>
-          <button
-            disabled={!selectedNodeId}
-            onClick={() => selectedNodeId && moveNode(selectedNodeId, "down")}
-            title="Move down"
-          >
-            ↓
-          </button>
-          <button
-            disabled={!selectedNodeId || selectedNodeId === activeScreenId}
-            onClick={() => selectedNodeId && deleteNode(selectedNodeId)}
-            title="Delete"
-          >
-            ✕
-          </button>
-        </div>
-      </div>
       {screen ? (
         <TreeNode
           node={screen}

@@ -10,7 +10,7 @@ test.describe("label inline editing", () => {
   test("double-click on canvas opens edit, grows frame while typing, commits on blur", async ({
     page,
   }) => {
-    await page.getByRole("button", { name: "+ label" }).click();
+    await page.getByRole("button", { name: "Add label" }).click();
     await expect(treeRow(page, "lab_1")).toBeVisible();
 
     await page.getByTestId("selection-mask").dblclick();
@@ -35,7 +35,7 @@ test.describe("label inline editing", () => {
   });
 
   test("tree double-click and Enter open inline edit", async ({ page }) => {
-    await page.getByRole("button", { name: "+ label" }).click();
+    await page.getByRole("button", { name: "Add label" }).click();
     await treeRow(page, "lab_1").dblclick();
     await expect(page.getByLabel("edit label text")).toBeVisible();
     await page.getByLabel("edit label text").blur();

@@ -12,6 +12,7 @@ import { RangeSlider } from "@shared/ui/RangeSlider";
 import { SidebarPanelIcon } from "@shared/ui/SidebarPanelIcon";
 
 import { CanvasRulers } from "./CanvasRulers";
+import { CanvasToolbar } from "./CanvasToolbar";
 import styles from "./CanvasWorkspace.module.css";
 import { SelectionOverlay } from "./SelectionOverlay";
 import { PreviewNode } from "./renderNode";
@@ -896,6 +897,7 @@ export function CanvasWorkspace({
           </div>
         </div>
       </div>
+      <CanvasToolbar />
     </div>
   );
 }

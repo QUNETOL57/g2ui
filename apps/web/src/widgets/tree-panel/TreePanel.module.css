@@ -1,38 +1,3 @@
-.addBar {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-  padding: 6px 10px;
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface-2);
-}
-
-.addBar button {
-  font-size: var(--font-size-sm);
-  padding: 2px 6px;
-  background: var(--color-surface-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  color: var(--color-text);
-  cursor: pointer;
-}
-
-.addBar button:hover:not(:disabled) {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-}
-
-.addBar button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.addBarSpacer {
-  margin-left: auto;
-  display: flex;
-  gap: 4px;
-}
-
 .emptyScreen {
   padding: 10px;
   color: var(--color-text-muted);

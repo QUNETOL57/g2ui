@@ -22,9 +22,9 @@
 .range::-webkit-slider-thumb {
   appearance: none;
   -webkit-appearance: none;
-  width: 16px;
-  height: 16px;
-  margin-top: -6px;
+  width: 12px;
+  height: 12px;
+  margin-top: -4px;
   border: 0;
   border-radius: 50%;
   background: var(--color-accent);
@@ -44,8 +44,8 @@
 }
 
 .range::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
+  width: 12px;
+  height: 12px;
   border: 0;
   border-radius: 50%;
   background: var(--color-accent);

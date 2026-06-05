@@ -5,19 +5,22 @@ import {
   MIN_ZOOM,
   PIXEL_GRID_VISIBLE_ZOOM,
   RULER_SIZE,
-  WHEEL_ZOOM_STEP,
   ZOOM_STEP,
+  ZOOM_STEP_COARSE,
   borderInsetFor,
   clamp,
   clampPointToContent,
   clampZoom,
+  formatZoomLabel,
   lineEndpointsForRect,
   lineFrameFromEndpoints,
   lineStrokeWidthFor,
   nextWheelZoom,
   normalizeZoom,
+  renderZoomFor,
   sameFrame,
   visualRectForNode,
+  zoomToProgress,
 } from "@widgets/canvas-workspace/lib/geometry";
 
 describe("clamp", () => {
@@ -33,8 +36,8 @@ describe("zoom constants", () => {
     expect(MIN_ZOOM).toBeLessThan(MAX_ZOOM);
     expect(PIXEL_GRID_VISIBLE_ZOOM).toBeGreaterThanOrEqual(MIN_ZOOM);
     expect(PIXEL_GRID_VISIBLE_ZOOM).toBeLessThanOrEqual(MAX_ZOOM);
-    expect(ZOOM_STEP).toBeGreaterThan(0);
-    expect(WHEEL_ZOOM_STEP).toBeGreaterThan(0);
+    expect(ZOOM_STEP).toBe(0.5);
+    expect(ZOOM_STEP_COARSE).toBe(1);
     expect(RULER_SIZE).toBeGreaterThan(0);
   });
 });
@@ -53,10 +56,11 @@ describe("normalizeZoom", () => {
     expect(normalizeZoom(PIXEL_GRID_VISIBLE_ZOOM + 0.6)).toBe(PIXEL_GRID_VISIBLE_ZOOM + 1);
   });
 
-  it("rounds to 0.25 below the pixel-grid threshold", () => {
-    expect(normalizeZoom(1.3)).toBe(1.25);
-    expect(normalizeZoom(1.4)).toBe(1.5);
-    expect(normalizeZoom(2.13)).toBe(2.25);
+  it("rounds to 0.5 below the pixel-grid threshold", () => {
+    expect(normalizeZoom(1.2)).toBe(1);
+    expect(normalizeZoom(1.3)).toBe(1.5);
+    expect(normalizeZoom(2.74)).toBe(2.5);
+    expect(normalizeZoom(2.75)).toBe(3);
   });
 
   it("clamps before rounding", () => {
@@ -66,19 +70,106 @@ describe("normalizeZoom", () => {
 });
 
 describe("nextWheelZoom", () => {
-  it("steps in 0.25 increments below threshold", () => {
-    expect(nextWheelZoom(1, 1)).toBeCloseTo(1.25, 5);
-    expect(nextWheelZoom(2, -1)).toBeCloseTo(1.75, 5);
+  it("steps in 0.5 increments below the threshold", () => {
+    expect(nextWheelZoom(1, 1)).toBeCloseTo(1.5, 5);
+    expect(nextWheelZoom(2.5, 1)).toBeCloseTo(3, 5);
+    expect(nextWheelZoom(3, -1)).toBeCloseTo(2.5, 5);
   });
 
-  it("snaps to threshold when crossing upward", () => {
-    expect(nextWheelZoom(PIXEL_GRID_VISIBLE_ZOOM - 0.25, 1)).toBe(PIXEL_GRID_VISIBLE_ZOOM);
+  it("walks the full 0.5 ladder from MIN up to the threshold", () => {
+    const steps: number[] = [];
+    let zoom = MIN_ZOOM;
+    for (let i = 0; i < 20 && zoom < PIXEL_GRID_VISIBLE_ZOOM; i += 1) {
+      zoom = nextWheelZoom(zoom, 1);
+      steps.push(zoom);
+    }
+    expect(steps).toEqual([1.5, 2, 2.5, 3, 3.5, 4, 4.5, PIXEL_GRID_VISIBLE_ZOOM]);
   });
 
-  it("steps in 0.25 above threshold but clamped to MAX", () => {
-    expect(nextWheelZoom(PIXEL_GRID_VISIBLE_ZOOM, 1)).toBeCloseTo(PIXEL_GRID_VISIBLE_ZOOM + 0.25, 5);
+  it("snaps to the threshold when crossing upward", () => {
+    expect(nextWheelZoom(PIXEL_GRID_VISIBLE_ZOOM - 0.5, 1)).toBe(PIXEL_GRID_VISIBLE_ZOOM);
+  });
+
+  it("steps in 1.0 increments at and above the threshold", () => {
+    expect(nextWheelZoom(PIXEL_GRID_VISIBLE_ZOOM, 1)).toBe(PIXEL_GRID_VISIBLE_ZOOM + 1);
+    expect(nextWheelZoom(PIXEL_GRID_VISIBLE_ZOOM + 2, 1)).toBe(PIXEL_GRID_VISIBLE_ZOOM + 3);
+  });
+
+  it("steps down by 1.0 above the threshold and snaps back to it", () => {
+    expect(nextWheelZoom(PIXEL_GRID_VISIBLE_ZOOM + 2, -1)).toBe(PIXEL_GRID_VISIBLE_ZOOM + 1);
+    expect(nextWheelZoom(PIXEL_GRID_VISIBLE_ZOOM + 1, -1)).toBe(PIXEL_GRID_VISIBLE_ZOOM);
+  });
+
+  it("switches back to 0.5 steps when leaving the threshold downward", () => {
+    expect(nextWheelZoom(PIXEL_GRID_VISIBLE_ZOOM, -1)).toBe(PIXEL_GRID_VISIBLE_ZOOM - 0.5);
+  });
+
+  it("clamps to MIN and MAX", () => {
     expect(nextWheelZoom(MAX_ZOOM, 1)).toBe(MAX_ZOOM);
     expect(nextWheelZoom(MIN_ZOOM, -1)).toBe(MIN_ZOOM);
+  });
+
+  it("walks the full ladder down from MAX to MIN", () => {
+    const steps: number[] = [];
+    let zoom = MAX_ZOOM;
+    for (let i = 0; i < 50 && zoom > MIN_ZOOM; i += 1) {
+      const next = nextWheelZoom(zoom, -1);
+      expect(next).toBeLessThan(zoom);
+      zoom = next;
+      steps.push(zoom);
+    }
+    expect(zoom).toBe(MIN_ZOOM);
+    expect(steps.includes(PIXEL_GRID_VISIBLE_ZOOM)).toBe(true);
+  });
+
+  it("is monotonic going up from MIN to MAX", () => {
+    let zoom = MIN_ZOOM;
+    for (let i = 0; i < 50 && zoom < MAX_ZOOM; i += 1) {
+      const next = nextWheelZoom(zoom, 1);
+      expect(next).toBeGreaterThan(zoom);
+      zoom = next;
+    }
+    expect(zoom).toBe(MAX_ZOOM);
+  });
+});
+
+describe("renderZoomFor", () => {
+  it("keeps fractional zoom below the pixel-grid threshold", () => {
+    expect(renderZoomFor(2.5)).toBe(2.5);
+    expect(renderZoomFor(MIN_ZOOM)).toBe(MIN_ZOOM);
+    expect(renderZoomFor(PIXEL_GRID_VISIBLE_ZOOM - 0.5)).toBe(PIXEL_GRID_VISIBLE_ZOOM - 0.5);
+  });
+
+  it("snaps to an integer at and above the threshold", () => {
+    expect(renderZoomFor(PIXEL_GRID_VISIBLE_ZOOM)).toBe(PIXEL_GRID_VISIBLE_ZOOM);
+    expect(renderZoomFor(PIXEL_GRID_VISIBLE_ZOOM + 0.4)).toBe(PIXEL_GRID_VISIBLE_ZOOM);
+    expect(renderZoomFor(6.6)).toBe(7);
+  });
+});
+
+describe("zoomToProgress", () => {
+  it("maps the zoom range onto 0..100", () => {
+    expect(zoomToProgress(MIN_ZOOM)).toBe(0);
+    expect(zoomToProgress(MAX_ZOOM)).toBe(100);
+    expect(zoomToProgress((MIN_ZOOM + MAX_ZOOM) / 2)).toBeCloseTo(50, 5);
+  });
+
+  it("clamps out-of-range zoom into 0..100", () => {
+    expect(zoomToProgress(MIN_ZOOM - 5)).toBe(0);
+    expect(zoomToProgress(MAX_ZOOM + 5)).toBe(100);
+  });
+});
+
+describe("formatZoomLabel", () => {
+  it("shows one decimal for fractional zoom", () => {
+    expect(formatZoomLabel(2.5)).toBe("2.5×");
+    expect(formatZoomLabel(1)).toBe("1×");
+  });
+
+  it("shows no decimals at and above the pixel-grid threshold", () => {
+    expect(formatZoomLabel(PIXEL_GRID_VISIBLE_ZOOM)).toBe(`${PIXEL_GRID_VISIBLE_ZOOM}×`);
+    expect(formatZoomLabel(6.4)).toBe("6×");
+    expect(formatZoomLabel(MAX_ZOOM)).toBe(`${MAX_ZOOM}×`);
   });
 });
 

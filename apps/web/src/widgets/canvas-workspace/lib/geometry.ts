@@ -2,8 +2,10 @@ import type { Frame, LineProps } from "@entities/ui-project";
 
 export const MAX_ZOOM = 15;
 export const MIN_ZOOM = 1;
+/** Zoom increment below the pixel-grid threshold. */
 export const ZOOM_STEP = 0.5;
-export const WHEEL_ZOOM_STEP = 0.25;
+/** Zoom increment at and above the pixel-grid threshold. */
+export const ZOOM_STEP_COARSE = 1;
 export const PIXEL_GRID_VISIBLE_ZOOM = 5;
 export const RULER_SIZE = 24;
 
@@ -26,16 +28,42 @@ export function clampZoom(value: number): number {
 export function normalizeZoom(value: number): number {
   const clamped = clampZoom(value);
   if (clamped >= PIXEL_GRID_VISIBLE_ZOOM) return Math.round(clamped);
-  return Math.round(clamped * 4) / 4;
+  return Math.round(clamped / ZOOM_STEP) * ZOOM_STEP;
 }
 
 export function nextWheelZoom(currentZoom: number, direction: 1 | -1): number {
-  if (currentZoom >= PIXEL_GRID_VISIBLE_ZOOM) {
-    return clampZoom(currentZoom + direction * WHEEL_ZOOM_STEP);
+  if (direction > 0) {
+    if (currentZoom < PIXEL_GRID_VISIBLE_ZOOM) {
+      const next = currentZoom + ZOOM_STEP;
+      return next >= PIXEL_GRID_VISIBLE_ZOOM ? PIXEL_GRID_VISIBLE_ZOOM : normalizeZoom(next);
+    }
+    return clampZoom(currentZoom + ZOOM_STEP_COARSE);
   }
-  const next = currentZoom + direction * WHEEL_ZOOM_STEP;
-  if (direction > 0 && next >= PIXEL_GRID_VISIBLE_ZOOM) return PIXEL_GRID_VISIBLE_ZOOM;
-  return normalizeZoom(next);
+
+  if (currentZoom > PIXEL_GRID_VISIBLE_ZOOM) {
+    const next = currentZoom - ZOOM_STEP_COARSE;
+    return next <= PIXEL_GRID_VISIBLE_ZOOM ? PIXEL_GRID_VISIBLE_ZOOM : clampZoom(next);
+  }
+  return clampZoom(currentZoom - ZOOM_STEP);
+}
+
+/**
+ * Zoom value used for rendering: snaps to an integer at and above the
+ * pixel-grid threshold, otherwise keeps the fractional zoom.
+ */
+export function renderZoomFor(zoom: number): number {
+  return zoom >= PIXEL_GRID_VISIBLE_ZOOM ? Math.round(zoom) : zoom;
+}
+
+/** Maps a zoom value to a 0..100 slider progress percentage. */
+export function zoomToProgress(zoom: number): number {
+  return ((clampZoom(zoom) - MIN_ZOOM) / (MAX_ZOOM - MIN_ZOOM)) * 100;
+}
+
+/** Formats a zoom value for display, e.g. "2.5×" or "6×". */
+export function formatZoomLabel(zoom: number): string {
+  const render = renderZoomFor(zoom);
+  return `${render.toFixed(render % 1 === 0 ? 0 : 1)}×`;
 }
 
 export function sameFrame(a: Frame, b: Frame): boolean {

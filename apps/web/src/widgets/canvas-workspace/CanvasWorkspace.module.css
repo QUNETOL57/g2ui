@@ -56,11 +56,22 @@
   text-transform: uppercase;
 }
 
+@media (max-width: 900px) {
+  .zoomControl {
+    grid-template-columns: minmax(72px, 120px) auto;
+  }
+
+  .zoomControl label {
+    display: none;
+  }
+}
+
 .zoomValue {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 0;
+  width: 36px;
+  flex: none;
   padding: 2px 6px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);

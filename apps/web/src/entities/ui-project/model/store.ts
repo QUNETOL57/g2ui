@@ -4,10 +4,12 @@ import type {
   Frame,
   IconProps,
   LabelProps,
+  PaletteEntry,
   UiProject,
   WidgetNode,
   WidgetType,
 } from "..";
+import { normalizePalette } from "../lib/palette";
 import { makeWidget, nextId, validateProject } from "..";
 import { getIconDefinition } from "@entities/icon/iconLibrary";
 import { normalizeIconNodeFrame } from "@entities/icon/iconSizing";
@@ -54,6 +56,7 @@ interface EditorState {
   commitLabelText: (nodeId: string, text: string, frame?: Frame) => void;
   cancelLabelTextEdit: () => void;
   setDisplaySize: (width: number, height: number) => void;
+  setPalette: (palette: PaletteEntry[]) => void;
   loadHelloSample: () => void;
   undo: () => void;
   redo: () => void;
@@ -195,6 +198,20 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         }
       }
       return { ...recordHistory(state), project: next, draftFrame: null };
+    }),
+
+  setPalette: (palette) =>
+    set((state) => {
+      const result = normalizePalette(palette);
+      if (!result.ok) {
+        return { lastError: result.error };
+      }
+      const current = JSON.stringify(state.project.palette ?? []);
+      const nextPalette = JSON.stringify(result.entries);
+      if (current === nextPalette) return state;
+      const next = cloneProject(state.project);
+      next.palette = result.entries;
+      return { ...recordHistory(state), project: next, lastError: null, draftFrame: null };
     }),
 
   loadHelloSample: () => {

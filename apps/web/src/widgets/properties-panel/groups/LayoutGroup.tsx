@@ -1,7 +1,6 @@
 import type { LayoutMode, WidgetNode } from "@entities/ui-project";
 import { cn } from "@shared/lib/cn";
 import { CustomSelect } from "@shared/ui/CustomSelect";
-
 import styles from "../PropertiesPanel.module.css";
 import { InspectorCard } from "../ui/InspectorCard";
 import { NumberField } from "../ui/NumberField";
@@ -22,6 +21,7 @@ export function LayoutGroup({
           <label>mode</label>
           <CustomSelect
             ariaLabel="layout mode"
+            size="sm"
             value={l.mode}
             options={[
               { value: "absolute", label: "absolute" },
@@ -49,6 +49,7 @@ export function LayoutGroup({
           <label>align</label>
           <CustomSelect
             ariaLabel="layout align"
+            size="sm"
             value={l.align ?? "start"}
             options={["start", "center", "end", "stretch"].map((value) => ({
               value,

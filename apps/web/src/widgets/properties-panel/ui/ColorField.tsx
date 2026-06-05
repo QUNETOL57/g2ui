@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from "react";
 import type { ColorRef } from "@entities/ui-project";
 import { cn } from "@shared/lib/cn";
 import { CustomSelect } from "@shared/ui/CustomSelect";
-
 import styles from "../PropertiesPanel.module.css";
 
 export function ColorField({
@@ -26,6 +25,7 @@ export function ColorField({
         <div className={cn(styles.colorModeRow, mode !== "hex" && styles.colorModeRowFull)}>
           <CustomSelect
             ariaLabel={`${label} mode`}
+            size="sm"
             value={mode}
             options={[
               { value: "hex", label: "hex" },
@@ -50,6 +50,7 @@ export function ColorField({
         {mode === "token" ? (
           <CustomSelect
             ariaLabel={`${label} token`}
+            size="sm"
             value={current.kind === "token" ? current.token : ""}
             options={(palette ?? []).map((p) => ({
               value: p.token,

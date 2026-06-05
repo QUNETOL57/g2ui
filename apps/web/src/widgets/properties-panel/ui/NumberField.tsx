@@ -18,7 +18,13 @@ export function NumberField({
   return (
     <div className={styles.row}>
       <label>{label}</label>
-      <DraftNumberInput value={value} min={min} max={max} onChange={onChange} />
+      <DraftNumberInput
+        className={styles.inputText}
+        value={value}
+        min={min}
+        max={max}
+        onChange={onChange}
+      />
     </div>
   );
 }

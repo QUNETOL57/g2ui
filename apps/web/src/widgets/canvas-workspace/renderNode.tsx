@@ -18,6 +18,7 @@ import { findFontFace, measureTextWidth } from "@entities/font/fontLibrary";
 import { IconGlyph } from "@entities/icon/iconLibrary";
 import { DEFAULT_ICON_ID, getIconScaleForFrame, getResolvedIconDefinition } from "@entities/icon/iconSizing";
 
+import { roundedRowInset } from "./lib/pixelRounded";
 import styles from "./renderNode.module.css";
 
 interface RenderCtx {
@@ -259,15 +260,6 @@ function PanelVisual({
       }}
     />
   );
-}
-
-function roundedRowInset(y: number, width: number, height: number, radius: number): number {
-  const r = Math.min(Math.floor(radius), Math.floor(width / 2), Math.floor(height / 2));
-  if (r <= 0) return 0;
-  const cornerY = y < r ? r - y - 0.5 : y >= height - r ? y - (height - r) + 0.5 : -1;
-  if (cornerY < 0) return 0;
-  const inset = r - Math.sqrt(Math.max(0, r * r - cornerY * cornerY));
-  return Math.max(0, Math.ceil(inset));
 }
 
 function PixelRoundedBox({

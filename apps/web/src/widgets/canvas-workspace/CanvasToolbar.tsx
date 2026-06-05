@@ -75,10 +75,11 @@ const TOOL_GROUPS: ToolGroup[] = [
 export function CanvasToolbar() {
   const activeScreenId = useEditorStore((s) => s.activeScreenId);
   const selectedNodeId = useEditorStore((s) => s.selectedNodeId);
+  const selectedNodeIds = useEditorStore((s) => s.selectedNodeIds);
   const selectNode = useEditorStore((s) => s.selectNode);
   const addWidget = useEditorStore((s) => s.addWidget);
   const moveNode = useEditorStore((s) => s.moveNode);
-  const deleteNode = useEditorStore((s) => s.deleteNode);
+  const deleteNodes = useEditorStore((s) => s.deleteNodes);
 
   const [openGroupId, setOpenGroupId] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -114,7 +115,8 @@ export function CanvasToolbar() {
   };
 
   const canArrange = !!selectedNodeId;
-  const canDelete = !!selectedNodeId && selectedNodeId !== activeScreenId;
+  const deletableIds = selectedNodeIds.filter((id) => id !== activeScreenId);
+  const canDelete = deletableIds.length > 0;
 
   return (
     <div className={styles.toolbar} ref={rootRef} role="toolbar" aria-label="Canvas tools">
@@ -222,7 +224,7 @@ export function CanvasToolbar() {
           title="Delete"
           aria-label="Delete"
           disabled={!canDelete}
-          onClick={() => selectedNodeId && deleteNode(selectedNodeId)}
+          onClick={() => deleteNodes(selectedNodeIds)}
         >
           <TrashIcon />
         </button>

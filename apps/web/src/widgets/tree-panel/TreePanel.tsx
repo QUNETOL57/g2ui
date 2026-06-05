@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { DragEvent } from "react";
 import type { WidgetNode } from "@entities/ui-project";
 import { useEditorStore } from "@entities/ui-project/model/store";
@@ -10,18 +10,54 @@ import styles from "./TreePanel.module.css";
 
 type DropPosition = "before" | "inside" | "after";
 type TreeDropTarget = { nodeId: string; position: DropPosition } | null;
+type SelectMods = { toggle?: boolean; range?: boolean };
 
 export function TreePanel() {
   const project = useEditorStore((s) => s.project);
   const activeScreenId = useEditorStore((s) => s.activeScreenId);
   const selectedNodeId = useEditorStore((s) => s.selectedNodeId);
+  const selectedNodeIds = useEditorStore((s) => s.selectedNodeIds);
   const selectNode = useEditorStore((s) => s.selectNode);
+  const toggleNodeSelection = useEditorStore((s) => s.toggleNodeSelection);
+  const setSelection = useEditorStore((s) => s.setSelection);
   const beginLabelTextEdit = useEditorStore((s) => s.beginLabelTextEdit);
   const moveNodeToParentIndex = useEditorStore((s) => s.moveNodeToParentIndex);
+  const moveNodesToTarget = useEditorStore((s) => s.moveNodesToTarget);
   const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<TreeDropTarget>(null);
 
   const screen = project.screens.find((s) => s.id === activeScreenId);
+
+  const selectedSet = useMemo(() => new Set(selectedNodeIds), [selectedNodeIds]);
+
+  const flatIds = useMemo(() => {
+    const acc: string[] = [];
+    const walk = (node: WidgetNode) => {
+      acc.push(node.id);
+      (node.children ?? []).forEach(walk);
+    };
+    if (screen) walk(screen);
+    return acc;
+  }, [screen]);
+
+  const handleSelect = (id: string, mods?: SelectMods) => {
+    if (mods?.range) {
+      const anchor = selectedNodeId ?? id;
+      const anchorIndex = flatIds.indexOf(anchor);
+      const targetIndex = flatIds.indexOf(id);
+      if (anchorIndex >= 0 && targetIndex >= 0) {
+        const [lo, hi] =
+          anchorIndex <= targetIndex ? [anchorIndex, targetIndex] : [targetIndex, anchorIndex];
+        setSelection(flatIds.slice(lo, hi + 1), id);
+        return;
+      }
+    }
+    if (mods?.toggle) {
+      toggleNodeSelection(id);
+      return;
+    }
+    selectNode(id);
+  };
 
   const canDrop = (sourceId: string | null, targetId: string, position: DropPosition) => {
     if (!sourceId || sourceId === targetId || sourceId === activeScreenId) {
@@ -39,11 +75,22 @@ export function TreePanel() {
     return !!targetParent && !containsNode(source, targetParent.id);
   };
 
+  const resolveMovingIds = (sourceId: string) =>
+    selectedNodeIds.length > 1 && selectedNodeIds.includes(sourceId) ? selectedNodeIds : [sourceId];
+
   const handleDrop = (targetId: string, position: DropPosition) => {
     const sourceId = draggedNodeId;
     setDraggedNodeId(null);
     setDropTarget(null);
-    if (!sourceId || !canDrop(sourceId, targetId, position)) return;
+    if (!sourceId) return;
+
+    const movingIds = resolveMovingIds(sourceId);
+    if (!movingIds.every((id) => canDrop(id, targetId, position))) return;
+
+    if (movingIds.length > 1) {
+      moveNodesToTarget(movingIds, targetId, position);
+      return;
+    }
 
     if (position === "inside") {
       const target = findNode(project, targetId);
@@ -67,15 +114,18 @@ export function TreePanel() {
         <TreeNode
           node={screen}
           depth={0}
-          selectedId={selectedNodeId}
-          onSelect={selectNode}
+          selectedSet={selectedSet}
+          primaryId={selectedNodeId}
+          onSelect={handleSelect}
           onLabelEdit={beginLabelTextEdit}
           activeScreenId={activeScreenId}
           draggedNodeId={draggedNodeId}
           dropTarget={dropTarget}
           onDragStart={(nodeId) => {
             setDraggedNodeId(nodeId);
-            selectNode(nodeId);
+            if (!(selectedNodeIds.length > 1 && selectedNodeIds.includes(nodeId))) {
+              selectNode(nodeId);
+            }
           }}
           onDragEnd={() => {
             setDraggedNodeId(null);
@@ -99,7 +149,8 @@ export function TreePanel() {
 function TreeNode({
   node,
   depth,
-  selectedId,
+  selectedSet,
+  primaryId,
   onSelect,
   onLabelEdit,
   activeScreenId,
@@ -112,8 +163,9 @@ function TreeNode({
 }: {
   node: WidgetNode;
   depth: number;
-  selectedId: string | null;
-  onSelect: (id: string) => void;
+  selectedSet: Set<string>;
+  primaryId: string | null;
+  onSelect: (id: string, mods?: SelectMods) => void;
   onLabelEdit: (id: string) => void;
   activeScreenId: string;
   draggedNodeId: string | null;
@@ -123,7 +175,8 @@ function TreeNode({
   onDragOver: (event: DragEvent<HTMLDivElement>, nodeId: string, position: DropPosition) => void;
   onDrop: (nodeId: string, position: DropPosition) => void;
 }) {
-  const isSelected = selectedId === node.id;
+  const isSelected = selectedSet.has(node.id);
+  const isPrimary = primaryId === node.id;
   const isDraggable = node.id !== activeScreenId;
   const dragOverClass =
     dropTarget?.nodeId === node.id
@@ -139,15 +192,22 @@ function TreeNode({
         className={cn(
           styles.row,
           isSelected && styles.rowSelected,
+          isPrimary && styles.rowPrimary,
           draggedNodeId === node.id && styles.rowDragging,
           dragOverClass,
         )}
         data-testid="tree-node-row"
         data-tree-node-id={node.id}
         data-tree-node-type={node.type}
+        aria-selected={isSelected}
         style={{ paddingLeft: 10 + depth * 14 }}
         draggable={isDraggable}
-        onClick={() => onSelect(node.id)}
+        onClick={(event) =>
+          onSelect(node.id, {
+            toggle: event.metaKey || event.ctrlKey,
+            range: event.shiftKey,
+          })
+        }
         onDoubleClick={(event) => {
           event.stopPropagation();
           if (node.type === "label" || node.type === "button") onLabelEdit(node.id);
@@ -188,7 +248,8 @@ function TreeNode({
           key={child.id}
           node={child}
           depth={depth + 1}
-          selectedId={selectedId}
+          selectedSet={selectedSet}
+          primaryId={primaryId}
           onSelect={onSelect}
           onLabelEdit={onLabelEdit}
           activeScreenId={activeScreenId}

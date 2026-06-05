@@ -73,24 +73,12 @@
 .typePill {
   display: inline-flex;
   align-items: center;
-  min-height: 22px;
-  padding: 2px 8px;
+  font-size: var(--font-size-xs);
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--color-surface-3);
+  color: var(--color-text-muted);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-pill);
-  color: var(--color-accent);
-  font-size: var(--font-size-sm);
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  transition:
-    background 120ms ease,
-    border-color 120ms ease,
-    color 120ms ease;
-}
-
-.typePill:hover {
-  border-color: var(--hover-border);
-  color: var(--hover-text);
 }
 
 .summaryId {

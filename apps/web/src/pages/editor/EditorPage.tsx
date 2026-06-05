@@ -26,7 +26,8 @@ export function EditorPage({
   const lastError = useEditorStore((s) => s.lastError);
   const project = useEditorStore((s) => s.project);
   const selectedNodeId = useEditorStore((s) => s.selectedNodeId);
-  const deleteNode = useEditorStore((s) => s.deleteNode);
+  const selectedNodeIds = useEditorStore((s) => s.selectedNodeIds);
+  const deleteNodes = useEditorStore((s) => s.deleteNodes);
   const beginLabelTextEdit = useEditorStore((s) => s.beginLabelTextEdit);
   const undo = useEditorStore((s) => s.undo);
   const redo = useEditorStore((s) => s.redo);
@@ -73,16 +74,16 @@ export function EditorPage({
         event.code === "Delete" ||
         event.code === "Backspace";
 
-      if (!isDeleteKey || !selectedNodeId) return;
+      if (!isDeleteKey || selectedNodeIds.length === 0) return;
       if (isEditingText) return;
 
       event.preventDefault();
-      deleteNode(selectedNodeId);
+      deleteNodes(selectedNodeIds);
     };
 
     window.addEventListener("keydown", handleKeyDown, { capture: true });
     return () => window.removeEventListener("keydown", handleKeyDown, { capture: true });
-  }, [beginLabelTextEdit, deleteNode, redo, selectedNodeId, undo]);
+  }, [beginLabelTextEdit, deleteNodes, redo, selectedNodeId, selectedNodeIds, undo]);
 
   return (
     <div

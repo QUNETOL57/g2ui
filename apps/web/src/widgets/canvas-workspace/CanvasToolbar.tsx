@@ -138,13 +138,25 @@ export function CanvasToolbar() {
         const menuId = `${menuBaseId}-${group.id}`;
         const isOpen = openGroupId === group.id;
         return (
-          <div key={group.id} className={styles.group}>
+          <div
+            key={group.id}
+            className={cn(
+              styles.group,
+              hasMenu && styles.groupMenu,
+              hasMenu && isOpen && styles.groupMenuOpen,
+            )}
+          >
             <button
               type="button"
               className={styles.tool}
-              title={`Add ${group.items[0].label.toLowerCase()}`}
-              aria-label={`Add ${group.items[0].label.toLowerCase()}`}
-              onClick={() => handleAdd(group.items[0].type)}
+              title={hasMenu ? group.label : `Add ${group.items[0].label.toLowerCase()}`}
+              aria-label={hasMenu ? group.label : `Add ${group.items[0].label.toLowerCase()}`}
+              aria-haspopup={hasMenu ? "menu" : undefined}
+              aria-expanded={hasMenu ? isOpen : undefined}
+              aria-controls={hasMenu ? menuId : undefined}
+              onClick={() =>
+                hasMenu ? setOpenGroupId(isOpen ? null : group.id) : handleAdd(group.items[0].type)
+              }
             >
               {group.icon}
             </button>

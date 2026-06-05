@@ -81,6 +81,15 @@
   background: var(--color-surface-3);
   color: var(--color-text-muted);
   border: 1px solid var(--color-border);
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+}
+
+.row:hover .typeBadge {
+  border-color: var(--hover-border);
+  color: var(--hover-text);
 }
 
 .rowSelected .typeBadge {

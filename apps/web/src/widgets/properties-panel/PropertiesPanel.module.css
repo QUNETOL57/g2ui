@@ -45,6 +45,11 @@
   font-size: var(--font-size-base);
   font-weight: 500;
   padding: 4px 6px;
+  transition: border-color 120ms ease;
+}
+
+.inputText:hover {
+  border-color: var(--hover-border);
 }
 
 .inputText:focus {
@@ -77,6 +82,15 @@
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+}
+
+.typePill:hover {
+  border-color: var(--hover-border);
+  color: var(--hover-text);
 }
 
 .summaryId {
@@ -113,6 +127,11 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface-3);
+  transition: border-color 120ms ease;
+}
+
+.transformField:hover {
+  border-color: var(--hover-border);
 }
 
 .transformField:focus-within {
@@ -342,6 +361,12 @@
   background: var(--color-surface-3);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color 120ms ease;
+}
+
+.hexInput:hover {
+  border-color: var(--hover-border);
 }
 
 .appearanceGroup {
@@ -449,6 +474,11 @@
   font-size: var(--font-size-base);
   font-weight: 500;
   padding: 4px 6px;
+  transition: border-color 120ms ease;
+}
+
+.inputSearch:hover {
+  border-color: var(--hover-border);
 }
 
 .inputSearch:focus {

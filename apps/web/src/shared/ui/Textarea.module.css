@@ -10,6 +10,11 @@
   font-weight: 500;
   padding: 6px 8px;
   resize: vertical;
+  transition: border-color 120ms ease;
+}
+
+.textarea:hover {
+  border-color: var(--hover-border);
 }
 
 .textarea:focus {

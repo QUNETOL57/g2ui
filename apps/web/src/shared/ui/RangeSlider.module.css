@@ -10,12 +10,12 @@
 
 .range::-webkit-slider-runnable-track {
   height: 6px;
-  border: 1px solid var(--color-border-strong);
+  border: 1px solid var(--color-border-soft);
   border-radius: var(--radius-pill);
   background: linear-gradient(
     to right,
     var(--color-accent) 0 var(--range-progress, 0%),
-    #2a2a2a var(--range-progress, 0%) 100%
+    var(--color-surface-2) var(--range-progress, 0%) 100%
   );
 }
 
@@ -32,9 +32,9 @@
 
 .range::-moz-range-track {
   height: 6px;
-  border: 1px solid var(--color-border-strong);
+  border: 1px solid var(--color-border-soft);
   border-radius: var(--radius-pill);
-  background: #2a2a2a;
+  background: var(--color-surface-2);
 }
 
 .range::-moz-range-progress {

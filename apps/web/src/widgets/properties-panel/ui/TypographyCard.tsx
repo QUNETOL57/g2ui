@@ -18,7 +18,6 @@ import { findFontFace, getFontFamilyOptions, getFontSizes } from "@entities/font
 import type { BitmapFontStyle } from "@entities/font/fontTypes";
 import { cn } from "@shared/lib/cn";
 import { CustomSelect } from "@shared/ui/CustomSelect";
-
 import styles from "../PropertiesPanel.module.css";
 
 import { ColorField } from "./ColorField";
@@ -171,6 +170,7 @@ function FontFields({
           <label>font</label>
           <CustomSelect
             ariaLabel="font family"
+            size="sm"
             value={selectedFamily}
             options={families.map((entry) => ({ value: entry.family, label: entry.family }))}
             onChange={(value) => {
@@ -200,6 +200,7 @@ function FontFields({
             <label>size</label>
             <CustomSelect
               ariaLabel="font size"
+              size="sm"
               value={String(selectedSize)}
               options={facesForSelection.map((size) => ({ value: String(size), label: `${size}` }))}
               onChange={(value) => onChange({ fontSize: Number(value), fontFace: undefined })}
@@ -216,6 +217,7 @@ function FontFields({
         <label>font</label>
         <CustomSelect
           ariaLabel="font family"
+          size="sm"
           value={selectedFamily}
           options={families.map((entry) => ({ value: entry.family, label: entry.family }))}
           onChange={(value) => {
@@ -243,6 +245,7 @@ function FontFields({
         <label>size</label>
         <CustomSelect
           ariaLabel="font size"
+          size="sm"
           value={String(selectedSize)}
           options={facesForSelection.map((size) => ({ value: String(size), label: `${size}` }))}
           onChange={(value) => onChange({ fontSize: Number(value), fontFace: undefined })}

@@ -16,7 +16,10 @@ interface CustomSelectProps {
   onChange: (value: string) => void;
   ariaLabel?: string;
   className?: string;
+  size?: "default" | "sm";
   triggerClassName?: string;
+  menuClassName?: string;
+  optionClassName?: string;
 }
 
 export function CustomSelect({
@@ -25,8 +28,12 @@ export function CustomSelect({
   onChange,
   ariaLabel,
   className,
+  size = "default",
   triggerClassName,
+  menuClassName,
+  optionClassName,
 }: CustomSelectProps) {
+  const isSm = size === "sm";
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const selected = useMemo(
@@ -49,7 +56,7 @@ export function CustomSelect({
     <div className={cn(styles.root, className)} ref={rootRef}>
       <button
         type="button"
-        className={cn(styles.trigger, triggerClassName)}
+        className={cn(styles.trigger, isSm && styles.triggerSm, triggerClassName)}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={ariaLabel}
@@ -73,7 +80,7 @@ export function CustomSelect({
         <span className={styles.chevron} aria-hidden="true" />
       </button>
       {open ? (
-        <div className={styles.menu} role="listbox">
+        <div className={cn(styles.menu, isSm && styles.menuSm, menuClassName)} role="listbox">
           {options.map((option) => {
             const isSelected = option.value === value;
             return (
@@ -82,7 +89,12 @@ export function CustomSelect({
                 type="button"
                 role="option"
                 aria-selected={isSelected}
-                className={cn(styles.option, isSelected && styles.optionSelected)}
+                className={cn(
+                  styles.option,
+                  isSm && styles.optionSm,
+                  isSelected && styles.optionSelected,
+                  optionClassName,
+                )}
                 onClick={() => {
                   onChange(option.value);
                   setOpen(false);

@@ -1,9 +1,11 @@
 import { memo, useState } from "react";
 import FileDownloadOutlinedIcon from "@mui/icons-material/FileDownloadOutlined";
 import FileUploadOutlinedIcon from "@mui/icons-material/FileUploadOutlined";
+import PaletteOutlinedIcon from "@mui/icons-material/PaletteOutlined";
 
 import { ExportProjectModal } from "@widgets/export-panel/ExportProjectModal";
 import { ImportProjectModal } from "@widgets/export-panel/ImportProjectModal";
+import { PaletteModal } from "@widgets/palette-panel/PaletteModal";
 
 import {
   autosaveStatusPresentation,
@@ -22,6 +24,7 @@ export const EditorStatusBar = memo(function EditorStatusBar({
 }: EditorStatusBarProps) {
   const [exportOpen, setExportOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const { label, Icon } = autosaveStatusPresentation(autosaveStatus, autosaveError);
 
   return (
@@ -37,6 +40,14 @@ export const EditorStatusBar = memo(function EditorStatusBar({
           <span>{label}</span>
         </div>
         <div className={styles.statusActions}>
+          <button
+            type="button"
+            className={styles.statusButton}
+            onClick={() => setPaletteOpen(true)}
+          >
+            <PaletteOutlinedIcon fontSize="small" aria-hidden />
+            Palette
+          </button>
           <button
             type="button"
             className={styles.statusButton}
@@ -56,6 +67,7 @@ export const EditorStatusBar = memo(function EditorStatusBar({
         </div>
       </footer>
 
+      <PaletteModal open={paletteOpen} onClose={() => setPaletteOpen(false)} />
       <ExportProjectModal open={exportOpen} onClose={() => setExportOpen(false)} />
       <ImportProjectModal open={importOpen} onClose={() => setImportOpen(false)} />
     </>

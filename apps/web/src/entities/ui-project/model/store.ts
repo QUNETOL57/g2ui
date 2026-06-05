@@ -37,6 +37,7 @@ interface EditorState {
   project: UiProject;
   activeScreenId: string;
   selectedNodeId: string | null;
+  selectedNodeIds: string[];
   editingLabelId: string | null;
   draftFrame: { nodeId: string; frame: Frame } | null;
   historyBatchBase: HistorySnapshot | null;
@@ -47,6 +48,8 @@ interface EditorState {
   setProject: (project: UiProject) => void;
   setActiveScreen: (screenId: string) => void;
   selectNode: (id: string | null) => void;
+  toggleNodeSelection: (id: string) => void;
+  setSelection: (ids: string[], primaryId?: string | null) => void;
   beginLabelTextEdit: (nodeId: string) => void;
   commitLabelText: (nodeId: string, text: string, frame?: Frame) => void;
   cancelLabelTextEdit: () => void;
@@ -57,9 +60,11 @@ interface EditorState {
 
   addWidget: (parentId: string, type: WidgetType) => string | null;
   deleteNode: (id: string) => void;
+  deleteNodes: (ids: string[]) => void;
   moveNode: (id: string, direction: "up" | "down") => void;
   moveNodeToIndex: (id: string, index: number) => void;
   moveNodeToParentIndex: (id: string, parentId: string, index: number) => void;
+  moveNodesToTarget: (ids: string[], targetId: string, position: "before" | "inside" | "after") => void;
   absolutizeLayout: (parentId: string, childFrames: Array<{ id: string; frame: Frame }>) => void;
   reparentNode: (id: string, newParentId: string) => void;
 
@@ -82,6 +87,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   project: initialProject,
   activeScreenId: initialProject.initialScreenId,
   selectedNodeId: null,
+  selectedNodeIds: [],
   editingLabelId: null,
   draftFrame: null,
   historyBatchBase: null,
@@ -96,6 +102,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       project,
       activeScreenId: project.initialScreenId,
       selectedNodeId: null,
+      selectedNodeIds: [],
       editingLabelId: null,
       draftFrame: null,
       historyBatchBase: null,
@@ -103,9 +110,33 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   setActiveScreen: (screenId) =>
-    set({ activeScreenId: screenId, selectedNodeId: null, editingLabelId: null, draftFrame: null }),
+    set({
+      activeScreenId: screenId,
+      selectedNodeId: null,
+      selectedNodeIds: [],
+      editingLabelId: null,
+      draftFrame: null,
+    }),
 
-  selectNode: (id) => set({ selectedNodeId: id, draftFrame: null }),
+  selectNode: (id) =>
+    set({ selectedNodeId: id, selectedNodeIds: id ? [id] : [], draftFrame: null }),
+
+  toggleNodeSelection: (id) =>
+    set((state) => {
+      const exists = state.selectedNodeIds.includes(id);
+      const nextIds = exists
+        ? state.selectedNodeIds.filter((x) => x !== id)
+        : [...state.selectedNodeIds, id];
+      const nextPrimary = exists ? (nextIds.at(-1) ?? null) : id;
+      return { selectedNodeIds: nextIds, selectedNodeId: nextPrimary, draftFrame: null };
+    }),
+
+  setSelection: (ids, primaryId) =>
+    set({
+      selectedNodeIds: ids,
+      selectedNodeId: primaryId !== undefined ? primaryId : (ids.at(-1) ?? null),
+      draftFrame: null,
+    }),
 
   beginLabelTextEdit: (nodeId) => {
     const node = findNode(get().project, nodeId);
@@ -174,6 +205,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       project: p,
       activeScreenId: p.initialScreenId,
       selectedNodeId: null,
+      selectedNodeIds: [],
       draftFrame: null,
       historyBatchBase: null,
     }));
@@ -188,6 +220,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         project: cloneProject(previous.project),
         activeScreenId: previous.activeScreenId,
         selectedNodeId: previous.selectedNodeId,
+        selectedNodeIds: previous.selectedNodeId ? [previous.selectedNodeId] : [],
         draftFrame: null,
         historyBatchBase: null,
         historyPast: nextPast,
@@ -203,6 +236,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         project: cloneProject(next.project),
         activeScreenId: next.activeScreenId,
         selectedNodeId: next.selectedNodeId,
+        selectedNodeIds: next.selectedNodeId ? [next.selectedNodeId] : [],
         draftFrame: null,
         historyBatchBase: null,
         historyPast: [...state.historyPast, snapshotState(state)].slice(-MAX_HISTORY),
@@ -219,7 +253,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       newId = id;
       const node = makeWidgetWithFrame(id, type, parentId, nextProject);
       insertChild(nextProject, parentId, node);
-      return { ...recordHistory(state), project: nextProject, selectedNodeId: id, draftFrame: null };
+      return {
+        ...recordHistory(state),
+        project: nextProject,
+        selectedNodeId: id,
+        selectedNodeIds: [id],
+        draftFrame: null,
+      };
     });
     return newId;
   },
@@ -233,7 +273,31 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         ...recordHistory(state),
         project: next,
         selectedNodeId: state.selectedNodeId === id ? null : state.selectedNodeId,
+        selectedNodeIds: state.selectedNodeIds.filter((x) => x !== id),
         editingLabelId: state.editingLabelId === id ? null : state.editingLabelId,
+        draftFrame: null,
+      };
+    }),
+
+  deleteNodes: (ids) =>
+    set((state) => {
+      const removable = ids.filter((id) => id && id !== state.activeScreenId);
+      if (removable.length === 0) return state;
+      const next = cloneProject(state.project);
+      let removedAny = false;
+      for (const id of removable) {
+        if (removeNode(next, id)) removedAny = true;
+      }
+      if (!removedAny) return state;
+      const removedSet = new Set(removable);
+      return {
+        ...recordHistory(state),
+        project: next,
+        selectedNodeId:
+          state.selectedNodeId && removedSet.has(state.selectedNodeId) ? null : state.selectedNodeId,
+        selectedNodeIds: state.selectedNodeIds.filter((x) => !removedSet.has(x)),
+        editingLabelId:
+          state.editingLabelId && removedSet.has(state.editingLabelId) ? null : state.editingLabelId,
         draftFrame: null,
       };
     }),
@@ -282,7 +346,77 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const adjustedIndex = currentParent.id === nextParent.id && currentIndex < index ? index - 1 : index;
       const clampedIndex = clampIndex(adjustedIndex, nextParent.children.length);
       nextParent.children.splice(clampedIndex, 0, node);
-      return { ...recordHistory(state), project: next, selectedNodeId: id, draftFrame: null };
+      return {
+        ...recordHistory(state),
+        project: next,
+        selectedNodeId: id,
+        selectedNodeIds: [id],
+        draftFrame: null,
+      };
+    }),
+
+  moveNodesToTarget: (ids, targetId, position) =>
+    set((state) => {
+      const next = cloneProject(state.project);
+      const target = findNode(next, targetId);
+      if (!target) return state;
+
+      let destParentId: string;
+      let beforeId: string | null;
+      if (position === "inside") {
+        destParentId = targetId;
+        beforeId = null;
+      } else {
+        const parent = findParent(next, targetId);
+        if (!parent?.children) return state;
+        destParentId = parent.id;
+        const ti = parent.children.findIndex((c) => c.id === targetId);
+        if (ti < 0) return state;
+        beforeId = position === "before" ? targetId : (parent.children[ti + 1]?.id ?? null);
+      }
+
+      const movable = ids.filter((id) => {
+        if (id === state.activeScreenId || id === destParentId) return false;
+        if (!findParent(next, id)) return false;
+        if (isAncestor(next, id, destParentId)) return false;
+        return !ids.some((other) => other !== id && isAncestor(next, other, id));
+      });
+      if (movable.length === 0) return state;
+
+      const order = new Map<string, number>();
+      let counter = 0;
+      const indexWalk = (node: WidgetNode) => {
+        order.set(node.id, counter++);
+        (node.children ?? []).forEach(indexWalk);
+      };
+      next.screens.forEach(indexWalk);
+      const ordered = [...movable].sort((a, b) => (order.get(a) ?? 0) - (order.get(b) ?? 0));
+      const movedSet = new Set(ordered);
+
+      const detached: WidgetNode[] = [];
+      for (const id of ordered) {
+        const node = removeNode(next, id);
+        if (node) detached.push(node);
+      }
+
+      const destParent = findNode(next, destParentId);
+      if (!destParent) return state;
+      if (!destParent.children) destParent.children = [];
+
+      let insertAt = destParent.children.length;
+      if (beforeId && !movedSet.has(beforeId)) {
+        const bi = destParent.children.findIndex((c) => c.id === beforeId);
+        if (bi >= 0) insertAt = bi;
+      }
+      destParent.children.splice(insertAt, 0, ...detached);
+
+      return {
+        ...recordHistory(state),
+        project: next,
+        selectedNodeId: ordered.at(-1) ?? null,
+        selectedNodeIds: ordered,
+        draftFrame: null,
+      };
     }),
 
   absolutizeLayout: (parentId, childFrames) =>
@@ -315,7 +449,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       if (!parent) return state;
       if (!parent.children) parent.children = [];
       parent.children.push(detached);
-      return { ...recordHistory(state), project: next, selectedNodeId: id, draftFrame: null };
+      return {
+        ...recordHistory(state),
+        project: next,
+        selectedNodeId: id,
+        selectedNodeIds: [id],
+        draftFrame: null,
+      };
     }),
 
   updateNode: (id, patch) =>
@@ -430,6 +570,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         project: normalizeProjectTextFrames(parsed),
         activeScreenId: parsed.initialScreenId,
         selectedNodeId: null,
+        selectedNodeIds: [],
         draftFrame: null,
         historyBatchBase: null,
         lastError: null,

@@ -126,3 +126,22 @@ export function withChildren(project: UiProject, children: WidgetNode[]): UiProj
   next.screens[0].children = children;
   return next;
 }
+
+export function makeSecondScreen(id = "screen_other", name = "Other"): UiProject["screens"][number] {
+  return {
+    id,
+    type: "screen",
+    name,
+    width: 160,
+    height: 128,
+    visible: true,
+    layout: { mode: "absolute", padding: 0, gap: 0, align: "start", justify: "start" },
+    style: { background: { kind: "token", token: "bg" } },
+    props: { background: { kind: "token", token: "bg" } },
+    children: [],
+  };
+}
+
+export function withScreens(project: UiProject, screens: UiProject["screens"]): UiProject {
+  return { ...project, screens };
+}

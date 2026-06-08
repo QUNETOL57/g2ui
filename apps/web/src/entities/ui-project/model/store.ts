@@ -5,10 +5,12 @@ import type {
   IconProps,
   LabelProps,
   PaletteEntry,
+  ScreenNode,
   UiProject,
   WidgetNode,
   WidgetType,
 } from "..";
+import { defaultLayout } from "../defaults";
 import { normalizePalette } from "../lib/palette";
 import { makeWidget, nextId, validateProject } from "..";
 import { getIconDefinition } from "@entities/icon/iconLibrary";
@@ -18,6 +20,7 @@ import { blankProject, helloSample } from "../samples/hello";
 import {
   clampIndex,
   cloneProject,
+  cloneScreenSubtree,
   collectIds,
   defaultFrameFor,
   findNode,
@@ -49,6 +52,10 @@ interface EditorState {
 
   setProject: (project: UiProject) => void;
   setActiveScreen: (screenId: string) => void;
+  addScreen: (name?: string) => string | null;
+  duplicateScreen: (screenId: string) => string | null;
+  removeScreen: (screenId: string) => boolean;
+  moveScreen: (screenId: string, toIndex: number) => void;
   selectNode: (id: string | null) => void;
   toggleNodeSelection: (id: string) => void;
   setSelection: (ids: string[], primaryId?: string | null) => void;
@@ -86,9 +93,13 @@ interface EditorState {
 
 const initialProject = blankProject();
 
+function resolveActiveScreenId(project: UiProject): string {
+  return project.screens[0]?.id ?? project.initialScreenId;
+}
+
 export const useEditorStore = create<EditorState>((set, get) => ({
   project: initialProject,
-  activeScreenId: initialProject.initialScreenId,
+  activeScreenId: resolveActiveScreenId(initialProject),
   selectedNodeId: null,
   selectedNodeIds: [],
   editingLabelId: null,
@@ -103,7 +114,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set((state) => ({
       ...recordHistory(state),
       project,
-      activeScreenId: project.initialScreenId,
+      activeScreenId: resolveActiveScreenId(project),
       selectedNodeId: null,
       selectedNodeIds: [],
       editingLabelId: null,
@@ -119,6 +130,112 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       selectedNodeIds: [],
       editingLabelId: null,
       draftFrame: null,
+    }),
+
+  addScreen: (name) => {
+    let newId: string | null = null;
+    set((state) => {
+      const next = cloneProject(state.project);
+      const usedIds = collectIds(next);
+      const id = nextId("screen", usedIds);
+      newId = id;
+      const { width, height } = next.display;
+      const screen: ScreenNode = {
+        id,
+        type: "screen",
+        name: name ?? `Screen ${next.screens.length + 1}`,
+        width,
+        height,
+        visible: true,
+        layout: defaultLayout("absolute"),
+        style: { background: { kind: "token", token: "bg" } },
+        props: { background: { kind: "token", token: "bg" } },
+        children: [],
+      };
+      next.screens.push(screen);
+      return {
+        ...recordHistory(state),
+        project: next,
+        activeScreenId: id,
+        selectedNodeId: null,
+        selectedNodeIds: [],
+        editingLabelId: null,
+        draftFrame: null,
+      };
+    });
+    return newId;
+  },
+
+  duplicateScreen: (screenId) => {
+    let newId: string | null = null;
+    set((state) => {
+      const next = cloneProject(state.project);
+      const source = next.screens.find((s) => s.id === screenId);
+      if (!source) return state;
+      const usedIds = collectIds(next);
+      const copy = cloneScreenSubtree(source, usedIds);
+      copy.name = source.name ? `${source.name} copy` : `${copy.id} copy`;
+      const sourceIndex = next.screens.findIndex((s) => s.id === screenId);
+      next.screens.splice(sourceIndex + 1, 0, copy);
+      newId = copy.id;
+      return {
+        ...recordHistory(state),
+        project: next,
+        activeScreenId: copy.id,
+        selectedNodeId: null,
+        selectedNodeIds: [],
+        editingLabelId: null,
+        draftFrame: null,
+      };
+    });
+    return newId;
+  },
+
+  removeScreen: (screenId) => {
+    let removed = false;
+    set((state) => {
+      if (state.project.screens.length <= 1) return state;
+      const next = cloneProject(state.project);
+      const index = next.screens.findIndex((s) => s.id === screenId);
+      if (index < 0) return state;
+      next.screens.splice(index, 1);
+      removed = true;
+
+      let nextActive = state.activeScreenId;
+      if (nextActive === screenId) {
+        const fallback = next.screens[Math.min(index, next.screens.length - 1)];
+        nextActive = fallback.id;
+      }
+
+      let nextInitial = next.initialScreenId;
+      if (nextInitial === screenId) {
+        nextInitial = nextActive;
+      }
+      next.initialScreenId = nextInitial;
+
+      return {
+        ...recordHistory(state),
+        project: next,
+        activeScreenId: nextActive,
+        selectedNodeId: null,
+        selectedNodeIds: [],
+        editingLabelId: null,
+        draftFrame: null,
+      };
+    });
+    return removed;
+  },
+
+  moveScreen: (screenId, toIndex) =>
+    set((state) => {
+      const next = cloneProject(state.project);
+      const currentIndex = next.screens.findIndex((s) => s.id === screenId);
+      if (currentIndex < 0) return state;
+      const clamped = clampIndex(toIndex, next.screens.length - 1);
+      if (clamped === currentIndex) return state;
+      const [screen] = next.screens.splice(currentIndex, 1);
+      next.screens.splice(clamped, 0, screen);
+      return { ...recordHistory(state), project: next, draftFrame: null };
     }),
 
   selectNode: (id) =>
@@ -220,7 +337,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set((state) => ({
       ...recordHistory(state),
       project: p,
-      activeScreenId: p.initialScreenId,
+      activeScreenId: resolveActiveScreenId(p),
       selectedNodeId: null,
       selectedNodeIds: [],
       draftFrame: null,
@@ -585,7 +702,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       set((state) => ({
         ...recordHistory(state),
         project: normalizeProjectTextFrames(parsed),
-        activeScreenId: parsed.initialScreenId,
+        activeScreenId: resolveActiveScreenId(parsed),
         selectedNodeId: null,
         selectedNodeIds: [],
         draftFrame: null,

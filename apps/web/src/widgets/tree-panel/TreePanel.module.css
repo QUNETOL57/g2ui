@@ -100,8 +100,15 @@
   line-height: 1.15;
 }
 
-.rowId {
+.rowMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
   margin-left: auto;
+  flex: 0 0 auto;
+}
+
+.rowId {
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
 }

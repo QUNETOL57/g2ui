@@ -5,6 +5,7 @@ import { useEditorStore } from "@entities/ui-project/model/store";
 import { findNode, findParent } from "@entities/ui-project/model/tree-ops";
 import { cn } from "@shared/lib/cn";
 import { SectionTitle } from "@shared/ui/SectionTitle";
+import { VisibilityToggleButton } from "@shared/ui/VisibilityToggleButton";
 
 import styles from "./TreePanel.module.css";
 
@@ -23,6 +24,7 @@ export function TreePanel() {
   const beginLabelTextEdit = useEditorStore((s) => s.beginLabelTextEdit);
   const moveNodeToParentIndex = useEditorStore((s) => s.moveNodeToParentIndex);
   const moveNodesToTarget = useEditorStore((s) => s.moveNodesToTarget);
+  const updateNode = useEditorStore((s) => s.updateNode);
   const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<TreeDropTarget>(null);
 
@@ -119,6 +121,7 @@ export function TreePanel() {
             primaryId={selectedNodeId}
             onSelect={handleSelect}
             onLabelEdit={beginLabelTextEdit}
+            onUpdateNode={updateNode}
             activeScreenId={activeScreenId}
             draggedNodeId={draggedNodeId}
             dropTarget={dropTarget}
@@ -155,6 +158,7 @@ function TreeNode({
   primaryId,
   onSelect,
   onLabelEdit,
+  onUpdateNode,
   activeScreenId,
   draggedNodeId,
   dropTarget,
@@ -169,6 +173,7 @@ function TreeNode({
   primaryId: string | null;
   onSelect: (id: string, mods?: SelectMods) => void;
   onLabelEdit: (id: string) => void;
+  onUpdateNode: (id: string, patch: Partial<WidgetNode>) => void;
   activeScreenId: string;
   draggedNodeId: string | null;
   dropTarget: TreeDropTarget;
@@ -243,7 +248,18 @@ function TreeNode({
       >
         <span className={styles.typeBadge}>{node.type}</span>
         <span className={styles.rowName}>{node.name ?? node.id}</span>
-        <span className={styles.rowId}>{node.id}</span>
+        <div className={styles.rowMeta}>
+          <span className={styles.rowId}>{node.id}</span>
+          {isDraggable ? (
+            <VisibilityToggleButton
+              visible={node.visible !== false}
+              label={node.name ?? node.id}
+              onToggle={() =>
+                onUpdateNode(node.id, { visible: node.visible === false })
+              }
+            />
+          ) : null}
+        </div>
       </div>
       {(node.children ?? []).map((child) => (
         <TreeNode
@@ -254,6 +270,7 @@ function TreeNode({
           primaryId={primaryId}
           onSelect={onSelect}
           onLabelEdit={onLabelEdit}
+          onUpdateNode={onUpdateNode}
           activeScreenId={activeScreenId}
           draggedNodeId={draggedNodeId}
           dropTarget={dropTarget}

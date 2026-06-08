@@ -1,0 +1,50 @@
+.shortcuts {
+  padding: 0 12px 12px;
+}
+
+.title {
+  margin: 0 0 8px;
+  padding: 0;
+  font-size: var(--font-size-sm);
+  text-transform: uppercase;
+  color: var(--color-text-soft);
+  letter-spacing: 0.12em;
+}
+
+.list {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  min-height: 24px;
+}
+
+.label {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-md);
+  line-height: 1.3;
+}
+
+.keys {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 20px;
+  padding: 2px 6px;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: var(--font-size-xs);
+  line-height: 1.2;
+  white-space: nowrap;
+}

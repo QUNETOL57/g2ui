@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
+import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
 
 import { cloneProject } from "@entities/ui-project/model/tree-ops";
@@ -181,7 +182,7 @@ export function LibraryPage({
                     setProjectPendingDelete(item);
                   }}
                 >
-                  <CloseRoundedIcon />
+                  <DeleteOutlineOutlinedIcon fontSize="inherit" />
                 </IconButton>
                 <button
                   className={styles.cardOpen}

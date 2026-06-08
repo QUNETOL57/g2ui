@@ -1,0 +1,17 @@
+.zoomToolbar {
+  display: grid;
+  grid-template-columns: minmax(72px, 120px) auto;
+  align-items: center;
+  gap: 6px;
+}
+
+.zoomValue {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  line-height: 1.2;
+  white-space: nowrap;
+}

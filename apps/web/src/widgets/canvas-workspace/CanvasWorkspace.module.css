@@ -8,29 +8,42 @@
   background: #121212;
 }
 
-.toolbar {
-  box-sizing: border-box;
-  height: var(--workspace-subheader-height);
-  min-height: var(--workspace-subheader-height);
-  padding: 0 2px;
-  background: var(--color-bg-deep);
-  border-bottom: 1px solid var(--color-border-soft);
+.workspaceOverlay {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 40;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 4px;
-  flex-shrink: 0;
+  gap: 12px;
+  padding: 5px;
+  pointer-events: none;
 }
 
-.toolbarStart,
-.toolbarEnd {
+.overlayStart,
+.overlayEnd {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  pointer-events: auto;
 }
 
-.toolbarEnd {
+.overlayEnd {
   margin-left: auto;
+}
+
+.projectMeta {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.projectMeta strong {
+  color: var(--color-text);
+  font-weight: 700;
 }
 
 .panelToggle {
@@ -52,40 +65,8 @@
   height: 14px;
 }
 
-.zoomControl {
-  display: grid;
-  grid-template-columns: minmax(72px, 120px) auto;
-  align-items: center;
-  gap: 6px;
-}
-
-.zoomValue {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  flex: none;
-  padding: 2px 6px;
-  border: 1px solid var(--color-border-soft);
-  border-radius: var(--radius-md);
-  background: var(--color-bg-deep);
-  color: var(--color-text);
-  font-size: var(--font-size-sm);
-  line-height: 1.2;
-  white-space: nowrap;
-  transition:
-    background 120ms ease,
-    border-color 120ms ease,
-    color 120ms ease;
-}
-
-.zoomValue:hover {
-  border-color: var(--hover-border);
-  color: var(--hover-text);
-}
-
 .stage {
-  flex: 1;
+  height: 100%;
   min-height: 0;
   background: #121212;
   overflow: auto;

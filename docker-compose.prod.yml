@@ -1,11 +1,11 @@
-name: guimintlab-studio-prod
+name: g2ui-prod
 
 services:
   api:
     build:
       context: ./apps/api
       dockerfile: Dockerfile
-    image: guimintlab-api:prod
+    image: g2ui-api:prod
     restart: unless-stopped
     env_file:
       - path: .env
@@ -14,7 +14,6 @@ services:
       API_HOST: 0.0.0.0
       API_PORT: 8000
       DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL to the external PostgreSQL connection string}
-      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:?set AUTH_JWT_SECRET}
       API_CORS_ORIGINS: ${API_CORS_ORIGINS:-http://localhost:5173}
     ports:
       - "${API_PORT:-8000}:8000"
@@ -23,7 +22,7 @@ services:
       - -c
       - >-
         alembic upgrade head &&
-        exec uvicorn guimintlab_api.main:app --host 0.0.0.0 --port 8000
+        exec uvicorn g2ui_api.main:app --host 0.0.0.0 --port 8000
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz').read()"]
       interval: 30s

@@ -14,8 +14,8 @@ export function BrandLogo({ className, framed = false }: BrandLogoProps) {
       <img
         className={styles.logo}
         src={logoUrl}
-        alt="GuiMintLab Studio"
-        title="GuiMintLab Studio"
+        alt="G2UI"
+        title="G2UI"
       />
       <span className={styles.name}>
         <strong>

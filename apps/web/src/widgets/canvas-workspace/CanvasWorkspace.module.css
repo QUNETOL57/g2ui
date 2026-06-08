@@ -1,0 +1,144 @@
+.wrap {
+  position: relative;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #121212;
+}
+
+.toolbar {
+  box-sizing: border-box;
+  height: var(--workspace-subheader-height);
+  min-height: var(--workspace-subheader-height);
+  padding: 0 8px;
+  background: var(--color-bg-deep);
+  border-bottom: 1px solid var(--color-border-soft);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.toolbarStart,
+.toolbarEnd {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbarEnd {
+  margin-left: auto;
+}
+
+.panelToggle {
+  width: 26px;
+  min-width: 26px;
+  height: 24px;
+  color: var(--color-text-muted);
+}
+
+.panelToggle svg {
+  width: 14px;
+  height: 14px;
+}
+
+.zoomControl {
+  display: grid;
+  grid-template-columns: auto minmax(72px, 120px) auto;
+  align-items: center;
+  gap: 6px;
+}
+
+.zoomControl label {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 900px) {
+  .zoomControl {
+    grid-template-columns: minmax(72px, 120px) auto;
+  }
+
+  .zoomControl label {
+    display: none;
+  }
+}
+
+.zoomValue {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  flex: none;
+  padding: 2px 6px;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-deep);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  line-height: 1.2;
+  white-space: nowrap;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+}
+
+.zoomValue:hover {
+  border-color: var(--hover-border);
+  color: var(--hover-text);
+}
+
+.stage {
+  flex: 1;
+  min-height: 0;
+  background: #121212;
+  overflow: auto;
+  padding: 24px;
+}
+
+.stageCenter {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.artboardShell {
+  position: absolute;
+}
+
+.deviceFrame {
+  background: #121212;
+  position: absolute;
+}
+
+.pixelGrid {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.pixelGridFrame {
+  position: absolute;
+  inset: 0;
+  border: 1px solid #171717;
+}
+
+.scaledContent {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 2;
+}
+
+.selectionLayer {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+}

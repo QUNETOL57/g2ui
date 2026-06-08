@@ -1,0 +1,91 @@
+name: guimintlab-studio
+
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: guimintlab-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-guimintlab}
+      POSTGRES_USER: ${POSTGRES_USER:-guimintlab}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-guimintlab}
+    ports:
+      - "${POSTGRES_PORT:-55432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    image: guimintlab-api:dev
+    container_name: guimintlab-api
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      API_HOST: 0.0.0.0
+      API_PORT: 8000
+      DATABASE_URL: ${LOCAL_DATABASE_URL:-postgresql+asyncpg://guimintlab:guimintlab@db:5432/guimintlab}
+    ports:
+      - "58008:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./apps/api/src:/app/src:ro
+      - ./apps/api/alembic:/app/alembic:ro
+    command:
+      - sh
+      - -c
+      - >-
+        alembic upgrade head &&
+        exec uvicorn guimintlab_api.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app/src
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz').read()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  web:
+    image: node:20-alpine
+    container_name: guimintlab-web
+    profiles: ["full"]
+    working_dir: /app
+    command: >
+      sh -c "
+        cd apps/web &&
+        npm config set fetch-retries 5 &&
+        npm config set fetch-retry-mintimeout 20000 &&
+        npm config set fetch-retry-maxtimeout 120000 &&
+        npm config set fetch-timeout 300000 &&
+        npm install &&
+        npm run dev -- --host 0.0.0.0
+      "
+    ports:
+      - "58009:5173"
+    volumes:
+      - ./:/app
+      - web_node_modules:/app/apps/web/node_modules
+      - web_npm_cache:/root/.npm
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:58008}
+      CHOKIDAR_USEPOLLING: "true"
+      WATCHPACK_POLLING: "true"
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
+  web_node_modules:
+  web_npm_cache:

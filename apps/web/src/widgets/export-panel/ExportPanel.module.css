@@ -1,0 +1,210 @@
+.exportButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-3);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+}
+
+.exportButton:hover {
+  border-color: var(--hover-border);
+  color: var(--hover-text);
+}
+
+.exportButton:focus-visible {
+  outline: 1px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+.exportButton svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.modalClose {
+  position: absolute;
+  z-index: 2;
+  top: 10px;
+  right: 10px;
+  min-width: 24px;
+  width: 24px;
+  height: 24px;
+  font-size: 16px;
+}
+
+.modalPanel {
+  display: grid;
+  gap: var(--space-7);
+  min-height: 0;
+  padding: 0 var(--space-5) var(--space-7);
+  background: var(--color-surface);
+}
+
+.modalTitle {
+  position: relative;
+  margin: 0 calc(-1 * var(--space-5));
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid var(--color-border);
+  background: linear-gradient(90deg, rgba(247, 79, 158, 0.08), transparent 42%);
+}
+
+.modalTitle::before {
+  content: "";
+  display: inline-block;
+  width: 3px;
+  height: 11px;
+  margin-right: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+  vertical-align: -1px;
+}
+
+.kicker {
+  display: inline;
+  margin-bottom: 0;
+  color: var(--color-text-soft);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.modalTitle p {
+  margin: 8px 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-base);
+  line-height: 1.5;
+}
+
+.modalBody {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(220px, 0.8fr);
+  gap: 1px;
+  background: var(--color-border);
+}
+
+.group {
+  min-height: 0;
+}
+
+.group h4 {
+  margin: 0 0 12px;
+  padding: 0;
+  font-size: var(--font-size-sm);
+  text-transform: uppercase;
+  color: var(--color-text-soft);
+  letter-spacing: 0.12em;
+}
+
+.codePreview {
+  max-height: 260px;
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+}
+
+.exportDialog,
+.importDialog {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.exportDialog .modalPanel,
+.importDialog .modalPanel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.exportDialog .modalContent,
+.importDialog .modalContent {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.exportDialog .group,
+.importDialog .group {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.exportDialog .codePreview {
+  flex: 1 1 auto;
+  min-height: 160px;
+  max-height: min(420px, calc(100vh - 240px));
+}
+
+.importDialog .importInput {
+  flex: 1 1 auto;
+  min-height: 180px;
+  max-height: min(360px, calc(100vh - 240px));
+}
+
+.codePreview pre,
+.codePreview code,
+.codePreview span {
+  background: transparent !important;
+}
+
+.importInput {
+  width: 100%;
+  min-height: 180px;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  padding: 6px;
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-sm);
+  resize: vertical;
+}
+
+.importInput:focus {
+  outline: 1px solid var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.hint {
+  margin: 10px 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-md);
+  line-height: 1.45;
+}
+
+.hint code {
+  color: var(--color-accent);
+}
+
+@media (max-width: 720px) {
+  .modalBody {
+    grid-template-columns: 1fr;
+  }
+}

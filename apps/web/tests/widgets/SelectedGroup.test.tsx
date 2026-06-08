@@ -38,13 +38,18 @@ describe("SelectedGroup", () => {
     expect(handler).toHaveBeenLastCalledWith("lbl_1", { name: undefined });
   });
 
-  it("toggles visibility via checkbox", async () => {
+  it("toggles visibility via icon button", async () => {
     const node = { ...makeLabel("lbl_1"), visible: true };
     const handler = vi.fn();
     render(<SelectedGroup node={node} updateNode={handler} />);
-    const cb = screen.getByRole("checkbox");
-    expect(cb).toBeChecked();
-    await userEvent.click(cb);
+    await userEvent.click(screen.getByRole("button", { name: "Hide lbl_1" }));
     expect(handler).toHaveBeenCalledWith("lbl_1", { visible: false });
+  });
+
+  it("shows visibility icon in the summary title row", () => {
+    const node = makeLabel("lbl_1", "Hello");
+    render(<SelectedGroup node={node} updateNode={() => undefined} />);
+    expect(screen.getByRole("button", { name: "Hide lbl_1" })).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Visible on canvas/i)).not.toBeInTheDocument();
   });
 });

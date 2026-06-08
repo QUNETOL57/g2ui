@@ -1,0 +1,32 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 20px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  line-height: 0;
+  cursor: pointer;
+  outline: none;
+  transition: color 120ms ease;
+}
+
+.button:hover {
+  color: var(--hover-text);
+}
+
+.buttonHidden {
+  color: var(--color-text-soft);
+  opacity: 0.72;
+}
+
+.button svg {
+  width: 14px;
+  height: 14px;
+}

@@ -20,10 +20,12 @@ beforeEach(() => {
 });
 
 describe("CanvasWorkspace: rendering", () => {
-  it("renders zoom control in the toolbar", () => {
+  it("renders project meta and zoom control in the workspace overlay", () => {
     render(<CanvasWorkspace />);
+    expect(screen.getByTestId("canvas-project-meta")).toBeInTheDocument();
+    expect(screen.getByTestId("canvas-zoom-toolbar")).toBeInTheDocument();
     expect(screen.getByRole("slider")).toBeInTheDocument();
-    expect(screen.getByText(/×/)).toBeInTheDocument();
+    expect(screen.getByText("2×")).toBeInTheDocument();
   });
 
   it("renders panel toggle buttons when handlers are provided", () => {

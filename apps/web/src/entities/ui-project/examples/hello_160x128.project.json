@@ -92,7 +92,7 @@
                 }
               },
               "props": {
-                "text": "GuiMintLab",
+                "text": "G2UI",
                 "align": "left"
               }
             }
@@ -157,7 +157,7 @@
                 }
               },
               "props": {
-                "text": "Built by GuiMintLab Studio",
+                "text": "Built by G2UI",
                 "align": "center"
               }
             },

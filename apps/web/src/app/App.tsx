@@ -21,7 +21,7 @@ type LibraryStatus = "local" | "loading" | "synced" | "saving" | "error";
 type AutosaveStatus = "local" | "saved" | "saving" | "unsynced" | "error";
 
 const AUTOSAVE_DELAY_MS = 1000;
-const LOCAL_DRAFT_PREFIX = "guimintlab:project-draft:";
+const LOCAL_DRAFT_PREFIX = "g2ui:project-draft:";
 
 export function App() {
   const project = useEditorStore((s) => s.project);

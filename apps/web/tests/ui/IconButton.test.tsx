@@ -18,10 +18,13 @@ describe("IconButton", () => {
     expect(btn).toHaveAttribute("title", "Tip");
   });
 
-  it("renders tooltip via data attribute when prop is set", () => {
+  it("renders tooltip in a portal when prop is set", async () => {
+    const user = userEvent.setup();
     render(<IconButton tooltip="Save now" aria-label="save">i</IconButton>);
-    const btn = screen.getByRole("button");
-    expect(btn).toHaveAttribute("data-tooltip", "Save now");
+    const btn = screen.getByRole("button", { name: "save" });
+    expect(btn).not.toHaveAttribute("title");
+    await user.hover(btn);
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Save now");
   });
 
   it("supports clicks", async () => {

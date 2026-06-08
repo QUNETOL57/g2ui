@@ -6,9 +6,9 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
-from guimintlab_api.db import Base
-from guimintlab_api.models import *  # noqa: F401,F403  (load all models)
-from guimintlab_api.settings import settings
+from g2ui_api.db import Base
+from g2ui_api.models import *  # noqa: F401,F403  (load all models)
+from g2ui_api.settings import settings
 
 config = context.config
 

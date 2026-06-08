@@ -1,5 +1,5 @@
 /**
- * Canonical schema version of GuiMintLab IR.
+ * Canonical schema version of G2UI IR.
  *
  * Bump policy:
  *   MAJOR — breaking changes to WidgetNode/Layout/Action shape.

@@ -1,14 +1,14 @@
-name: guimintlab-studio
+name: g2ui
 
 services:
   db:
     image: postgres:17-alpine
-    container_name: guimintlab-db
+    container_name: g2ui-db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-guimintlab}
-      POSTGRES_USER: ${POSTGRES_USER:-guimintlab}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-guimintlab}
+      POSTGRES_DB: ${POSTGRES_DB:-g2ui}
+      POSTGRES_USER: ${POSTGRES_USER:-g2ui}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-g2ui}
     ports:
       - "${POSTGRES_PORT:-55432}:5432"
     volumes:
@@ -23,8 +23,8 @@ services:
     build:
       context: ./apps/api
       dockerfile: Dockerfile
-    image: guimintlab-api:dev
-    container_name: guimintlab-api
+    image: g2ui-api:dev
+    container_name: g2ui-api
     restart: unless-stopped
     env_file:
       - path: .env
@@ -32,7 +32,7 @@ services:
     environment:
       API_HOST: 0.0.0.0
       API_PORT: 8000
-      DATABASE_URL: ${LOCAL_DATABASE_URL:-postgresql+asyncpg://guimintlab:guimintlab@db:5432/guimintlab}
+      DATABASE_URL: ${LOCAL_DATABASE_URL:-postgresql+asyncpg://g2ui:g2ui@db:5432/g2ui}
     ports:
       - "58008:8000"
     depends_on:
@@ -46,7 +46,7 @@ services:
       - -c
       - >-
         alembic upgrade head &&
-        exec uvicorn guimintlab_api.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app/src
+        exec uvicorn g2ui_api.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app/src
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz').read()"]
       interval: 30s
@@ -56,7 +56,7 @@ services:
 
   web:
     image: node:20-alpine
-    container_name: guimintlab-web
+    container_name: g2ui-web
     profiles: ["full"]
     working_dir: /app
     command: >

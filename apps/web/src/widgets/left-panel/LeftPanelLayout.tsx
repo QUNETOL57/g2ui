@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 
 import { cn } from "@shared/lib/cn";
 import { ScreensPanel } from "@widgets/screens-panel/ScreensPanel";
@@ -15,7 +15,7 @@ export function LeftPanelLayout() {
   const [screensCollapsed, setScreensCollapsed] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
 
-  const beginResize = useCallback((event: MouseEvent<HTMLDivElement>) => {
+  const beginResize = useCallback((event: ReactMouseEvent<HTMLDivElement>) => {
     event.preventDefault();
     setIsResizing(true);
   }, []);

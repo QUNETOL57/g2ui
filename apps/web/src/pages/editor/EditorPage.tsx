@@ -24,7 +24,6 @@ export function EditorPage({
   onBackToLibrary,
 }: EditorPageProps) {
   const lastError = useEditorStore((s) => s.lastError);
-  const project = useEditorStore((s) => s.project);
   const selectedNodeId = useEditorStore((s) => s.selectedNodeId);
   const selectedNodeIds = useEditorStore((s) => s.selectedNodeIds);
   const deleteNodes = useEditorStore((s) => s.deleteNodes);
@@ -109,11 +108,6 @@ export function EditorPage({
               aria-hidden
             />
           </button>
-          <div className={styles.brandMain}>
-            <span className={styles.brandMeta}>
-              <strong>{project.name}</strong> · {project.display.width} × {project.display.height}
-            </span>
-          </div>
         </div>
       </TopBar>
       <aside

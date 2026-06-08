@@ -8,24 +8,20 @@ import type { LayoutNode } from "@entities/ui-project/lib/layoutEngine";
 import { resolveColor } from "@entities/ui-project/lib/color";
 import { normalizeIconFrame } from "@entities/icon/iconSizing";
 import { IconButton } from "@shared/ui/IconButton";
-import { RangeSlider } from "@shared/ui/RangeSlider";
 import { SidebarPanelIcon } from "@shared/ui/SidebarPanelIcon";
 
 import { CanvasRulers } from "./CanvasRulers";
 import { CanvasToolbar } from "./CanvasToolbar";
+import { CanvasZoomToolbar } from "./CanvasZoomToolbar";
 import styles from "./CanvasWorkspace.module.css";
 import { SelectionOverlay } from "./SelectionOverlay";
 import { PreviewNode } from "./renderNode";
 import {
-  MAX_ZOOM,
-  MIN_ZOOM,
   PIXEL_GRID_VISIBLE_ZOOM,
   RULER_SIZE,
-  ZOOM_STEP,
   borderInsetFor,
   clamp,
   clampPointToContent,
-  formatZoomLabel,
   lineEndpointsForRect,
   lineFrameFromEndpoints,
   lineStrokeWidthFor,
@@ -762,8 +758,8 @@ export function CanvasWorkspace({
 
   return (
     <div className={styles.wrap}>
-      <div className={styles.toolbar}>
-        <div className={styles.toolbarStart}>
+      <div className={styles.workspaceOverlay}>
+        <div className={styles.overlayStart}>
           {onToggleLeftPanel ? (
             <IconButton
               className={styles.panelToggle}
@@ -774,19 +770,16 @@ export function CanvasWorkspace({
               <SidebarPanelIcon side="left" />
             </IconButton>
           ) : null}
+          <span className={styles.projectMeta} data-testid="canvas-project-meta">
+            <strong>{project.name}</strong> · {project.display.width} × {project.display.height}
+          </span>
         </div>
-        <div className={styles.toolbarEnd}>
-          <div className={styles.zoomControl}>
-            <RangeSlider
-              min={MIN_ZOOM}
-              max={MAX_ZOOM}
-              step={ZOOM_STEP}
-              value={zoom}
-              progress={zoomProgress}
-              onChange={(e) => setZoom(normalizeZoom(Number(e.target.value)))}
-            />
-            <span className={styles.zoomValue}>{formatZoomLabel(zoom)}</span>
-          </div>
+        <div className={styles.overlayEnd}>
+          <CanvasZoomToolbar
+            zoom={zoom}
+            zoomProgress={zoomProgress}
+            onZoomChange={(value) => setZoom(normalizeZoom(value))}
+          />
           {onToggleRightPanel ? (
             <IconButton
               className={styles.panelToggle}

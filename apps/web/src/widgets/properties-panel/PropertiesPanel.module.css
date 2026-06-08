@@ -67,10 +67,9 @@
 }
 
 .summaryTitleRow {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 8px;
+  display: flex;
   align-items: center;
+  gap: 8px;
 }
 
 .typePill {
@@ -85,6 +84,7 @@
 }
 
 .summaryId {
+  flex: 1 1 auto;
   min-width: 0;
   color: var(--color-text-muted);
   font-family: var(--font-family-mono);
@@ -94,13 +94,8 @@
   white-space: nowrap;
 }
 
-.visibilityToggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--color-text);
-  font-size: var(--font-size-md);
-  cursor: pointer;
+.summaryVisibility {
+  margin-left: auto;
 }
 
 .transformGrid {

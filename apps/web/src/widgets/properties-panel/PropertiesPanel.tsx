@@ -12,6 +12,7 @@ import { LabelGroup } from "./groups/LabelGroup";
 import { LayoutGroup } from "./groups/LayoutGroup";
 import { SelectedGroup } from "./groups/SelectedGroup";
 import { StyleGroup } from "./groups/StyleGroup";
+import { EditorShortcutsList } from "./ui/EditorShortcutsList";
 
 export function PropertiesPanel() {
   const project = useEditorStore((s) => s.project);
@@ -33,6 +34,7 @@ export function PropertiesPanel() {
       <>
         <SectionTitle>Properties</SectionTitle>
         <EmptyState>Select a widget in the tree or canvas.</EmptyState>
+        <EditorShortcutsList />
       </>
     );
   }

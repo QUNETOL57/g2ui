@@ -28,9 +28,12 @@ beforeEach(() => {
 });
 
 describe("PropertiesPanel: empty state", () => {
-  it("shows hint when nothing selected", () => {
+  it("shows hint and shortcuts when nothing selected", () => {
     selectAndRender(null);
     expect(screen.getByText(/Select a widget/i)).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Keyboard shortcuts" })).toBeInTheDocument();
+    expect(screen.getByText("Undo")).toBeInTheDocument();
+    expect(screen.getByText("Zoom canvas")).toBeInTheDocument();
   });
 });
 
@@ -107,8 +110,7 @@ describe("PropertiesPanel: writes to store via shared inputs", () => {
     const project = withChildren(makeFixtureProject(), [makeLabel("lbl_1")]);
     get().setProject(project);
     selectAndRender("lbl_1");
-    const visibleCheckbox = screen.getByLabelText(/Visible on canvas/i);
-    await userEvent.click(visibleCheckbox);
+    await userEvent.click(screen.getByRole("button", { name: "Hide lbl_1" }));
     expect(get().project.screens[0].children?.[0].visible).toBe(false);
   });
 

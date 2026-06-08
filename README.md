@@ -1,103 +1,135 @@
-# Guimintlab Studio
+# G2UI
 
-Visual editor for embedded UI projects.
+Визуальный редактор UI для встраиваемых устройств с маленькими TFT/OLED-дисплеями (ESP-IDF, ST7735 и аналоги).
 
-## Monorepo layout
+G2UI позволяет проектировать экраны в браузере, хранить проекты в облаке (или локально) и экспортировать их в JSON для прошивки. Рантайм на устройстве парсит этот JSON напрямую — без отдельного шага генерации C-кода.
+
+## Что умеет приложение
+
+- **Библиотека проектов** — создание, переименование, удаление и предпросмотр карточек проектов.
+- **Визуальный редактор** — дерево виджетов, холст с линейками и выделением, панель свойств.
+- **Виджеты** — панели, метки, кнопки, иконки, bitmap-текст; абсолютная и flex-вёрстка (column/row).
+- **Пресеты дисплеев** — 160×128, 128×128, 240×240 и другие типовые разрешения.
+- **Undo/redo** — история изменений в редакторе.
+- **Экспорт** — копирование или скачивание `*.project.json` для встраивания в прошивку через `EMBED_FILES`.
+- **Синхронизация** — опциональный backend API с PostgreSQL; без API проекты сохраняются в `localStorage`.
+
+Редактор работает с каноническим IR (`UiProject → ScreenNode → WidgetNode`). Отдельной «модели редактора» нет: store — прямое представление дерева проекта.
+
+## Структура репозитория
 
 ```text
-guimintlab-studio/
-├── docker-compose.yml       Local dev stack with PostgreSQL
-├── docker-compose.prod.yml  Production API stack with external PostgreSQL
+g2ui/
+├── docker-compose.yml       Локальный стек: PostgreSQL + API (+ web в профиле full)
+├── docker-compose.prod.yml  Продакшен API (внешняя PostgreSQL)
 ├── apps/
-│   ├── web/        Vite + React + TypeScript frontend
-│   └── api/        FastAPI backend (Python 3.14 + uv)
-└── package.json             Root scripts
+│   ├── web/                 Vite + React + TypeScript (редактор)
+│   └── api/                 FastAPI + SQLAlchemy (хранение проектов)
+└── package.json             Корневые npm-скрипты
 ```
 
-## Prerequisites
 
-- Node.js 20+ and npm
-- Docker Desktop (for running the API and PostgreSQL locally)
-
-## Quick start
+## Быстрый старт
 
 ```bash
-git clone <repo>
-cd guimintlab-studio
+git clone <repo-url>
+cd g2ui
 cp .env.example .env
 npm install
 npm --prefix apps/web install
 ```
 
-### Mode A — Fast dev (recommended on macOS)
+### Режим A — быстрая разработка (рекомендуется на macOS)
 
-API and PostgreSQL run in Docker, web runs natively (sub-100ms HMR).
+API и PostgreSQL в Docker, web нативно (быстрый HMR).
 
 ```bash
-npm run dev:docker   # terminal 1 — API at http://localhost:58008, PostgreSQL at localhost:55432
-npm run dev:web      # terminal 2 — web at http://localhost:5173
+# Терминал 1 — API на http://localhost:58008, PostgreSQL на localhost:55432
+npm run dev:docker
+
+# Терминал 2 — web на http://localhost:5173
+npm run dev:web
 ```
 
-For Mode A, keep `VITE_API_URL=http://localhost:58008` in `.env`.
+В `.env` для этого режима: `VITE_API_URL=http://localhost:58008`.
 
-### Mode B — Full Docker
+### Режим B — всё в Docker
 
-API, web and PostgreSQL all run in containers. One command for everything — useful for onboarding or if you prefer container isolation.
-The web container keeps its own Linux `node_modules` in a Docker volume, so it
-does not reuse macOS dependencies from your host.
+API, web и PostgreSQL в контейнерах. Удобно для онбординга или изолированной среды.
 
 ```bash
 npm run dev:docker:full
 ```
 
-Open the web app at <http://localhost:58009>. The API is available at
-<http://localhost:58008> (Swagger at `/docs`).
+- Web: http://localhost:58009
+- API: http://localhost:58008 (Swagger: `/docs`)
 
-> On macOS, file watching across the Docker virtualization layer requires polling, which has noticeable HMR latency. If that bothers you, switch to Mode A or use [OrbStack](https://orbstack.dev/) instead of Docker Desktop.
+> На macOS file-watching через Docker даёт заметную задержку HMR. Для комфортной разработки используйте режим A или [OrbStack](https://orbstack.dev/).
 
-### Stop everything
+### Остановка
 
 ```bash
 npm run down
 ```
 
-## Stack
+## Использование
 
-- **Frontend**: React 18, Vite, Vitest, Zustand, custom UI primitives
-- **Backend**: FastAPI, SQLAlchemy 2.0 async, Alembic
-- **Database**: PostgreSQL
-- **Auth**: Bearer JWT verification
-- **Deploy**: Dokploy (Docker)
+1. Откройте http://localhost:5173 (режим A) или http://localhost:58009 (режим B).
+2. В библиотеке создайте проект: выберите разрешение дисплея, ориентацию и шаблон (blank или hello).
+3. В редакторе соберите экран: добавляйте виджеты в дереве, настраивайте свойства, перемещайте элементы на холсте.
+4. Экспортируйте JSON через панель Export.
+5. Положите файл в ESP-IDF-проект и подключите через `EMBED_FILES`. Компонент `g2ui` на устройстве разберёт JSON без регенерации C.
 
----
+Без настроенного API (`VITE_API_URL`) проекты живут только в браузере (`localStorage`). С API — автосохранение на сервер.
 
-## API app (apps/api)
+## Сборка для продакшена
 
-FastAPI backend for Guimintlab Studio. It verifies bearer JWTs and talks to
-PostgreSQL via SQLAlchemy.
-
-### API Structure
-
-- `apps/api/src/guimintlab_api/main.py` — app factory, CORS, router registration.
-- `apps/api/src/guimintlab_api/auth.py` — bearer JWT verification.
-- `apps/api/src/guimintlab_api/db.py` — async SQLAlchemy engine and session.
-- `apps/api/src/guimintlab_api/routers/` — API endpoints.
-- `apps/api/src/guimintlab_api/models/` — SQLAlchemy models.
-- `apps/api/src/guimintlab_api/schemas/` — Pydantic DTOs.
-- `apps/api/alembic/` — database migrations.
-
-### API Commands
+### Web (статика)
 
 ```bash
-npm run dev:docker   # API in Docker at http://localhost:58008
+npm run build:web
+```
 
+Артефакты: `apps/web/dist/`. Раздавайте через любой static host; `VITE_API_URL` задаётся на этапе сборки.
+
+### API (Docker)
+
+```bash
+# В .env укажите внешнюю PostgreSQL
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+Продакшен-compose не поднимает БД — нужен готовый `DATABASE_URL`.
+
+## Полезные команды
+
+| Команда | Описание |
+|---------|----------|
+| `npm run dev:web` | Dev-сервер web |
+| `npm run dev:docker` | API + PostgreSQL в Docker |
+| `npm run dev:docker:full` | API + web + PostgreSQL в Docker |
+| `npm run build:web` | Production-сборка web |
+| `npm run test:web` | Unit/feature-тесты (Vitest) |
+| `npm run test:e2e` | E2E-тесты (Playwright) |
+| `npm run down` | Остановить Docker-стек |
+| `npm run gen:types` | Сгенерировать TS-типы из OpenAPI API |
+
+Первый запуск Playwright (Chromium):
+
+```bash
+npm --prefix apps/web run test:e2e:install
+```
+
+### API вне Docker
+
+```bash
 cd apps/api
 uv sync
-uv run uvicorn guimintlab_api.main:app --reload --host 0.0.0.0 --port 8000
+uv run uvicorn g2ui_api.main:app --reload --host 0.0.0.0 --port 8000
 uv run pytest
 ```
 
-### Migrations
+### Миграции БД
 
 ```bash
 cd apps/api
@@ -105,73 +137,11 @@ uv run alembic revision --autogenerate -m "describe change"
 uv run alembic upgrade head
 ```
 
-Docker Compose publishes the API at <http://localhost:58008>; Swagger is
-available at `/docs`.
+## Стек
 
-### Production Compose
-
-Production does not start a database container. Provide `DATABASE_URL` for an
-external PostgreSQL instance and run the production compose file:
-
-```bash
-docker compose -f docker-compose.prod.yml up -d --build
-```
-
----
-
-## Web app (apps/web)
-
-Studio operates on the canonical IR defined in `apps/web/src/ui-ir/`.
-There is **no separate editor model**: the editor store is a direct view
-over the `UiProject → ScreenNode → WidgetNode` tree.
-
-### What lives here
-
-FSD-inspired layout. Dependency direction is `app → pages → widgets → entities → shared`.
-
-- `apps/web/src/app/` — root composition (providers, view switching, global styles).
-- `apps/web/src/pages/library/` — project library screen (cards, create/edit/delete modals).
-- `apps/web/src/pages/editor/` — editor screen shell + keyboard shortcuts.
-- `apps/web/src/widgets/tree-panel/` — widget tree panel.
-- `apps/web/src/widgets/canvas-workspace/` — canvas workspace + preview renderer (rulers, selection overlay, pure geometry helpers).
-- `apps/web/src/widgets/properties-panel/` — property inspector (per-type groups + shared inspector controls).
-- `apps/web/src/widgets/export-panel/` — IR export + C codegen UI.
-- `apps/web/src/entities/ui-project/` — canonical IR (`schema`, `types`, `validate`, `defaults`, `ids`), Zustand store (`model/store`), tree ops (`model/tree-ops`), undo/redo (`model/history`), shared layout semantics (`lib/layoutEngine`, `lib/color`), starter projects (`samples/`).
-- `apps/web/src/entities/icon/` — icon library + sizing helpers.
-- `apps/web/src/entities/font/` — bitmap font library + `BitmapText` renderer.
-- `apps/web/src/shared/ui/` — generic UI primitives (IconButton, CustomSelect, DraftNumberInput).
-- `apps/web/src/shared/config/` — display presets and other configuration data.
-- `apps/web/src/shared/assets/` — logo, font sources.
-
-Imports use `@app`, `@pages`, `@widgets`, `@entities`, `@shared` aliases — see `apps/web/vite.config.ts` and `apps/web/tsconfig.json`.
-
-### Commands
-
-```bash
-npm run dev:web      # Vite prints the local dev server URL
-npm run build:web    # production build
-npm run test:web     # vitest run (unit + feature tests in jsdom)
-npm run test:e2e     # Playwright browser tests (starts Vite dev server)
-```
-
-First-time Playwright setup (Chromium only):
-
-```bash
-npm --prefix apps/web run test:e2e:install
-```
-
-### Boundaries
-
-Studio must NOT:
-
-- Own its own layer/element model.
-- Emit raw draw calls — codegen lives in `guimintlab-core`.
-- Know about SPI/DMA/ESP-IDF.
-
-Studio MUST:
-
-- Speak IR only.
-- Round-trip any project it opens without losing ids.
-- Share layout semantics with the runtime (any divergence is a bug).
-
-See [`guimintlab-core/docs/boundaries.md`](../guimintlab-core/docs/boundaries.md).
+| Слой | Технологии |
+|------|------------|
+| Frontend | React 18, Vite, TypeScript, Zustand, Vitest, Playwright |
+| Backend | FastAPI, SQLAlchemy 2.0 async, Alembic |
+| Database | PostgreSQL 17 |
+| Deploy | Docker, Dokploy |

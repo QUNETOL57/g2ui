@@ -6,7 +6,7 @@ import { BrandLogo } from "@shared/ui/BrandLogo";
 describe("BrandLogo", () => {
   it("renders the studio logo image with alt text", () => {
     render(<BrandLogo />);
-    const img = screen.getByAltText("GuiMintLab Studio") as HTMLImageElement;
+    const img = screen.getByAltText("G2UI") as HTMLImageElement;
     expect(img).toBeInTheDocument();
     expect(img.src).toMatch(/svg/);
   });

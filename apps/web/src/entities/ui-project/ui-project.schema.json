@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://guimintlab.dev/schema/ui-project.schema.json",
-  "title": "GuiMintLab UI Project",
+  "$id": "https://g2ui.dev/schema/ui-project.schema.json",
+  "title": "G2UI UI Project",
   "type": "object",
   "required": ["schemaVersion", "id", "name", "display", "screens", "initialScreenId"],
   "properties": {

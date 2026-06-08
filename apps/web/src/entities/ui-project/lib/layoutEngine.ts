@@ -3,7 +3,7 @@ import type { Frame, LayoutSpec, WidgetNode } from "@entities/ui-project";
 /**
  * Layout engine v1.
  *
- * MUST match the runtime layout rules in `guimintlab-core/packages/guimintlab/src/internal/guimintlab_builder.c`.
+ * MUST match the runtime layout rules in `g2ui-core/packages/g2ui/src/internal/g2ui_builder.c`.
  * Any divergence between this file and the C runtime is a preview-parity bug.
  *
  * Scope v1:

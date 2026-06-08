@@ -7,7 +7,7 @@ export function resetEditorStore(project?: UiProject) {
   const next = project ?? blankProject();
   useEditorStore.setState({
     project: next,
-    activeScreenId: next.initialScreenId,
+    activeScreenId: next.screens[0]?.id ?? next.initialScreenId,
     selectedNodeId: null,
     selectedNodeIds: [],
     editingLabelId: null,

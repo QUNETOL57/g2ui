@@ -96,7 +96,7 @@ export const ExportProjectModal = memo(function ExportProjectModal({
             </div>
             <p className={styles.hint}>
               Save this file to your ESP-IDF project and embed it via
-              <code>EMBED_FILES</code>. The <code>guimintlab</code> component parses it on-device — no C
+              <code>EMBED_FILES</code>. The <code>g2ui</code> component parses it on-device — no C
               regeneration step.
             </p>
           </div>

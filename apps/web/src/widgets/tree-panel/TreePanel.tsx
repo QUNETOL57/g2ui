@@ -108,40 +108,42 @@ export function TreePanel() {
   };
 
   return (
-    <div>
+    <div className={styles.panel} data-testid="tree-panel">
       <SectionTitle>Widget tree</SectionTitle>
-      {screen ? (
-        <TreeNode
-          node={screen}
-          depth={0}
-          selectedSet={selectedSet}
-          primaryId={selectedNodeId}
-          onSelect={handleSelect}
-          onLabelEdit={beginLabelTextEdit}
-          activeScreenId={activeScreenId}
-          draggedNodeId={draggedNodeId}
-          dropTarget={dropTarget}
-          onDragStart={(nodeId) => {
-            setDraggedNodeId(nodeId);
-            if (!(selectedNodeIds.length > 1 && selectedNodeIds.includes(nodeId))) {
-              selectNode(nodeId);
-            }
-          }}
-          onDragEnd={() => {
-            setDraggedNodeId(null);
-            setDropTarget(null);
-          }}
-          onDragOver={(event, nodeId, position) => {
-            if (!canDrop(draggedNodeId, nodeId, position)) return;
-            event.preventDefault();
-            event.dataTransfer.dropEffect = "move";
-            setDropTarget({ nodeId, position });
-          }}
-          onDrop={handleDrop}
-        />
-      ) : (
-        <div className={styles.emptyScreen}>No active screen</div>
-      )}
+      <div className={styles.list} data-testid="tree-panel-list">
+        {screen ? (
+          <TreeNode
+            node={screen}
+            depth={0}
+            selectedSet={selectedSet}
+            primaryId={selectedNodeId}
+            onSelect={handleSelect}
+            onLabelEdit={beginLabelTextEdit}
+            activeScreenId={activeScreenId}
+            draggedNodeId={draggedNodeId}
+            dropTarget={dropTarget}
+            onDragStart={(nodeId) => {
+              setDraggedNodeId(nodeId);
+              if (!(selectedNodeIds.length > 1 && selectedNodeIds.includes(nodeId))) {
+                selectNode(nodeId);
+              }
+            }}
+            onDragEnd={() => {
+              setDraggedNodeId(null);
+              setDropTarget(null);
+            }}
+            onDragOver={(event, nodeId, position) => {
+              if (!canDrop(draggedNodeId, nodeId, position)) return;
+              event.preventDefault();
+              event.dataTransfer.dropEffect = "move";
+              setDropTarget({ nodeId, position });
+            }}
+            onDrop={handleDrop}
+          />
+        ) : (
+          <div className={styles.emptyScreen}>No active screen</div>
+        )}
+      </div>
     </div>
   );
 }
@@ -200,7 +202,7 @@ function TreeNode({
         data-tree-node-id={node.id}
         data-tree-node-type={node.type}
         aria-selected={isSelected}
-        style={{ paddingLeft: 10 + depth * 14 }}
+        style={{ paddingLeft: 4 + depth * 12 }}
         draggable={isDraggable}
         onClick={(event) =>
           onSelect(node.id, {
@@ -240,7 +242,7 @@ function TreeNode({
         }}
       >
         <span className={styles.typeBadge}>{node.type}</span>
-        <span>{node.name ?? node.id}</span>
+        <span className={styles.rowName}>{node.name ?? node.id}</span>
         <span className={styles.rowId}>{node.id}</span>
       </div>
       {(node.children ?? []).map((child) => (

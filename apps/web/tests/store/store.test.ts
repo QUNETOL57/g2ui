@@ -9,7 +9,9 @@ import {
   makeIcon,
   makeLabel,
   makePanel,
+  makeSecondScreen,
   withChildren,
+  withScreens,
 } from "../fixtures/projects";
 import { resetEditorStore } from "../fixtures/store";
 
@@ -38,10 +40,21 @@ describe("store: setProject / loadHelloSample", () => {
     get().setProject(next);
     const s = get();
     expect(s.project.id).toBe("loaded");
-    expect(s.activeScreenId).toBe(next.initialScreenId);
+    expect(s.activeScreenId).toBe(next.screens[0]?.id);
     expect(s.selectedNodeId).toBeNull();
     expect(s.historyPast).toHaveLength(1);
     expect(s.historyPast[0].project.id).toBe(prevId);
+  });
+
+  it("setProject activates the first screen in the list", () => {
+    const project = withScreens(makeFixtureProject(), [
+      makeSecondScreen("screen_top", "Top"),
+      makeSecondScreen("screen_other", "Other"),
+    ]);
+    project.initialScreenId = "screen_other";
+
+    get().setProject(project);
+    expect(get().activeScreenId).toBe("screen_top");
   });
 
   it("loadHelloSample loads the hello sample", () => {

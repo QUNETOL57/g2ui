@@ -777,7 +777,6 @@ export function CanvasWorkspace({
         </div>
         <div className={styles.toolbarEnd}>
           <div className={styles.zoomControl}>
-            <label>zoom</label>
             <RangeSlider
               min={MIN_ZOOM}
               max={MAX_ZOOM}

@@ -8,7 +8,7 @@ import { TopBar } from "@shared/ui/TopBar";
 import { CanvasWorkspace } from "@widgets/canvas-workspace/CanvasWorkspace";
 import { EditorStatusBar } from "@widgets/editor-status-bar/EditorStatusBar";
 import { PropertiesPanel } from "@widgets/properties-panel/PropertiesPanel";
-import { TreePanel } from "@widgets/tree-panel/TreePanel";
+import { LeftPanelLayout } from "@widgets/left-panel/LeftPanelLayout";
 
 import styles from "./EditorPage.module.css";
 
@@ -120,7 +120,7 @@ export function EditorPage({
         className={cn(styles.leftPanel, !leftPanelOpen && styles.panelCollapsed)}
         aria-hidden={!leftPanelOpen}
       >
-        {leftPanelOpen ? <TreePanel /> : null}
+        {leftPanelOpen ? <LeftPanelLayout /> : null}
       </aside>
       <div className={styles.centerPanel}>
         <CanvasWorkspace

@@ -21,6 +21,57 @@
   border-radius: var(--radius-md);
 }
 
+.previewMini {
+  flex: initial;
+  height: auto;
+  min-height: 0;
+  padding: 4px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background-size: 8px 8px;
+}
+
+.previewMini .screen {
+  box-shadow:
+    0 0 0 1px rgba(227, 232, 240, 0.32),
+    0 0 0 1px var(--color-border);
+}
+
+.previewSidebar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex: initial;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.canvasSidebar {
+  position: relative;
+  left: auto;
+  top: auto;
+  transform: none;
+  overflow: visible;
+  flex-shrink: 0;
+}
+
+.previewSidebar .screen {
+  position: relative;
+  left: auto;
+  top: auto;
+  transform: none;
+  width: 100%;
+  height: 100%;
+  box-shadow:
+    0 0 0 1px rgba(227, 232, 240, 0.42),
+    0 0 0 2px var(--color-border);
+}
+
 .canvas {
   position: absolute;
   left: 50%;

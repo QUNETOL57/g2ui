@@ -33,9 +33,10 @@ describe("EditorPage", () => {
     expect(back).toHaveBeenCalled();
   });
 
-  it("renders TreePanel, PropertiesPanel and status bar actions", () => {
+  it("renders left panel with widget tree and screens, PropertiesPanel and status bar actions", () => {
     render(<EditorPage onBackToLibrary={() => undefined} autosaveStatus="saved" />);
     expect(screen.getByText("Widget tree")).toBeInTheDocument();
+    expect(screen.getByText("Screens")).toBeInTheDocument();
     expect(screen.getByText(/Properties/)).toBeInTheDocument();
     expect(screen.getByText("Saved")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^Export$/ })).toBeInTheDocument();
@@ -54,9 +55,11 @@ describe("EditorPage", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Hide widget tree" }));
     expect(screen.queryByText("Widget tree")).not.toBeInTheDocument();
+    expect(screen.queryByText("Screens")).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Show widget tree" }));
     expect(screen.getByText("Widget tree")).toBeInTheDocument();
+    expect(screen.getByText("Screens")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Hide properties" }));
     expect(screen.queryByText(/Select a widget/)).not.toBeInTheDocument();

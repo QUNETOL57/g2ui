@@ -1,5 +1,5 @@
 import type { Frame, LabelProps, ScreenNode, UiProject, WidgetNode, WidgetType } from "..";
-import { makeWidget } from "..";
+import { makeWidget, nextId } from "..";
 import { defaultProps } from "../defaults";
 import { findFontFace, measureTextWidth } from "@entities/font/fontLibrary";
 import { DEFAULT_ICON_ID, getResolvedIconDefinition } from "@entities/icon/iconSizing";
@@ -144,6 +144,19 @@ export function normalizeTextNodeFrame(node: WidgetNode, frame: Frame): Frame {
     };
   }
   return { ...frame, width, height };
+}
+
+export function cloneScreenSubtree(screen: ScreenNode, usedIds: Set<string>): ScreenNode {
+  const cloned = JSON.parse(JSON.stringify(screen)) as ScreenNode;
+  const remap = (node: WidgetNode) => {
+    const prefix = node.type === "screen" ? "screen" : node.type.slice(0, 3);
+    const newId = nextId(prefix, usedIds);
+    usedIds.add(newId);
+    node.id = newId;
+    (node.children ?? []).forEach(remap);
+  };
+  remap(cloned);
+  return cloned;
 }
 
 export function normalizeProjectTextFrames(project: UiProject): UiProject {

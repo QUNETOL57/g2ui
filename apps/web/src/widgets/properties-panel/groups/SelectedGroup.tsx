@@ -1,5 +1,6 @@
 import type { WidgetNode } from "@entities/ui-project";
 import { cn } from "@shared/lib/cn";
+import { VisibilityToggleButton } from "@shared/ui/VisibilityToggleButton";
 
 import styles from "../PropertiesPanel.module.css";
 
@@ -17,6 +18,12 @@ export function SelectedGroup({
         <span className={styles.summaryId} title={node.id}>
           {node.id}
         </span>
+        <VisibilityToggleButton
+          className={styles.summaryVisibility}
+          visible={node.visible !== false}
+          label={node.name ?? node.id}
+          onToggle={() => updateNode(node.id, { visible: node.visible === false })}
+        />
       </div>
       <div className={styles.row}>
         <label>name</label>
@@ -28,14 +35,6 @@ export function SelectedGroup({
           onChange={(e) => updateNode(node.id, { name: e.target.value || undefined })}
         />
       </div>
-      <label className={styles.visibilityToggle}>
-        <input
-          type="checkbox"
-          checked={node.visible !== false}
-          onChange={(e) => updateNode(node.id, { visible: e.target.checked })}
-        />
-        Visible on canvas
-      </label>
     </div>
   );
 }

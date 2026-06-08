@@ -91,6 +91,20 @@ describe("ScreensPanel interactions", () => {
     expect(get().project.screens.length).toBe(before + 1);
   });
 
+  it("activates the newly added screen and shows its default name", async () => {
+    renderPanel();
+
+    await userEvent.click(screen.getByTestId("screens-panel-add"));
+
+    const added = get().project.screens.at(-1);
+    expect(added?.name).toBe("Screen 2");
+    expect(get().activeScreenId).toBe(added?.id);
+    expect(screen.getByText("Screen 2")).toBeInTheDocument();
+    expect(
+      screen.getAllByTestId("screen-card").find((card) => card.dataset.screenId === added?.id),
+    ).toHaveAttribute("aria-current", "true");
+  });
+
   it("duplicates a screen via duplicate button", async () => {
     const project = withChildren(makeFixtureProject(), [makeLabel("lbl_1")]);
     get().setProject(project);
@@ -101,6 +115,20 @@ describe("ScreensPanel interactions", () => {
     expect(get().project.screens.length).toBe(2);
     const copy = get().project.screens[1];
     expect(copy.children?.[0]?.id).not.toBe("lbl_1");
+  });
+
+  it("activates duplicated screen and shows copy suffix in the card title", async () => {
+    renderPanel();
+
+    const card = screen.getByTestId("screen-card");
+    await userEvent.click(within(card).getByTestId("screen-card-duplicate"));
+
+    const copy = get().project.screens[1];
+    expect(get().activeScreenId).toBe(copy.id);
+    expect(screen.getByText("Main copy")).toBeInTheDocument();
+    expect(
+      screen.getAllByTestId("screen-card").find((item) => item.dataset.screenId === copy.id),
+    ).toHaveAttribute("aria-current", "true");
   });
 
   it("deletes a screen when more than one exists", async () => {
@@ -115,6 +143,26 @@ describe("ScreensPanel interactions", () => {
     await userEvent.click(within(otherCard).getByTestId("screen-card-delete"));
     expect(get().project.screens).toHaveLength(1);
     expect(get().project.screens[0].id).toBe("screen_main");
+  });
+
+  it("switches active screen when the active card is deleted", async () => {
+    const project = withScreens(makeFixtureProject(), [
+      makeFixtureProject().screens[0],
+      makeSecondScreen("screen_other", "Other"),
+    ]);
+    get().setProject(project);
+    get().setActiveScreen("screen_other");
+    renderPanel();
+
+    const activeCard = screen
+      .getAllByTestId("screen-card")
+      .find((card) => card.dataset.screenId === "screen_other")!;
+    await userEvent.click(within(activeCard).getByTestId("screen-card-delete"));
+
+    expect(get().activeScreenId).toBe("screen_main");
+    expect(
+      screen.getAllByTestId("screen-card").find((card) => card.dataset.screenId === "screen_main"),
+    ).toHaveAttribute("aria-current", "true");
   });
 
   it("disables delete when only one screen remains", () => {

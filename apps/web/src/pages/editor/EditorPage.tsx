@@ -6,6 +6,7 @@ import { findNode } from "@entities/ui-project/model/tree-ops";
 import logoUrl from "@shared/assets/logo.svg";
 import { TopBar } from "@shared/ui/TopBar";
 import { CanvasWorkspace } from "@widgets/canvas-workspace/CanvasWorkspace";
+import { EditorMenu } from "@widgets/editor-menu/EditorMenu";
 import { EditorStatusBar } from "@widgets/editor-status-bar/EditorStatusBar";
 import { PropertiesPanel } from "@widgets/properties-panel/PropertiesPanel";
 import { LeftPanelLayout } from "@widgets/left-panel/LeftPanelLayout";
@@ -93,21 +94,24 @@ export function EditorPage({
       )}
     >
       <TopBar>
-        <div className={styles.brand}>
-          <button
-            type="button"
-            className={styles.brandLogoButton}
-            onClick={onBackToLibrary}
-            title="Back to project library"
-            aria-label="Back to project library"
-          >
-            <img
-              className={styles.brandLogo}
-              src={logoUrl}
-              alt=""
-              aria-hidden
-            />
-          </button>
+        <div className={styles.topBarStart}>
+          <div className={styles.brand}>
+            <button
+              type="button"
+              className={styles.brandLogoButton}
+              onClick={onBackToLibrary}
+              title="Back to project library"
+              aria-label="Back to project library"
+            >
+              <img
+                className={styles.brandLogo}
+                src={logoUrl}
+                alt=""
+                aria-hidden
+              />
+            </button>
+          </div>
+          <EditorMenu onBackToLibrary={onBackToLibrary} />
         </div>
       </TopBar>
       <aside

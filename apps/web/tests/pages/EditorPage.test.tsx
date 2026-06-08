@@ -43,6 +43,16 @@ describe("EditorPage", () => {
     expect(screen.getByRole("button", { name: /^Import$/ })).toBeInTheDocument();
   });
 
+  it("renders editor menu and shortcuts in the empty properties panel", () => {
+    render(<EditorPage onBackToLibrary={() => undefined} />);
+
+    expect(screen.getByRole("menubar", { name: "Editor menu" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Project" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Edit" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Keyboard shortcuts" })).toBeInTheDocument();
+    expect(screen.getByText("Enter / Double-click")).toBeInTheDocument();
+  });
+
   it("renders the error banner when lastError is set", () => {
     useEditorStore.setState({ lastError: "Oops" });
     render(<EditorPage onBackToLibrary={() => undefined} />);

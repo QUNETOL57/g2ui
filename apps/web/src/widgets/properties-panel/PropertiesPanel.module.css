@@ -437,8 +437,15 @@
 
 .iconTileSelected {
   border-color: var(--color-accent);
+}
+
+.iconTileSelected:hover {
+  border-color: var(--color-accent);
+  background: var(--color-surface-2);
+}
+
+.iconTileSelected .iconTileName {
   color: var(--color-accent);
-  background: var(--color-accent-soft);
 }
 
 .iconTilePreview {

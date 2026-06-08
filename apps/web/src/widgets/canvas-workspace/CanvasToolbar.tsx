@@ -1,3 +1,4 @@
+import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import { useEffect, useId, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
@@ -19,7 +20,6 @@ import {
   RectIcon,
   SelectToolIcon,
   TextIcon,
-  TrashIcon,
 } from "./toolbarIcons";
 
 interface ToolItem {
@@ -226,7 +226,7 @@ export function CanvasToolbar() {
           disabled={!canDelete}
           onClick={() => deleteNodes(selectedNodeIds)}
         >
-          <TrashIcon />
+          <DeleteOutlineOutlinedIcon sx={{ fontSize: 16 }} />
         </button>
       </div>
     </div>

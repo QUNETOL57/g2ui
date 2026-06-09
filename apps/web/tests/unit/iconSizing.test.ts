@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   DEFAULT_ICON_ID,
+  fitIconFrameToContent,
   getIconScaleForFrame,
   getResolvedIconDefinition,
   normalizeIconFrame,
@@ -83,6 +84,24 @@ describe("normalizeIconFrame", () => {
     }, { maxWidth: icon.width * 3, maxHeight: icon.height * 3 });
     expect(next.width).toBeLessThanOrEqual(icon.width * 3);
     expect(next.height).toBeLessThanOrEqual(icon.height * 3);
+  });
+});
+
+describe("fitIconFrameToContent", () => {
+  it("shrinks the frame to the rendered icon size without moving the origin", () => {
+    const icon = getResolvedIconDefinition(DEFAULT_ICON_ID);
+    const frame = fitIconFrameToContent(DEFAULT_ICON_ID, {
+      x: 12,
+      y: 8,
+      width: icon.width * 4 + 3,
+      height: icon.height * 4 + 5,
+    });
+    expect(frame).toEqual({
+      x: 12,
+      y: 8,
+      width: icon.width * 4,
+      height: icon.height * 4,
+    });
   });
 });
 

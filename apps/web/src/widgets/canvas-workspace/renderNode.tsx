@@ -18,7 +18,7 @@ import { findFontFace, measureTextWidth } from "@entities/font/fontLibrary";
 import { IconGlyph } from "@entities/icon/iconLibrary";
 import { DEFAULT_ICON_ID, getIconScaleForFrame, getResolvedIconDefinition } from "@entities/icon/iconSizing";
 
-import { roundedRowInset } from "./lib/pixelRounded";
+import { innerFillScanline, roundedRowInset } from "./lib/pixelRounded";
 import styles from "./renderNode.module.css";
 
 interface RenderCtx {
@@ -285,7 +285,6 @@ function PixelRoundedBox({
   const outerColor = hasBorder ? borderColor : background;
   const innerW = Math.max(0, w - bw * 2);
   const innerH = Math.max(0, h - bw * 2);
-  const innerRadius = Math.max(0, radius - bw);
 
   return (
     <svg
@@ -318,13 +317,14 @@ function PixelRoundedBox({
         : null}
       {hasBorder && hasFill
         ? Array.from({ length: innerH }, (_, y) => {
-            const inset = roundedRowInset(y, innerW, innerH, innerRadius);
+            const svgY = bw + y;
+            const { x, width: fillWidth } = innerFillScanline(svgY, w, h, radius, bw);
             return (
               <rect
                 key={`inner-${y}`}
-                x={bw + inset}
-                y={bw + y}
-                width={Math.max(0, innerW - inset * 2)}
+                x={x}
+                y={svgY}
+                width={fillWidth}
                 height={1}
                 fill={background}
               />

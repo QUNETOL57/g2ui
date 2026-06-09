@@ -257,6 +257,31 @@ describe("store: updateNode / updateFrame / updateProps / updateLayout / updateS
     expect(f?.y).toBe(22);
   });
 
+  it("fitNodeFrameToContent tightens label and icon frames", async () => {
+    const { getResolvedIconDefinition } = await import("@entities/icon/iconSizing");
+    const label = makeLabel("lbl_1", "Hi");
+    label.frame = { x: 1, y: 2, width: 100, height: 50 };
+    label.props = { ...(label.props ?? {}), textAutoSize: false };
+    const icon = makeIcon("ic_1", "earth");
+    const earth = getResolvedIconDefinition("earth");
+    icon.frame = { x: 0, y: 0, width: earth.width * 5, height: earth.height * 5 };
+    get().setProject(withChildren(makeFixtureProject(), [label, icon]));
+
+    get().fitNodeFrameToContent("lbl_1");
+    const fittedLabel = findNode(get().project, "lbl_1")!;
+    expect(fittedLabel.frame!.width).toBeLessThan(100);
+    expect(fittedLabel.frame!.height).toBeLessThan(50);
+    expect((fittedLabel.props as { textAutoSize?: boolean }).textAutoSize).toBeUndefined();
+
+    get().fitNodeFrameToContent("ic_1");
+    expect(findNode(get().project, "ic_1")!.frame).toEqual({
+      x: 0,
+      y: 0,
+      width: earth.width * 5,
+      height: earth.height * 5,
+    });
+  });
+
   it("updateFrame normalizes icon frames to integer multiples", async () => {
     const { getResolvedIconDefinition } = await import("@entities/icon/iconSizing");
     const icon = getResolvedIconDefinition("earth");

@@ -9,6 +9,7 @@ import {
   findNode,
   findParent,
   findScreenOf,
+  fitTextNodeFrame,
   insertChild,
   isAncestor,
   normalizeProjectTextFrames,
@@ -202,6 +203,18 @@ describe("defaultFrameFor", () => {
     project.screens[0].frame = undefined;
     const frame = defaultFrameFor("panel", "screen_main", project);
     expect(frame.width).toBe(project.display.width);
+  });
+});
+
+describe("fitTextNodeFrame", () => {
+  it("shrinks an oversized label frame to the text bounds", () => {
+    const node = makeLabel("l_a", "Hi");
+    const fitted = fitTextNodeFrame(node, { x: 3, y: 4, width: 120, height: 80 });
+    expect(fitted.x).toBe(3);
+    expect(fitted.y).toBe(4);
+    expect(fitted.width).toBeLessThan(120);
+    expect(fitted.height).toBeLessThan(80);
+    expect(fitted.height).toBe(normalizeTextNodeFrame(node, fitted).height);
   });
 });
 

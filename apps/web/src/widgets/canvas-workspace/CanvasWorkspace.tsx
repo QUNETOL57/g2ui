@@ -81,6 +81,7 @@ export function CanvasWorkspace({
   const selectNode = useEditorStore((s) => s.selectNode);
   const absolutizeLayout = useEditorStore((s) => s.absolutizeLayout);
   const updateFrame = useEditorStore((s) => s.updateFrame);
+  const fitNodeFrameToContent = useEditorStore((s) => s.fitNodeFrameToContent);
   const updateProps = useEditorStore((s) => s.updateProps);
   const draftFrame = useEditorStore((s) => s.draftFrame);
   const setDraftFrame = useEditorStore((s) => s.setDraftFrame);
@@ -678,16 +679,21 @@ export function CanvasWorkspace({
     [handleNodeMouseDown, selectedNodeId],
   );
 
-  const handleSelectionMaskDoubleClick = useCallback(
+  const handleSelectionFrameDoubleClick = useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
       if (!selectedNodeId || event.button !== 0) return;
       const node = findNode(project, selectedNodeId);
-      if (node?.type === "label" || node?.type === "button") {
-        beginLabelTextEdit(selectedNodeId);
+      if (node?.type === "label" || node?.type === "icon") {
+        fitNodeFrameToContent(selectedNodeId);
       }
     },
-    [beginLabelTextEdit, project, selectedNodeId],
+    [fitNodeFrameToContent, project, selectedNodeId],
   );
+
+  const allowSelectionContentInteraction =
+    selectedNode?.type === "label" || selectedNode?.type === "button";
+  const showSelectionFrameDoubleClick =
+    selectedNode?.type === "label" || selectedNode?.type === "icon";
 
   const showSelectionMoveMask =
     canMoveSelection && editingLabelId !== selectedNodeId;
@@ -879,7 +885,10 @@ export function CanvasWorkspace({
                     showResizeHandles={canResizeSelection}
                     lineEndpoints={displayedLineEndpoints}
                     onMoveMouseDown={handleSelectionMoveMouseDown}
-                    onMoveMaskDoubleClick={handleSelectionMaskDoubleClick}
+                    onFrameDoubleClick={
+                      showSelectionFrameDoubleClick ? handleSelectionFrameDoubleClick : undefined
+                    }
+                    allowContentInteraction={allowSelectionContentInteraction}
                     onResizeHandleMouseDown={handleResizeMouseDown}
                     onLineEndpointMouseDown={handleLineEndpointMouseDown}
                   />

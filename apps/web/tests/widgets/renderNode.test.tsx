@@ -111,6 +111,39 @@ describe("PreviewNode: per-type rendering", () => {
     expect(screen.getByLabelText("Save")).toBeInTheDocument();
   });
 
+  it("aligns bordered button fill with the outer rounded edge", () => {
+    const button = makeButton("bt_1", "Button123");
+    button.style = {
+      ...(button.style ?? {}),
+      borderRadius: 14,
+      drawBorder: true,
+      borderWidth: 1,
+      borderColor: { kind: "hex", value: "#FFFFFF" },
+      background: { kind: "hex", value: "#333333" },
+    };
+    const { container } = renderProject([button]);
+    const rects = [
+      ...container.querySelectorAll('[data-widget-type="button"] [data-testid="pixel-rounded-box"] rect'),
+    ] as SVGRectElement[];
+
+    expect(rects.length).toBeGreaterThan(0);
+
+    const outerByY = new Map<number, SVGRectElement>();
+    const innerByY = new Map<number, SVGRectElement>();
+    for (const rect of rects) {
+      const y = Number(rect.getAttribute("y"));
+      if (rect.getAttribute("fill") === "#FFFFFF") outerByY.set(y, rect);
+      if (rect.getAttribute("fill") === "#333333") innerByY.set(y, rect);
+    }
+
+    for (const [y, inner] of innerByY) {
+      const outer = outerByY.get(y);
+      expect(outer, `missing outer scanline at y=${y}`).toBeTruthy();
+      expect(Number(inner.getAttribute("x"))).toBe(Number(outer!.getAttribute("x")) + 1);
+      expect(Number(inner.getAttribute("width"))).toBe(Number(outer!.getAttribute("width")) - 2);
+    }
+  });
+
   it("renders rect as a styled div", () => {
     const { container } = renderProject([makeRect("rc_1")]);
     expect(container.querySelectorAll("div").length).toBeGreaterThan(0);

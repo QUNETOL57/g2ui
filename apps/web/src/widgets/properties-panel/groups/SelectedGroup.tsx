@@ -11,23 +11,29 @@ export function SelectedGroup({
   node: WidgetNode;
   updateNode: (id: string, patch: Partial<WidgetNode>) => void;
 }) {
+  const nameInputId = `selected-node-name-${node.id}`;
+
   return (
     <div className={cn(styles.group, styles.summary)}>
-      <div className={styles.summaryTitleRow}>
-        <span className={styles.typePill}>{node.type}</span>
-        <span className={styles.summaryId} title={node.id}>
-          {node.id}
-        </span>
-        <VisibilityToggleButton
-          className={styles.summaryVisibility}
-          visible={node.visible !== false}
-          label={node.name ?? node.id}
-          onToggle={() => updateNode(node.id, { visible: node.visible === false })}
-        />
+      <span className={styles.typePill}>{node.type}</span>
+      <span className={styles.summaryId} title={node.id}>
+        {node.id}
+      </span>
+      <div className={styles.summaryActions}>
+        {node.type !== "screen" ? (
+          <VisibilityToggleButton
+            visible={node.visible !== false}
+            label={node.name ?? node.id}
+            onToggle={() => updateNode(node.id, { visible: node.visible === false })}
+          />
+        ) : (
+          <span className={styles.summaryActionsSpacer} aria-hidden="true" />
+        )}
       </div>
-      <div className={styles.row}>
-        <label>name</label>
+      <div className={cn(styles.row, styles.summaryNameRow)}>
+        <label htmlFor={nameInputId}>name</label>
         <input
+          id={nameInputId}
           type="text"
           className={styles.inputText}
           value={node.name ?? ""}

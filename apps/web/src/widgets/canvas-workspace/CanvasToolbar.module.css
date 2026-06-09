@@ -82,7 +82,11 @@
 
 .groupMenuOpen {
   border-radius: var(--radius-md);
-  box-shadow: inset 0 0 0 1px var(--hover-border);
+}
+
+.groupMenuOpen .tool:focus-visible,
+.groupMenuOpen .chevron:focus-visible {
+  outline: none;
 }
 
 .groupMenu:hover .tool:not(:disabled),

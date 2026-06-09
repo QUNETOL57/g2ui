@@ -14,7 +14,7 @@ import { defaultLayout } from "../defaults";
 import { normalizePalette } from "../lib/palette";
 import { makeWidget, nextId, validateProject } from "..";
 import { getIconDefinition } from "@entities/icon/iconLibrary";
-import { normalizeIconNodeFrame } from "@entities/icon/iconSizing";
+import { fitIconFrameToContent, normalizeIconNodeFrame } from "@entities/icon/iconSizing";
 
 import { blankProject, helloSample } from "../samples/hello";
 import {
@@ -25,6 +25,7 @@ import {
   defaultFrameFor,
   findNode,
   findParent,
+  fitTextNodeFrame,
   insertChild,
   isAncestor,
   normalizeProjectTextFrames,
@@ -80,6 +81,7 @@ interface EditorState {
 
   updateNode: (id: string, patch: Partial<WidgetNode>) => void;
   updateFrame: (id: string, frame: Partial<NonNullable<WidgetNode["frame"]>>) => void;
+  fitNodeFrameToContent: (id: string) => void;
   updateProps: (id: string, patch: Record<string, unknown>, options?: { history?: boolean }) => void;
   updateLayout: (id: string, patch: Partial<NonNullable<WidgetNode["layout"]>>) => void;
   updateStyle: (id: string, patch: Partial<NonNullable<WidgetNode["style"]>>) => void;
@@ -614,6 +616,29 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       ) {
         node.props = { ...(node.props ?? {}), textAutoSize: false } as LabelProps;
       }
+      return { ...recordHistory(state), project: next, draftFrame: null };
+    }),
+
+  fitNodeFrameToContent: (id) =>
+    set((state) => {
+      const next = cloneProject(state.project);
+      const node = findNode(next, id);
+      if (!node?.frame) return state;
+
+      if (node.type === "label") {
+        const props = { ...(node.props ?? {}) } as LabelProps;
+        delete props.textAutoSize;
+        node.props = props;
+        node.frame = fitTextNodeFrame(node, node.frame);
+      } else if (node.type === "icon") {
+        node.frame = fitIconFrameToContent(
+          ((node.props ?? {}) as Partial<IconProps>).iconId,
+          node.frame,
+        );
+      } else {
+        return state;
+      }
+
       return { ...recordHistory(state), project: next, draftFrame: null };
     }),
 

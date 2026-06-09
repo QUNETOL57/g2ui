@@ -62,46 +62,125 @@
 
 .summary {
   display: grid;
-  gap: 10px;
+  grid-template-columns: auto minmax(0, 1fr) 20px;
+  grid-template-rows: 20px 25px;
+  gap: 8px;
+  align-items: center;
   background: var(--color-bg-deep);
 }
 
-.summaryTitleRow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .typePill {
+  grid-column: 1;
+  grid-row: 1;
   display: inline-flex;
   align-items: center;
+  align-self: center;
+  height: 18px;
   font-size: var(--font-size-xs);
-  padding: 1px 5px;
-  border-radius: 3px;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+  padding: 0 6px;
+  border-radius: var(--radius-sm);
   background: var(--color-surface-3);
-  color: var(--color-text-muted);
+  color: var(--color-text-soft);
   border: 1px solid var(--color-border);
 }
 
 .summaryId {
-  flex: 1 1 auto;
+  grid-column: 2;
+  grid-row: 1;
   min-width: 0;
-  color: var(--color-text-muted);
+  color: var(--color-text);
   font-family: var(--font-family-mono);
   font-size: var(--font-size-sm);
+  font-weight: 500;
+  line-height: 20px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.summaryVisibility {
-  margin-left: auto;
+.summaryActions {
+  grid-column: 3;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+}
+
+.summaryActionsSpacer {
+  display: block;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+}
+
+.summaryNameRow {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  grid-template-columns: 72px minmax(0, 1fr);
+  margin-bottom: 0;
 }
 
 .transformGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
+}
+
+.parentAlignButtons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.parentAlignDivider {
+  width: 1px;
+  height: 25px;
+  margin: 0 2px;
+  background: var(--color-border);
+  flex: 0 0 auto;
+}
+
+.parentAlignButton {
+  display: inline-grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 25px;
+  height: 25px;
+  min-width: 25px;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-3);
+  color: #d8d8d8;
+  font-size: 16px;
+  line-height: 0;
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.parentAlignButtons .parentAlignButton {
+  width: 25px;
+  height: 25px;
+  min-width: 25px;
+}
+
+.parentAlignButton svg {
+  width: 16px;
+  height: 16px;
+}
+
+.parentAlignButton:hover:not(:disabled) {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
 }
 
 .transformField {
@@ -247,6 +326,19 @@
 
 .inspectorCardToggle {
   cursor: pointer;
+}
+
+.visibilityToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.visibilityToggle input[type="checkbox"] {
+  margin: 0;
+  flex: 0 0 auto;
 }
 
 .inspectorCardTitleStack {

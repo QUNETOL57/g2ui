@@ -172,4 +172,31 @@ describe("CanvasWorkspace: selection", () => {
     expect(frame?.x).toBe(8);
     expect(frame?.width).toBe(90);
   });
+
+  it("fits label frame to text on double-click of the selection frame", async () => {
+    const label = makeLabel("lbl_1", "Hi");
+    label.frame = { x: 8, y: 8, width: 120, height: 40 };
+    label.props = { ...(label.props ?? {}), textAutoSize: false };
+    get().setProject(withChildren(makeFixtureProject(), [label]));
+    render(<CanvasWorkspace />);
+
+    await userEvent.pointer({ keys: "[MouseLeft]", target: screen.getByLabelText("Hi") });
+    fireEvent.doubleClick(screen.getByTestId("resize-handle-s"));
+
+    const frame = get().project.screens[0].children?.[0].frame;
+    expect(frame?.width).toBeLessThan(120);
+    expect(frame?.height).toBeLessThan(40);
+    expect((get().project.screens[0].children?.[0].props as { textAutoSize?: boolean }).textAutoSize).toBeUndefined();
+  });
+
+  it("opens label text edit on double-click of the label content", async () => {
+    const project = withChildren(makeFixtureProject(), [makeLabel("lbl_1", "Hi")]);
+    get().setProject(project);
+    render(<CanvasWorkspace />);
+
+    await userEvent.pointer({ keys: "[MouseLeft]", target: screen.getByLabelText("Hi") });
+    fireEvent.doubleClick(screen.getByLabelText("Hi"));
+
+    expect(screen.getByLabelText("edit label text")).toBeInTheDocument();
+  });
 });

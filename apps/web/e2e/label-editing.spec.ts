@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { canvasWidget, openBlankEditor, treeRow } from "./helpers";
+import { canvasWidget, addLabelWidget, openBlankEditor, treeRow } from "./helpers";
 
 test.describe("label inline editing", () => {
   test.beforeEach(async ({ page }) => {
@@ -10,10 +10,10 @@ test.describe("label inline editing", () => {
   test("double-click on canvas opens edit, grows frame while typing, commits on blur", async ({
     page,
   }) => {
-    await page.getByRole("button", { name: "Add label" }).click();
+    await addLabelWidget(page);
     await expect(treeRow(page, "lab_1")).toBeVisible();
 
-    await page.getByTestId("selection-mask").dblclick();
+    await canvasWidget(page, "lab_1").dblclick();
 
     const input = page.getByLabel("edit label text");
     await expect(input).toBeVisible();
@@ -30,12 +30,12 @@ test.describe("label inline editing", () => {
     await expect(treeRow(page, "lab_1")).toContainText("lab_1");
     await expect(page.getByText("Properties · label")).toBeVisible();
 
-    await page.getByTestId("selection-mask").click();
+    await canvasWidget(page, "lab_1").click();
     await expect(page.getByText("Properties · label")).toBeVisible();
   });
 
   test("tree double-click and Enter open inline edit", async ({ page }) => {
-    await page.getByRole("button", { name: "Add label" }).click();
+    await addLabelWidget(page);
     await treeRow(page, "lab_1").dblclick();
     await expect(page.getByLabel("edit label text")).toBeVisible();
     await page.getByLabel("edit label text").blur();

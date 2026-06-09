@@ -250,15 +250,19 @@ function TreeNode({
         <span className={styles.rowName}>{node.name ?? node.id}</span>
         <div className={styles.rowMeta}>
           <span className={styles.rowId}>{node.id}</span>
-          {isDraggable ? (
-            <VisibilityToggleButton
-              visible={node.visible !== false}
-              label={node.name ?? node.id}
-              onToggle={() =>
-                onUpdateNode(node.id, { visible: node.visible === false })
-              }
-            />
-          ) : null}
+          <div className={styles.rowVisibilitySlot}>
+            {isDraggable ? (
+              <VisibilityToggleButton
+                visible={node.visible !== false}
+                label={node.name ?? node.id}
+                onToggle={() =>
+                  onUpdateNode(node.id, { visible: node.visible === false })
+                }
+              />
+            ) : (
+              <span className={styles.rowVisibilitySpacer} aria-hidden="true" />
+            )}
+          </div>
         </div>
       </div>
       {(node.children ?? []).map((child) => (

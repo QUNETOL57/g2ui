@@ -32,8 +32,19 @@ describe("DraftNumberInput", () => {
     const input = screen.getByRole("spinbutton");
     await userEvent.clear(input);
     await userEvent.type(input, "10");
+    expect(handler).toHaveBeenLastCalledWith(10);
     await userEvent.tab();
     expect(handler).toHaveBeenLastCalledWith(10);
+  });
+
+  it("updates while typing before blur", async () => {
+    const handler = vi.fn();
+    render(<Harness initial={1} min={1} onChange={handler} />);
+    const input = screen.getByRole("spinbutton");
+    await userEvent.clear(input);
+    await userEvent.type(input, "5");
+    expect(handler).toHaveBeenLastCalledWith(5);
+    expect(input).toHaveValue(5);
   });
 
   it("commits on Enter", async () => {
@@ -51,11 +62,13 @@ describe("DraftNumberInput", () => {
     const input = screen.getByRole("spinbutton");
     await userEvent.clear(input);
     await userEvent.type(input, "999");
+    expect(handler).toHaveBeenLastCalledWith(10);
     await userEvent.tab();
     expect(handler).toHaveBeenLastCalledWith(10);
 
     await userEvent.clear(input);
     await userEvent.type(input, "-50");
+    expect(handler).toHaveBeenLastCalledWith(0);
     await userEvent.tab();
     expect(handler).toHaveBeenLastCalledWith(0);
   });

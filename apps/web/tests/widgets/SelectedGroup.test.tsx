@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { SelectedGroup } from "@widgets/properties-panel/groups/SelectedGroup";
 
-import { makeLabel } from "../fixtures/projects";
+import { makeFixtureProject, makeLabel } from "../fixtures/projects";
 
 describe("SelectedGroup", () => {
   it("shows type pill and node id", () => {
@@ -51,5 +51,11 @@ describe("SelectedGroup", () => {
     render(<SelectedGroup node={node} updateNode={() => undefined} />);
     expect(screen.getByRole("button", { name: "Hide lbl_1" })).toBeInTheDocument();
     expect(screen.queryByLabelText(/Visible on canvas/i)).not.toBeInTheDocument();
+  });
+
+  it("hides visibility toggle for screen nodes", () => {
+    const screenNode = makeFixtureProject().screens[0];
+    render(<SelectedGroup node={screenNode} updateNode={() => undefined} />);
+    expect(screen.queryByRole("button", { name: /Hide/i })).not.toBeInTheDocument();
   });
 });

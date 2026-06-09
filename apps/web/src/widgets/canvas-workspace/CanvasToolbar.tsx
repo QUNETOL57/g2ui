@@ -15,7 +15,6 @@ import {
   ChevronIcon,
   FrameIcon,
   IconGlyphIcon,
-  ImageIcon,
   LineIcon,
   RectIcon,
   SelectToolIcon,
@@ -65,10 +64,7 @@ const TOOL_GROUPS: ToolGroup[] = [
     id: "media",
     label: "Media",
     icon: <IconGlyphIcon />,
-    items: [
-      { type: "icon", label: "Icon", icon: <IconGlyphIcon /> },
-      { type: "image", label: "Image", icon: <ImageIcon /> },
-    ],
+    items: [{ type: "icon", label: "Icon", icon: <IconGlyphIcon /> }],
   },
 ];
 

@@ -157,7 +157,7 @@ describe("canvas layer order (feature)", () => {
     const labelEl = container.querySelector('[data-widget-id="lbl_1"]') as HTMLElement;
     const panelEl = container.querySelector('[data-widget-id="pan_1"]') as HTMLElement;
     expect(Number(labelEl.style.zIndex)).toBeLessThan(Number(panelEl.style.zIndex));
-    expect(container.querySelector('[data-testid="selection-mask"]')).toBeTruthy();
+    expect(container.querySelector('[data-testid="selection-move-n"]')).toBeTruthy();
   });
 
   it("swaps stacking when the label moves up in the tree", () => {

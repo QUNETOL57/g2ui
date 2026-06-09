@@ -38,6 +38,17 @@ export function normalizeIconFrame(
   return { x, y, width, height };
 }
 
+export function fitIconFrameToContent(iconId: string | undefined | null, frame: Frame): Frame {
+  const icon = getResolvedIconDefinition(iconId);
+  const scale = getIconScaleForFrame(icon, frame);
+  return {
+    x: frame.x,
+    y: frame.y,
+    width: icon.width * scale,
+    height: icon.height * scale,
+  };
+}
+
 export function normalizeIconNodeFrame(node: WidgetNode, frame: Frame): Frame {
   const props = (node.props ?? {}) as Partial<IconProps>;
   return node.type === "icon" ? normalizeIconFrame(props.iconId, frame) : frame;

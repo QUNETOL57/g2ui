@@ -132,6 +132,16 @@ export function measureLabelTextBounds(node: WidgetNode): { width: number; heigh
   };
 }
 
+export function fitTextNodeFrame(node: WidgetNode, frame: Frame): Frame {
+  if (node.type !== "label") return frame;
+  const { width, height } = measureLabelTextBounds(node);
+  return { ...frame, width, height };
+}
+
+export function canFitNodeFrameToContent(node: WidgetNode): boolean {
+  return node.type === "label" || node.type === "icon";
+}
+
 export function normalizeTextNodeFrame(node: WidgetNode, frame: Frame): Frame {
   if (node.type !== "label") return frame;
   const props = (node.props ?? {}) as LabelProps;

@@ -28,13 +28,40 @@ function cloneFontFace(face, overrides) {
   };
 }
 
+function metricsFromGlyphs(glyphs, referenceLineHeight, referenceBaseline) {
+  let minTop = Infinity;
+  let maxBottom = 0;
+
+  for (const glyph of glyphs) {
+    if (glyph.width === 0 && glyph.height === 0) continue;
+    minTop = Math.min(minTop, glyph.yOffset);
+    maxBottom = Math.max(maxBottom, glyph.yOffset + glyph.height);
+  }
+
+  if (!Number.isFinite(minTop)) {
+    return { lineHeight: referenceLineHeight, baseline: referenceBaseline };
+  }
+
+  const lineHeight = Math.max(1, maxBottom - minTop);
+  const baseline = Math.max(
+    1,
+    Math.min(lineHeight, Math.round(referenceBaseline * (lineHeight / referenceLineHeight))),
+  );
+
+  return { lineHeight, baseline };
+}
+
+function tightenFontFace(face) {
+  const { lineHeight, baseline } = metricsFromGlyphs(face.glyphs, face.lineHeight, face.baseline);
+  return { ...face, lineHeight, baseline, size: lineHeight };
+}
+
 function scaleFontFaceByIntegerFactor(source, scaleFactor, id) {
   const lineHeight = source.lineHeight * scaleFactor;
-  const size = lineHeight;
   const baseline = source.baseline * scaleFactor;
 
   if (scaleFactor === 1) {
-    return cloneFontFace(source, { id, size, lineHeight, baseline });
+    return cloneFontFace(source, { id, size: lineHeight, lineHeight, baseline });
   }
 
   const scaledMetrics = source.glyphs.map((glyph) => ({
@@ -83,13 +110,19 @@ function scaleFontFaceByIntegerFactor(source, scaleFactor, id) {
     };
   });
 
+  const { lineHeight: tightLineHeight, baseline: tightBaseline } = metricsFromGlyphs(
+    glyphs,
+    lineHeight,
+    baseline,
+  );
+
   return {
     id,
     family: source.family,
-    size,
+    size: tightLineHeight,
     style: source.style,
-    lineHeight,
-    baseline,
+    lineHeight: tightLineHeight,
+    baseline: tightBaseline,
     bytesPerRow,
     bitmap,
     glyphs,
@@ -120,7 +153,7 @@ function loadOriginalOrg01() {
   return original;
 }
 
-const source = loadOriginalOrg01();
+const source = tightenFontFace(loadOriginalOrg01());
 
 const orgFaces = ORG_SCALE_FACTORS.map((scaleFactor) =>
   scaleFontFaceByIntegerFactor(source, scaleFactor, orgFaceId(scaleFactor)),

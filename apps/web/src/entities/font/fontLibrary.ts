@@ -99,3 +99,48 @@ export function measureTextWidth(face: BitmapFontFace, text: string): number {
   }
   return width;
 }
+
+/** Pixel bounds of the rendered ink for a string (ignores empty descender rows). */
+export function measureTextInkBounds(
+  face: BitmapFontFace,
+  text: string,
+): { top: number; height: number } {
+  let top = Infinity;
+  let bottom = -1;
+
+  for (const char of text) {
+    const glyph = findGlyph(face, char.codePointAt(0) ?? 0);
+    if (!glyph || (glyph.width === 0 && glyph.height === 0)) continue;
+
+    for (let row = 0; row < glyph.height; row += 1) {
+      for (let col = 0; col < glyph.width; col += 1) {
+        if (!glyphPixelOn(face, glyph, col, row)) continue;
+        const y = glyph.yOffset + row;
+        top = Math.min(top, y);
+        bottom = Math.max(bottom, y);
+      }
+    }
+  }
+
+  if (!Number.isFinite(top) || bottom < 0) {
+    return { top: 0, height: face.lineHeight };
+  }
+
+  return { top, height: bottom - top + 1 };
+}
+
+export function measureTextInkHeight(face: BitmapFontFace, text: string): number {
+  return measureTextInkBounds(face, text).height;
+}
+
+export function textInkOriginY(
+  face: BitmapFontFace,
+  text: string,
+  boxHeight: number,
+  verticalAlign: "top" | "center" | "bottom",
+): number {
+  const ink = measureTextInkBounds(face, text);
+  if (verticalAlign === "top") return -ink.top;
+  if (verticalAlign === "bottom") return boxHeight - ink.height - ink.top;
+  return Math.floor((boxHeight - ink.height) / 2) - ink.top;
+}

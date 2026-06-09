@@ -663,7 +663,16 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         }
       }
       if (node.type === "label") {
-        node.frame = normalizeTextNodeFrame(node, node.frame ?? defaultFrameFor("label", "", next));
+        const refitKeys = ["text", "fontFamily", "fontSize", "fontStyle", "fontFace"] as const;
+        const shouldRefit = refitKeys.some((key) => key in patch);
+        if (shouldRefit) {
+          const props = { ...(node.props ?? {}) } as LabelProps;
+          delete props.textAutoSize;
+          node.props = props;
+          node.frame = fitTextNodeFrame(node, node.frame ?? defaultFrameFor("label", "", next));
+        } else {
+          node.frame = normalizeTextNodeFrame(node, node.frame ?? defaultFrameFor("label", "", next));
+        }
       }
       const history = options.history === false ? {} : recordHistory(state);
       return { ...history, project: next, draftFrame: null };

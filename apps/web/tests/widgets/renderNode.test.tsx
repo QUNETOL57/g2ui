@@ -207,6 +207,38 @@ describe("PreviewNode: behavior", () => {
     expect(labelEl.style.zIndex).toBe("1");
   });
 
+  it("renders nested children above their parent for hit testing", () => {
+    const header = makeLabel("hdr_1", "Header");
+    header.frame = { x: 0, y: 0, width: 80, height: 10 };
+    const icon = makeIcon("ico_4", "earth");
+    icon.frame = { x: 4, y: 12, width: 16, height: 16 };
+    const panel = makePanel("pan_1", [header, icon]);
+    panel.frame = { x: 8, y: 8, width: 80, height: 32 };
+    panel.layout = { mode: "absolute", padding: 0, gap: 0, align: "start", justify: "start" };
+
+    const project = withChildren(makeFixtureProject(), [panel]);
+    const layout = layoutTree(project.screens[0], project.display.width, project.display.height);
+    const { container } = render(
+      <PreviewNode
+        layoutNode={layout}
+        ctx={{
+          palette: project.palette,
+          selectedId: null,
+          movableId: null,
+          dragPreview: null,
+          onSelect: vi.fn(),
+        }}
+      />,
+    );
+
+    const panelEl = container.querySelector('[data-widget-id="pan_1"]') as HTMLElement;
+    const headerEl = container.querySelector('[data-widget-id="hdr_1"]') as HTMLElement;
+    const iconEl = container.querySelector('[data-widget-id="ico_4"]') as HTMLElement;
+
+    expect(Number(panelEl.style.zIndex)).toBeLessThan(Number(iconEl.style.zIndex));
+    expect(Number(headerEl.style.zIndex)).toBeGreaterThan(Number(iconEl.style.zIndex));
+  });
+
   it("hides nodes with visible=false", () => {
     const hidden = { ...makeLabel("lbl_1", "Hidden"), visible: false };
     renderProject([hidden]);

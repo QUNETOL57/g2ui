@@ -1,7 +1,7 @@
 import type { Frame, LabelProps, ScreenNode, UiProject, WidgetNode, WidgetType } from "..";
 import { makeWidget, nextId } from "..";
 import { defaultProps } from "../defaults";
-import { findFontFace, measureTextWidth } from "@entities/font/fontLibrary";
+import { findFontFace, measureTextWidth, measureTextInkHeight } from "@entities/font/fontLibrary";
 import { DEFAULT_ICON_ID, getResolvedIconDefinition } from "@entities/icon/iconSizing";
 
 export function cloneProject(p: UiProject): UiProject {
@@ -128,7 +128,7 @@ export function measureLabelTextBounds(node: WidgetNode): { width: number; heigh
   const text = props.text ?? "";
   return {
     width: Math.max(1, measureTextWidth(face, text) + 1),
-    height: face.lineHeight,
+    height: Math.max(1, measureTextInkHeight(face, text)),
   };
 }
 

@@ -14,7 +14,7 @@ import type { LayoutNode } from "@entities/ui-project/lib/layoutEngine";
 import { resolveColor } from "@entities/ui-project/lib/color";
 import { BitmapText, type BitmapTextAlign } from "@entities/font/BitmapText";
 import type { BitmapFontFace } from "@entities/font/fontTypes";
-import { findFontFace, measureTextWidth } from "@entities/font/fontLibrary";
+import { findFontFace, measureTextWidth, measureTextInkBounds, measureTextInkHeight, textInkOriginY } from "@entities/font/fontLibrary";
 import { IconGlyph } from "@entities/icon/iconLibrary";
 import { DEFAULT_ICON_ID, getIconScaleForFrame, getResolvedIconDefinition } from "@entities/icon/iconSizing";
 
@@ -62,13 +62,14 @@ function PreviewNodeImpl({
     ? Math.max(displayRect.height, lineStrokeWidth)
     : displayRect.height;
   const isLayerNode = node.type !== "screen";
+  const nodeStackBase = isLayerNode ? stackIndex : 0;
   const style: React.CSSProperties = {
     left: rect.x + nextDragOffset.x,
     top: rect.y + nextDragOffset.y,
     width: displayRect.width,
     height: visualHeight,
     cursor: node.id === ctx.movableId ? "move" : undefined,
-    zIndex: isLayerNode ? stackIndex : undefined,
+    zIndex: isLayerNode ? nodeStackBase : undefined,
   };
   const visualNode: WidgetNode =
     node.type === "line" && preview?.lineProps
@@ -103,7 +104,7 @@ function PreviewNodeImpl({
           layoutNode={child}
           ctx={ctx}
           dragOffset={nextDragOffset}
-          stackIndex={children.length - index}
+          stackIndex={nodeStackBase + (children.length - index)}
         />
       ))}
     </>
@@ -344,20 +345,15 @@ function labelTextOrigin(
   verticalAlign: "top" | "center" | "bottom" = "center",
 ) {
   const textWidth = measureTextWidth(face, text);
-  const textHeight = face.lineHeight;
+  const ink = measureTextInkBounds(face, text);
   let originX = 0;
   if (align === "center") {
     originX = Math.floor((boxWidth - textWidth) / 2);
   } else if (align === "right") {
     originX = boxWidth - textWidth;
   }
-  let originY = Math.floor((boxHeight - textHeight) / 2);
-  if (verticalAlign === "top") {
-    originY = 0;
-  } else if (verticalAlign === "bottom") {
-    originY = boxHeight - textHeight;
-  }
-  return { originX, originY, textWidth, textHeight };
+  const originY = textInkOriginY(face, text, boxHeight, verticalAlign);
+  return { originX, originY, textWidth, textHeight: ink.height };
 }
 
 function expandedLabelFrameForText(
@@ -371,7 +367,7 @@ function expandedLabelFrameForText(
   return {
     ...rect,
     width: Math.max(rect.width, textWidth + 1, caretWidth + 1),
-    height: Math.max(rect.height, face.lineHeight),
+    height: Math.max(rect.height, measureTextInkHeight(face, text)),
   };
 }
 
@@ -407,7 +403,7 @@ function LabelInlineEditor({
   color,
   bg,
   align,
-  verticalAlign = "center",
+  verticalAlign = "top",
   rect,
   onCommit,
   onDraftFrame,
@@ -508,7 +504,14 @@ function LabelInlineEditor({
     return () => window.removeEventListener("mousedown", handleMouseDown, { capture: true });
   }, [nodeId, onCommit]);
 
-  const { originX, originY } = labelTextOrigin(face, text, align, rect.width, rect.height, verticalAlign);
+  const { originX, originY, textHeight } = labelTextOrigin(
+    face,
+    text,
+    align,
+    rect.width,
+    rect.height,
+    verticalAlign,
+  );
   const rawCaretLeft = originX + measureTextWidth(face, text.slice(0, caretIndex));
   const caretLeft = Math.max(0, Math.min(rawCaretLeft, Math.max(0, rect.width - 1)));
 
@@ -539,7 +542,7 @@ function LabelInlineEditor({
         style={{
           left: caretLeft,
           top: originY,
-          height: face.lineHeight,
+          height: textHeight,
           backgroundColor: color,
         }}
       />
@@ -634,6 +637,7 @@ function LabelVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; re
         text={props.text ?? ""}
         color={color}
         align={align}
+        verticalAlign="top"
         boxWidth={rect.width}
         boxHeight={rect.height}
       />

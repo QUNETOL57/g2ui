@@ -10,6 +10,8 @@ import {
   getFontFamilyOptions,
   getFontSizes,
   glyphPixelOn,
+  measureTextInkBounds,
+  measureTextInkHeight,
   measureTextWidth,
   normalizeFontStyle,
 } from "@entities/font/fontLibrary";
@@ -110,5 +112,26 @@ describe("measureTextWidth & glyph lookups", () => {
       expect(glyphPixelOn(face, a, -1, -1)).toBe(false);
       expect(glyphPixelOn(face, a, a.width + 5, a.height + 5)).toBe(false);
     }
+  });
+});
+
+describe("Org_01 metrics", () => {
+  it("uses a line height that matches glyph bounds without trailing slack", () => {
+    for (const face of getFontFaces().filter((entry) => entry.family === "Org_01")) {
+      let maxBottom = 0;
+      for (const glyph of face.glyphs) {
+        if (glyph.height === 0 && glyph.width === 0) continue;
+        maxBottom = Math.max(maxBottom, glyph.yOffset + glyph.height);
+      }
+      expect(face.lineHeight).toBe(maxBottom);
+      expect(face.size).toBe(face.lineHeight);
+    }
+  });
+
+  it("measures cap-only ink shorter than line height at large sizes", () => {
+    const face = findFontFace({ fontFamily: "Org_01", fontSize: 60 });
+    const ink = measureTextInkBounds(face, "Label");
+    expect(ink.top).toBe(0);
+    expect(measureTextInkHeight(face, "Label")).toBe(face.lineHeight - 10);
   });
 });

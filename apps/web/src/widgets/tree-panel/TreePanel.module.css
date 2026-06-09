@@ -28,6 +28,8 @@
   margin: 0 4px 3px;
   padding: 3px 4px;
   box-sizing: border-box;
+  min-height: 28px;
+  height: 28px;
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
   background: var(--color-surface);
@@ -103,9 +105,25 @@
 .rowMeta {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
   margin-left: auto;
   flex: 0 0 auto;
+  min-height: 20px;
+}
+
+.rowVisibilitySlot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+}
+
+.rowVisibilitySpacer {
+  display: block;
+  width: 20px;
+  height: 20px;
 }
 
 .rowId {
@@ -114,8 +132,13 @@
 }
 
 .typeBadge {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  height: 18px;
+  box-sizing: border-box;
   font-size: var(--font-size-xs);
-  padding: 1px 5px;
+  padding: 0 5px;
   border-radius: 3px;
   background: var(--color-surface-3);
   color: var(--color-text-muted);

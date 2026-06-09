@@ -27,14 +27,28 @@ export function computeCornerInsets(radius: number): number[] {
   }
 
   insets[0] = Math.max(0, insets[0] - 1);
-  if (r === 4 && insets[r - 1] === 1 && insets[r - 2] === 1) {
-    insets.push(0);
-  } else {
-    insets[r - 1] = 0;
-  }
+  insets[r - 1] = 0;
 
   insetCache.set(r, insets);
   return insets;
+}
+
+/** Inner fill scanline for a bordered pixel-rounded box (inset matches the outer shape). */
+export function innerFillScanline(
+  svgY: number,
+  width: number,
+  height: number,
+  radius: number,
+  borderWidth: number,
+): { x: number; width: number } {
+  const w = Math.max(0, Math.round(width));
+  const bw = Math.max(0, Math.round(borderWidth));
+  const innerW = Math.max(0, w - bw * 2);
+  const inset = roundedRowInset(svgY, w, height, radius);
+  return {
+    x: bw + inset,
+    width: Math.max(0, innerW - inset * 2),
+  };
 }
 
 /** Left inset (px) for a scanline inside a pixel-rounded rectangle corner. */
@@ -43,10 +57,16 @@ export function roundedRowInset(y: number, width: number, height: number, radius
   if (r <= 0) return 0;
 
   const insets = computeCornerInsets(r);
-  if (y < insets.length) return insets[y];
+  const cornerRows = insets.length;
 
-  const bottomStart = height - insets.length;
-  if (y >= bottomStart) return insets[y - bottomStart];
+  let topInset = 0;
+  if (y < cornerRows) topInset = insets[y];
 
-  return 0;
+  let bottomInset = 0;
+  const bottomStart = height - cornerRows;
+  if (y >= bottomStart) {
+    bottomInset = insets[cornerRows - 1 - (y - bottomStart)];
+  }
+
+  return Math.max(topInset, bottomInset);
 }

@@ -50,6 +50,7 @@ export function PropertiesPanel() {
       {node.type !== "screen" ? (
         <FrameGroup
           node={node}
+          project={project}
           draftFrame={draftFrame?.nodeId === node.id ? draftFrame.frame : null}
           updateFrame={updateFrame}
         />

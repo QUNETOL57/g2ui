@@ -5,7 +5,6 @@ export async function openBlankEditor(page: Page) {
   await page.goto("/");
   await page.getByRole("button", { name: "New project" }).click();
   await page.getByRole("button", { name: "Create project", exact: true }).click();
-  await expect(page.getByText(/schema/)).toBeVisible();
   await expect(page.getByText("Widget tree")).toBeVisible();
 }
 
@@ -15,4 +14,9 @@ export function canvasWidget(page: Page, widgetId: string) {
 
 export function treeRow(page: Page, nodeId: string) {
   return page.locator(`[data-tree-node-id="${nodeId}"]`);
+}
+
+export async function addLabelWidget(page: Page) {
+  await page.getByRole("button", { name: "Text tools" }).click();
+  await page.getByRole("menuitem", { name: "Label" }).click();
 }

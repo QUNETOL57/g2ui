@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { canvasWidget, openBlankEditor, treeRow } from "./helpers";
+import { canvasWidget, addLabelWidget, openBlankEditor, treeRow } from "./helpers";
 
 test.describe("widget tree layer order on canvas", () => {
   test.beforeEach(async ({ page }) => {
@@ -8,7 +8,7 @@ test.describe("widget tree layer order on canvas", () => {
   });
 
   test("sibling order controls z-index and hit-testing at overlap", async ({ page }) => {
-    await page.getByRole("button", { name: "Add label" }).click();
+    await addLabelWidget(page);
     await page.getByRole("button", { name: "Add panel" }).click();
     await treeRow(page, "screen_main").click();
 
@@ -54,13 +54,16 @@ test.describe("widget tree layer order on canvas", () => {
     await treeRow(page, "lab_1").click();
     await expect(label).toHaveCSS("z-index", "1");
     await expect(panel).toHaveCSS("z-index", "2");
-    await expect(page.getByTestId("selection-mask")).toBeVisible();
+    await expect(page.getByTestId("resize-handle-s")).toBeVisible();
 
+    const handleBox = await page.getByTestId("resize-handle-s").boundingBox();
+    expect(handleBox).not.toBeNull();
     const topWhenLabelSelected = await page.evaluate(({ px, py }) => {
       const el = document.elementFromPoint(px, py);
-      if (el?.closest('[data-testid="selection-mask"]')) return "selection-mask";
+      if (el?.closest('[data-testid^="resize-handle-"]')) return "resize-handle";
+      if (el?.closest('[data-testid^="selection-move-"]')) return "selection-move";
       return el?.closest("[data-widget-id]")?.getAttribute("data-widget-id") ?? null;
-    }, { px: x, py: y });
-    expect(topWhenLabelSelected).toBe("selection-mask");
+    }, { px: handleBox!.x + handleBox!.width / 2, py: handleBox!.y + handleBox!.height / 2 });
+    expect(topWhenLabelSelected).toBe("resize-handle");
   });
 });

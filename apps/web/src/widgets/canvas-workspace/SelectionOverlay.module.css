@@ -1,3 +1,23 @@
+.moveStrip {
+  position: absolute;
+  z-index: 7;
+  pointer-events: auto;
+  background: transparent;
+  cursor: move;
+}
+
+.moveStripN,
+.moveStripS {
+  height: 8px;
+  transform: translateY(-50%);
+}
+
+.moveStripE,
+.moveStripW {
+  width: 8px;
+  transform: translateX(-50%);
+}
+
 .selectionMask {
   position: absolute;
   z-index: 6;

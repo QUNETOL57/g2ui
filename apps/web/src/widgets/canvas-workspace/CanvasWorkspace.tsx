@@ -746,7 +746,18 @@ export function CanvasWorkspace({
       onLabelEditStart: beginLabelTextEdit,
       editingLabelId,
       onLabelTextCommit: commitLabelText,
-      onLabelDraftFrame: (nodeId: string, frame: Frame) => scheduleDraftFrame({ nodeId, frame }),
+      onLabelDraftFrame: (nodeId: string, frame: Frame) => {
+        const currentLayout = layoutRef.current;
+        const parentLayout = currentLayout ? findParentLayoutNode(currentLayout, nodeId) : null;
+        const absoluteFrame = parentLayout
+          ? {
+              ...frame,
+              x: parentLayout.rect.x + frame.x,
+              y: parentLayout.rect.y + frame.y,
+            }
+          : frame;
+        scheduleDraftFrame({ nodeId, frame: absoluteFrame });
+      },
     }),
     [
       project.palette,

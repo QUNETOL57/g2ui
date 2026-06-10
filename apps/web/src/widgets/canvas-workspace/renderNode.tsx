@@ -409,6 +409,7 @@ function LabelInlineEditor({
   align,
   verticalAlign = "center",
   rect,
+  nodeFrame,
   onCommit,
   onDraftFrame,
   onSelect,
@@ -421,6 +422,7 @@ function LabelInlineEditor({
   align: BitmapTextAlign;
   verticalAlign?: "top" | "center" | "bottom";
   rect: Frame;
+  nodeFrame: Frame;
   onCommit: (nodeId: string, text: string, frame?: Frame) => void;
   onDraftFrame?: (nodeId: string, frame: Frame) => void;
   onSelect: (id: string) => void;
@@ -428,7 +430,7 @@ function LabelInlineEditor({
   const rootRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const textRef = useRef(initialText);
-  const frameRef = useRef(rect);
+  const frameRef = useRef(nodeFrame);
   const visualRectRef = useRef(rect);
   const [text, setText] = useState(initialText);
   const [caretIndex, setCaretIndex] = useState(initialText.length);
@@ -482,11 +484,11 @@ function LabelInlineEditor({
   );
 
   useEffect(() => {
-    frameRef.current = rect;
+    frameRef.current = nodeFrame;
     setText(initialText);
     setCaretIndex(initialText.length);
     expandForText(initialText, initialText.length);
-  }, [nodeId, initialText]);
+  }, [nodeId, initialText, nodeFrame.x, nodeFrame.y, nodeFrame.width, nodeFrame.height]);
 
   useEffect(() => {
     const input = inputRef.current;
@@ -613,6 +615,7 @@ function LabelVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; re
         bg={bg}
         align={align}
         rect={rect}
+        nodeFrame={node.frame ?? { x: 0, y: 0, width: rect.width, height: rect.height }}
         onCommit={ctx.onLabelTextCommit}
         onDraftFrame={ctx.onLabelDraftFrame}
         onSelect={ctx.onSelect}
@@ -765,6 +768,7 @@ function ButtonVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; r
               align={horizontalAlign}
               verticalAlign={verticalAlign}
               rect={{ x: 0, y: 0, width: contentWidth, height: contentHeight }}
+              nodeFrame={node.frame ?? { x: 0, y: 0, width: contentWidth, height: contentHeight }}
               onCommit={ctx.onLabelTextCommit}
               onSelect={ctx.onSelect}
             />
@@ -817,6 +821,14 @@ function ButtonVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; r
                     width: textBoxWidth,
                     height: Math.max(textBoxHeight, face.lineHeight),
                   }}
+                  nodeFrame={
+                    node.frame ?? {
+                      x: 0,
+                      y: 0,
+                      width: textBoxWidth,
+                      height: Math.max(textBoxHeight, face.lineHeight),
+                    }
+                  }
                   onCommit={ctx.onLabelTextCommit}
                   onSelect={ctx.onSelect}
                 />

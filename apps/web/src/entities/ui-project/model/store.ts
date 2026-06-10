@@ -269,7 +269,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   commitLabelText: (nodeId, text, frame) => {
+    const wasEditing = get().editingLabelId === nodeId;
     set((state) => {
+      if (state.editingLabelId !== nodeId) return state;
+
       const next = cloneProject(state.project);
       const node = findNode(next, nodeId);
       if (node?.type !== "label" && node?.type !== "button") {
@@ -292,7 +295,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         draftFrame: null,
       };
     });
-    get().commitHistoryBatch();
+    if (wasEditing) get().commitHistoryBatch();
   },
 
   cancelLabelTextEdit: () => set({ editingLabelId: null }),

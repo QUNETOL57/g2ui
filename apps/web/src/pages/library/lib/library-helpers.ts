@@ -1,5 +1,6 @@
 import type { UiProject } from "@entities/ui-project";
 import type { TemplateId } from "@entities/ui-project/lib/projectTemplates";
+import { cloneProject } from "@entities/ui-project/model/tree-ops";
 import { DEFAULT_PRESET_ID, DISPLAY_PRESETS } from "@shared/config/displayPresets";
 
 export type Orientation = "landscape" | "portrait";
@@ -41,4 +42,21 @@ export function formatEditedAt(date: Date): string {
 
 export function templateLabel(template: TemplateId): string {
   return template === "hello" ? "Hello" : "Blank";
+}
+
+export function copyProjectCard(source: ProjectCard): ProjectCard {
+  const createdAt = new Date();
+  const newId = `project-${createdAt.getTime()}`;
+  const copiedProject = cloneProject(source.project);
+  copiedProject.id = newId;
+  copiedProject.name = `${source.name} copy`;
+  return {
+    id: newId,
+    name: copiedProject.name,
+    width: source.width,
+    height: source.height,
+    template: source.template,
+    updatedAt: createdAt,
+    project: copiedProject,
+  };
 }

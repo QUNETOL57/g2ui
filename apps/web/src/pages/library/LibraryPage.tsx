@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
+import ControlPointDuplicateOutlinedIcon from "@mui/icons-material/ControlPointDuplicateOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
 
@@ -22,6 +23,7 @@ import styles from "./LibraryPage.module.css";
 import { ProjectPreview } from "./ProjectPreview";
 import {
   findPresetIdForSize,
+  copyProjectCard,
   formatEditedAt,
   orientSize,
   templateLabel,
@@ -35,6 +37,7 @@ interface LibraryPageProps {
   error?: string | null;
   onOpenProject: (project: ProjectCard) => void;
   onCreateProject: (card: ProjectCard) => void;
+  onCopyProject: (card: ProjectCard) => void;
   onDeleteProject: (projectId: string) => void;
   onUpdateProject: (card: ProjectCard) => void;
 }
@@ -45,6 +48,7 @@ export function LibraryPage({
   error = null,
   onOpenProject,
   onCreateProject,
+  onCopyProject,
   onDeleteProject,
   onUpdateProject,
 }: LibraryPageProps) {
@@ -162,6 +166,17 @@ export function LibraryPage({
           <div className={styles.cardGrid}>
             {projects.map((item) => (
               <article className={styles.card} key={item.id}>
+                <IconButton
+                  className={styles.copyButton}
+                  title={`Copy ${item.name}`}
+                  aria-label={`Copy ${item.name}`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onCopyProject(copyProjectCard(item));
+                  }}
+                >
+                  <ControlPointDuplicateOutlinedIcon fontSize="inherit" />
+                </IconButton>
                 <IconButton
                   className={styles.editButton}
                   title={`Edit ${item.name}`}

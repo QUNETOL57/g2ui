@@ -35,6 +35,7 @@ function Harness({
   spies?: {
     onOpen?: (card: ProjectCard) => void;
     onCreate?: (card: ProjectCard) => void;
+    onCopy?: (card: ProjectCard) => void;
     onDelete?: (id: string) => void;
     onUpdate?: (card: ProjectCard) => void;
   };
@@ -47,6 +48,10 @@ function Harness({
       onCreateProject={(c) => {
         setProjects((items) => [c, ...items]);
         spies?.onCreate?.(c);
+      }}
+      onCopyProject={(c) => {
+        setProjects((items) => [c, ...items]);
+        spies?.onCopy?.(c);
       }}
       onDeleteProject={(id) => {
         setProjects((items) => items.filter((p) => p.id !== id));
@@ -124,6 +129,30 @@ describe("LibraryPage: edit flow", () => {
     await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
     expect(onUpdate).toHaveBeenCalled();
     expect(screen.getByText("Renamed")).toBeInTheDocument();
+  });
+});
+
+describe("LibraryPage: copy flow", () => {
+  it("duplicates a project via copy button", async () => {
+    const onCopy = vi.fn();
+    const source = makeCard("p1", "Original");
+    render(<Harness initial={[source]} spies={{ onCopy }} />);
+    await userEvent.click(screen.getByRole("button", { name: "Copy Original" }));
+    expect(onCopy).toHaveBeenCalled();
+    const copied = onCopy.mock.calls[0][0] as ProjectCard;
+    expect(copied.id).not.toBe("p1");
+    expect(copied.name).toBe("Original copy");
+    expect(copied.project.id).toBe(copied.id);
+    expect(copied.project).not.toBe(source.project);
+    expect(copied.project).toEqual(
+      expect.objectContaining({
+        name: "Original copy",
+        display: source.project.display,
+        screens: source.project.screens,
+      }),
+    );
+    expect(screen.getByText("Original copy")).toBeInTheDocument();
+    expect(screen.getByText("Original")).toBeInTheDocument();
   });
 });
 

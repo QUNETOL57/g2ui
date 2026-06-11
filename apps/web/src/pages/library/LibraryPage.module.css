@@ -73,6 +73,7 @@
   box-shadow: none;
 }
 
+.copyButton,
 .editButton,
 .deleteButton {
   position: absolute;
@@ -81,6 +82,10 @@
   min-width: 24px;
   width: 24px;
   height: 24px;
+}
+
+.copyButton {
+  right: 72px;
 }
 
 .editButton {

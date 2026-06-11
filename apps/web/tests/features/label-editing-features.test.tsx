@@ -112,6 +112,28 @@ describe("label text editing (feature)", () => {
     expect(get().draftFrame).toBeNull();
   });
 
+  it("preserves label position inside a panel when committing by clicking outside", async () => {
+    const label = {
+      ...makeLabel("lbl_1", "Panel text"),
+      frame: { x: 8, y: 8, width: 40, height: 7 },
+    };
+    const panel = {
+      ...makePanel("pan_1", [label]),
+      frame: { x: 0, y: 16, width: 160, height: 60 },
+    };
+    get().setProject(withChildren(makeFixtureProject(), [panel]));
+    render(<CanvasWorkspace />);
+
+    const frameBefore = findNode(get().project, "lbl_1")?.frame;
+    fireEvent.doubleClick(screen.getByLabelText("Panel text"));
+    fireEvent.mouseDown(document.body);
+
+    const frameAfter = findNode(get().project, "lbl_1")?.frame;
+    expect(frameAfter?.x).toBe(frameBefore?.x);
+    expect(frameAfter?.y).toBe(frameBefore?.y);
+    expect(get().editingLabelId).toBeNull();
+  });
+
   it("allows re-selecting the label after commit", async () => {
     const project = withChildren(makeFixtureProject(), [makeLabel("lbl_1", "Pick")]);
     get().setProject(project);

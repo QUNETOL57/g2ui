@@ -39,12 +39,38 @@ export function RectIcon({ size = 18 }: ToolbarIconProps) {
   );
 }
 
+export function CircleIcon({ size = 18 }: ToolbarIconProps) {
+  return (
+    <svg {...base(size)}>
+      <circle cx="12" cy="12" r="7.5" />
+    </svg>
+  );
+}
+
+export function TriangleIcon({ size = 18 }: ToolbarIconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="M12 4.5 20 19H4z" />
+    </svg>
+  );
+}
+
 export function LineIcon({ size = 18 }: ToolbarIconProps) {
   return (
     <svg {...base(size)}>
       <path d="M5 19 19 5" />
       <circle cx="5" cy="19" r="1.6" fill="currentColor" stroke="none" />
       <circle cx="19" cy="5" r="1.6" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+export function MarkerIcon({ size = 18 }: ToolbarIconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="M5 19h4l9.5-9.5-4-4L5 15z" />
+      <path d="M13.5 6.5 15.5 4.5 19.5 8.5 17.5 10.5" />
+      <path d="M4 21h7" />
     </svg>
   );
 }

@@ -20,13 +20,16 @@ export function FrameGroup({
   project,
   draftFrame,
   updateFrame,
+  updateNode,
 }: {
   node: WidgetNode;
   project: UiProject;
   draftFrame: Frame | null;
   updateFrame: (id: string, patch: Partial<NonNullable<WidgetNode["frame"]>>) => void;
+  updateNode?: (id: string, patch: Partial<WidgetNode>) => void;
 }) {
   const f = draftFrame ?? node.frame ?? { x: 0, y: 0, width: 0, height: 0 };
+  const canRotate = ["rect", "circle", "triangle", "line", "freehand"].includes(node.type);
   const icon = node.type === "icon"
     ? getResolvedIconDefinition(((node.props ?? {}) as Partial<IconProps>).iconId)
     : null;
@@ -68,6 +71,13 @@ export function FrameGroup({
           min={icon?.height}
           onChange={(v) => updateFrame(node.id, { height: v })}
         />
+        {canRotate && updateNode ? (
+          <TransformField
+            label="R"
+            value={node.rotation ?? 0}
+            onChange={(v) => updateNode(node.id, { rotation: normalizeRotation(v) })}
+          />
+        ) : null}
       </div>
       {canAlignInParent && parentBounds ? (
         <ParentAlignControls
@@ -77,6 +87,11 @@ export function FrameGroup({
       ) : null}
     </div>
   );
+}
+
+function normalizeRotation(value: number): number {
+  const normalized = value % 360;
+  return normalized < 0 ? normalized + 360 : normalized;
 }
 
 function TransformField({

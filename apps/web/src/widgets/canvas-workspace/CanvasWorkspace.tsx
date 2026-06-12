@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import type { Frame, IconProps, LayoutMode } from "@entities/ui-project";
+import type { Frame, IconProps, LayoutMode, PixelPoint } from "@entities/ui-project";
 import { useEditorStore } from "@entities/ui-project/model/store";
 import { findNode, findParent } from "@entities/ui-project/model/tree-ops";
 import { layoutTree } from "@entities/ui-project/lib/layoutEngine";
@@ -77,8 +77,12 @@ export function CanvasWorkspace({
 }: CanvasWorkspaceProps) {
   const project = useEditorStore((s) => s.project);
   const activeScreenId = useEditorStore((s) => s.activeScreenId);
+  const activeTool = useEditorStore((s) => s.activeTool);
+  const markerStyle = useEditorStore((s) => s.markerStyle);
   const selectedNodeId = useEditorStore((s) => s.selectedNodeId);
   const selectNode = useEditorStore((s) => s.selectNode);
+  const setActiveTool = useEditorStore((s) => s.setActiveTool);
+  const addFreehandStroke = useEditorStore((s) => s.addFreehandStroke);
   const absolutizeLayout = useEditorStore((s) => s.absolutizeLayout);
   const updateFrame = useEditorStore((s) => s.updateFrame);
   const fitNodeFrameToContent = useEditorStore((s) => s.fitNodeFrameToContent);
@@ -108,6 +112,7 @@ export function CanvasWorkspace({
   const [zoom, setZoom] = useState(2);
   const [stageViewport, setStageViewport] = useState({ width: 0, height: 0 });
   const [dragPreview, setDragPreview] = useState<DragPreview | null>(null);
+  const [markerDraftPoints, setMarkerDraftPoints] = useState<PixelPoint[]>([]);
   const screen = project.screens.find((s) => s.id === activeScreenId);
   const layout = useMemo(() => {
     if (!screen) return null;
@@ -171,6 +176,8 @@ export function CanvasWorkspace({
     screen.style?.drawBackground === false
       ? "#000000"
       : resolveColor(screen.style?.background, project.palette, "#121212");
+  const markerDraftColor = resolveColor(markerStyle.color, project.palette, "#FFFFFF");
+  const markerDraftWidth = Math.max(1, Math.round(markerStyle.width));
   const scaledW = Math.round(w * renderZoom);
   const scaledH = Math.round(h * renderZoom);
   const showPixelGrid = renderZoom >= PIXEL_GRID_VISIBLE_ZOOM;
@@ -734,6 +741,65 @@ export function CanvasWorkspace({
       });
     };
 
+  const pointFromCanvasEvent = useCallback(
+    (event: MouseEvent | React.MouseEvent<HTMLDivElement>): PixelPoint | null => {
+      const frame = deviceFrameRef.current;
+      if (!frame) return null;
+      const bounds = frame.getBoundingClientRect();
+      const x = Math.floor((event.clientX - bounds.left) / renderZoom);
+      const y = Math.floor((event.clientY - bounds.top) / renderZoom);
+      if (x < 0 || y < 0 || x >= w || y >= h) return null;
+      return { x, y };
+    },
+    [h, renderZoom, w],
+  );
+
+  const startMarkerDrawing = useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      if (activeTool !== "marker" || event.button !== 0) return false;
+      const startPoint = pointFromCanvasEvent(event);
+      if (!startPoint) return false;
+
+      event.preventDefault();
+      event.stopPropagation();
+      selectNode(null);
+
+      const points: PixelPoint[] = [startPoint];
+      const seen = new Set([`${startPoint.x}:${startPoint.y}`]);
+      let lastPoint = startPoint;
+      setMarkerDraftPoints(points);
+
+      const addPoint = (point: PixelPoint | null) => {
+        if (!point) return;
+        for (const nextPoint of rasterPixelSegment(lastPoint, point)) {
+          const key = `${nextPoint.x}:${nextPoint.y}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          points.push(nextPoint);
+        }
+        lastPoint = point;
+        setMarkerDraftPoints([...points]);
+      };
+
+      const handleMouseMove = (moveEvent: MouseEvent) => {
+        addPoint(pointFromCanvasEvent(moveEvent));
+      };
+
+      const handleMouseUp = () => {
+        window.removeEventListener("mousemove", handleMouseMove);
+        window.removeEventListener("mouseup", handleMouseUp);
+        setMarkerDraftPoints([]);
+        addFreehandStroke(activeScreenId, points);
+        setActiveTool("select");
+      };
+
+      window.addEventListener("mousemove", handleMouseMove);
+      window.addEventListener("mouseup", handleMouseUp);
+      return true;
+    },
+    [activeScreenId, activeTool, addFreehandStroke, pointFromCanvasEvent, selectNode, setActiveTool],
+  );
+
   const renderCtx = useMemo(
     () => ({
       palette: project.palette,
@@ -742,7 +808,11 @@ export function CanvasWorkspace({
       dragPreview,
       draftFrame,
       onSelect: selectNode,
-      onNodeMouseDown: handleNodeMouseDown,
+      onNodeMouseDown: activeTool === "marker"
+        ? (_nodeId: string, event: React.MouseEvent<HTMLDivElement>) => {
+            startMarkerDrawing(event);
+          }
+        : handleNodeMouseDown,
       onLabelEditStart: beginLabelTextEdit,
       editingLabelId,
       onLabelTextCommit: commitLabelText,
@@ -766,6 +836,8 @@ export function CanvasWorkspace({
       dragPreview,
       draftFrame,
       selectNode,
+      activeTool,
+      startMarkerDrawing,
       handleNodeMouseDown,
       beginLabelTextEdit,
       editingLabelId,
@@ -852,9 +924,11 @@ export function CanvasWorkspace({
                 background: bg,
                 left: RULER_SIZE,
                 top: RULER_SIZE,
+                cursor: activeTool === "marker" ? "crosshair" : undefined,
               }}
               onMouseDown={(e) => {
                 e.stopPropagation();
+                if (startMarkerDrawing(e)) return;
                 if (e.button === 0) selectNode(null);
               }}
             >
@@ -884,6 +958,21 @@ export function CanvasWorkspace({
                   layoutNode={layout}
                   ctx={renderCtx}
                 />
+                {markerDraftPoints.map((point, index) => (
+                  <div
+                    key={`${point.x}:${point.y}:${index}`}
+                    aria-hidden
+                    style={{
+                      position: "absolute",
+                      left: point.x,
+                      top: point.y,
+                      width: markerDraftWidth,
+                      height: markerDraftWidth,
+                      background: markerDraftColor,
+                      pointerEvents: "none",
+                    }}
+                  />
+                ))}
               </div>
               {showGuides && displayedSelectedRect ? (
                 <div className={styles.selectionLayer}>
@@ -912,4 +1001,31 @@ export function CanvasWorkspace({
       <CanvasToolbar />
     </div>
   );
+}
+
+function rasterPixelSegment(start: PixelPoint, end: PixelPoint): PixelPoint[] {
+  const points: PixelPoint[] = [];
+  let currentX = start.x;
+  let currentY = start.y;
+  const dx = Math.abs(end.x - start.x);
+  const sx = start.x < end.x ? 1 : -1;
+  const dy = -Math.abs(end.y - start.y);
+  const sy = start.y < end.y ? 1 : -1;
+  let error = dx + dy;
+
+  while (true) {
+    points.push({ x: currentX, y: currentY });
+    if (currentX === end.x && currentY === end.y) break;
+    const doubledError = error * 2;
+    if (doubledError >= dy) {
+      error += dy;
+      currentX += sx;
+    }
+    if (doubledError <= dx) {
+      error += dx;
+      currentY += sy;
+    }
+  }
+
+  return points;
 }

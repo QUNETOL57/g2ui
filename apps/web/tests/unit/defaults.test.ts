@@ -58,10 +58,13 @@ describe("defaultProps", () => {
     expect(icon.iconId).toBe("earth");
   });
 
-  it("provides image, line, rect defaults", () => {
+  it("provides image, line, rect and drawing defaults", () => {
     expect(defaultProps("image")).toEqual({ imageId: "placeholder" });
     expect(defaultProps("line")).toEqual({ x1: 0, y1: 0, x2: 59, y2: 0, strokeWidth: 1 });
     expect(defaultProps("rect")).toEqual({ radius: 0 });
+    expect(defaultProps("circle")).toEqual({ radius: 0 });
+    expect(defaultProps("triangle")).toEqual({ direction: "up" });
+    expect(defaultProps("freehand")).toEqual({ points: [], strokeWidth: 1 });
   });
 });
 

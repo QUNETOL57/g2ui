@@ -13,12 +13,15 @@ import {
   ArrowUpIcon,
   ButtonIcon,
   ChevronIcon,
+  CircleIcon,
   FrameIcon,
   IconGlyphIcon,
   LineIcon,
+  MarkerIcon,
   RectIcon,
   SelectToolIcon,
   TextIcon,
+  TriangleIcon,
 } from "./toolbarIcons";
 
 interface ToolItem {
@@ -48,6 +51,8 @@ const TOOL_GROUPS: ToolGroup[] = [
     icon: <RectIcon />,
     items: [
       { type: "rect", label: "Rectangle", icon: <RectIcon /> },
+      { type: "circle", label: "Circle", icon: <CircleIcon /> },
+      { type: "triangle", label: "Triangle", icon: <TriangleIcon /> },
       { type: "line", label: "Line", icon: <LineIcon /> },
     ],
   },
@@ -70,9 +75,11 @@ const TOOL_GROUPS: ToolGroup[] = [
 
 export function CanvasToolbar() {
   const activeScreenId = useEditorStore((s) => s.activeScreenId);
+  const activeTool = useEditorStore((s) => s.activeTool);
   const selectedNodeId = useEditorStore((s) => s.selectedNodeId);
   const selectedNodeIds = useEditorStore((s) => s.selectedNodeIds);
   const selectNode = useEditorStore((s) => s.selectNode);
+  const setActiveTool = useEditorStore((s) => s.setActiveTool);
   const addWidget = useEditorStore((s) => s.addWidget);
   const moveNode = useEditorStore((s) => s.moveNode);
   const deleteNodes = useEditorStore((s) => s.deleteNodes);
@@ -106,6 +113,7 @@ export function CanvasToolbar() {
   };
 
   const handleAdd = (type: WidgetType) => {
+    setActiveTool("select");
     addWidget(resolveParentForAdd(), type);
     setOpenGroupId(null);
   };
@@ -118,15 +126,30 @@ export function CanvasToolbar() {
     <div className={styles.toolbar} ref={rootRef} role="toolbar" aria-label="Canvas tools">
       <button
         type="button"
-        className={cn(styles.tool, styles.toolActive)}
+        className={cn(styles.tool, activeTool === "select" && styles.toolActive)}
         title="Select"
         aria-label="Select"
         onClick={() => {
+          setActiveTool("select");
           selectNode(null);
           setOpenGroupId(null);
         }}
       >
         <SelectToolIcon />
+      </button>
+
+      <button
+        type="button"
+        className={cn(styles.tool, activeTool === "marker" && styles.toolActive)}
+        title="Marker"
+        aria-label="Marker"
+        onClick={() => {
+          setActiveTool(activeTool === "marker" ? "select" : "marker");
+          selectNode(null);
+          setOpenGroupId(null);
+        }}
+      >
+        <MarkerIcon />
       </button>
 
       <span className={styles.divider} aria-hidden />

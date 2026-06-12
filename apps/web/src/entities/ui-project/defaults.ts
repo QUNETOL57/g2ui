@@ -1,5 +1,7 @@
 import type {
   ButtonProps,
+  CircleProps,
+  FreehandProps,
   IconProps,
   ImageProps,
   LabelProps,
@@ -8,6 +10,7 @@ import type {
   PanelProps,
   RectProps,
   ScreenProps,
+  TriangleProps,
   UiProject,
   WidgetNode,
   WidgetType,
@@ -47,6 +50,12 @@ export function defaultProps(type: WidgetType): Record<string, unknown> {
       return { x1: 0, y1: 0, x2: 59, y2: 0, strokeWidth: 1 } satisfies LineProps;
     case "rect":
       return { radius: 0 } satisfies RectProps;
+    case "circle":
+      return { radius: 0 } satisfies CircleProps;
+    case "triangle":
+      return { direction: "up" } satisfies TriangleProps;
+    case "freehand":
+      return { points: [], strokeWidth: 1 } satisfies FreehandProps;
   }
 }
 
@@ -95,7 +104,9 @@ export function makeWidget(id: string, type: WidgetType): WidgetNode {
     style: {
       textColor: { kind: "hex", value: "#FFFFFF" },
       ...(type === "label" ? { drawBackground: false } : {}),
-      ...(type === "line" ? { borderColor: { kind: "hex", value: "#FFFFFF" }, borderWidth: 1 } : {}),
+      ...(type === "line" || type === "freehand"
+        ? { borderColor: { kind: "hex", value: "#FFFFFF" }, borderWidth: 1 }
+        : {}),
     },
     props: defaultProps(type),
     children: type === "panel" || type === "screen" ? [] : undefined,

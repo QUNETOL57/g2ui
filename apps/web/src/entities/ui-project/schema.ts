@@ -17,6 +17,9 @@ export const IR_WIDGET_TYPES = [
   "image",
   "line",
   "rect",
+  "circle",
+  "triangle",
+  "freehand",
 ] as const;
 
 export const IR_LAYOUT_MODES = ["absolute", "row", "column"] as const;

@@ -37,7 +37,10 @@ export function StyleGroup({
     node.type !== "panel" &&
     node.type !== "label" &&
     node.type !== "button" &&
-    node.type !== "rect";
+    node.type !== "rect" &&
+    node.type !== "circle" &&
+    node.type !== "triangle" &&
+    node.type !== "freehand";
 
   if (node.type === "icon") {
     return (
@@ -55,7 +58,7 @@ export function StyleGroup({
     );
   }
 
-  if (node.type === "line") {
+  if (node.type === "line" || node.type === "freehand") {
     return (
       <div className={cn(styles.group, styles.appearanceGroup)}>
         <h4>Appearance</h4>

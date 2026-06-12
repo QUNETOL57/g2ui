@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { FrameGroup } from "@widgets/properties-panel/groups/FrameGroup";
 
-import { makeButton, makeFixtureProject, makeIcon, makeLabel, withChildren } from "../fixtures/projects";
+import { makeButton, makeFixtureProject, makeIcon, makeLabel, makeRect, withChildren } from "../fixtures/projects";
 
 describe("FrameGroup", () => {
   const project = withChildren(makeFixtureProject(), [makeLabel("lbl_1")]);
@@ -46,6 +46,28 @@ describe("FrameGroup", () => {
     await userEvent.type(inputs[0], "5");
     await userEvent.tab();
     expect(handler).toHaveBeenCalledWith("b_1", { x: 5 });
+  });
+
+  it("shows rotation for shapes and commits a normalized value", async () => {
+    const node = { ...makeRect("rc_1"), rotation: 0 };
+    const updateNode = vi.fn();
+    render(
+      <FrameGroup
+        node={node}
+        project={project}
+        draftFrame={null}
+        updateFrame={() => undefined}
+        updateNode={updateNode}
+      />,
+    );
+    expect(screen.getByText("R")).toBeInTheDocument();
+
+    const inputs = screen.getAllByRole("spinbutton");
+    await userEvent.clear(inputs[4]);
+    await userEvent.type(inputs[4], "405");
+    await userEvent.tab();
+
+    expect(updateNode).toHaveBeenCalledWith("rc_1", { rotation: 45 });
   });
 
   it("clamps W to icon definition size for icon nodes", async () => {

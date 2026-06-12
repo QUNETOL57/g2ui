@@ -157,6 +157,24 @@ describe("defaultFrameFor", () => {
       width: 40,
       height: 24,
     });
+    expect(defaultFrameFor("circle", "screen_main", project)).toEqual({
+      x: 8,
+      y: 8,
+      width: 32,
+      height: 32,
+    });
+    expect(defaultFrameFor("triangle", "screen_main", project)).toEqual({
+      x: 8,
+      y: 8,
+      width: 36,
+      height: 32,
+    });
+    expect(defaultFrameFor("freehand", "screen_main", project)).toEqual({
+      x: 8,
+      y: 8,
+      width: 1,
+      height: 1,
+    });
     expect(defaultFrameFor("line", "screen_main", project)).toEqual({
       x: 8,
       y: 8,

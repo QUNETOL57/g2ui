@@ -2,12 +2,15 @@ import { memo, useCallback, useEffect, useRef, useState } from "react";
 
 import type {
   ButtonProps,
+  CircleProps,
   Frame,
+  FreehandProps,
   IconProps,
   LabelProps,
   LineProps,
   PaletteEntry,
   RectProps,
+  TriangleProps,
   WidgetNode,
 } from "@entities/ui-project";
 import type { LayoutNode } from "@entities/ui-project/lib/layoutEngine";
@@ -62,11 +65,14 @@ function PreviewNodeImpl({
     ? Math.max(displayRect.height, lineStrokeWidth)
     : displayRect.height;
   const isLayerNode = node.type !== "screen";
+  const rotation = node.type !== "screen" ? node.rotation ?? 0 : 0;
   const style: React.CSSProperties = {
     left: rect.x + nextDragOffset.x,
     top: rect.y + nextDragOffset.y,
     width: displayRect.width,
     height: visualHeight,
+    transform: rotation ? `rotate(${rotation}deg)` : undefined,
+    transformOrigin: rotation ? "center center" : undefined,
     cursor: node.id === ctx.movableId ? "move" : undefined,
     zIndex: isLayerNode ? stackIndex : undefined,
   };
@@ -161,6 +167,12 @@ function NodeVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; rec
       return <PanelVisual node={node} ctx={ctx} rect={rect} />;
     case "rect":
       return <PanelVisual node={node} ctx={ctx} rect={rect} />;
+    case "circle":
+      return <CircleVisual node={node} ctx={ctx} rect={rect} />;
+    case "triangle":
+      return <TriangleVisual node={node} ctx={ctx} rect={rect} />;
+    case "freehand":
+      return <FreehandVisual node={node} ctx={ctx} />;
     case "label":
       return <LabelVisual node={node} ctx={ctx} rect={rect} />;
     case "button":
@@ -259,6 +271,315 @@ function PanelVisual({
         border: `${borderWidth}px solid ${borderColor}`,
       }}
     />
+  );
+}
+
+function CircleVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; rect: Frame }) {
+  const props = (node.props ?? {}) as Partial<CircleProps>;
+  const fill = node.style?.drawBackground !== false
+    ? resolveColor(node.style?.background, ctx.palette, "#FFFFFF")
+    : "transparent";
+  const strokeWidth = node.style?.drawBorder ? Math.max(0, node.style.borderWidth ?? 1) : 0;
+  const stroke = strokeWidth > 0
+    ? resolveColor(node.style?.borderColor, ctx.palette, "#FFFFFF")
+    : "transparent";
+  const w = Math.max(1, Math.round(rect.width));
+  const h = Math.max(1, Math.round(rect.height));
+  const explicitRadius = props.radius && props.radius > 0 ? props.radius : null;
+
+  return (
+    <PixelCircle
+      width={w}
+      height={h}
+      radius={explicitRadius}
+      fill={fill}
+      borderColor={stroke}
+      borderWidth={strokeWidth}
+    />
+  );
+}
+
+function TriangleVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; rect: Frame }) {
+  const props = (node.props ?? {}) as Partial<TriangleProps>;
+  const fill = node.style?.drawBackground !== false
+    ? resolveColor(node.style?.background, ctx.palette, "#FFFFFF")
+    : "transparent";
+  const strokeWidth = node.style?.drawBorder ? Math.max(0, node.style.borderWidth ?? 1) : 0;
+  const stroke = strokeWidth > 0
+    ? resolveColor(node.style?.borderColor, ctx.palette, "#FFFFFF")
+    : "transparent";
+  const w = Math.max(1, Math.round(rect.width));
+  const h = Math.max(1, Math.round(rect.height));
+
+  return (
+    <PixelTriangle
+      width={w}
+      height={h}
+      direction={props.direction ?? "up"}
+      fill={fill}
+      borderColor={stroke}
+      borderWidth={strokeWidth}
+    />
+  );
+}
+
+function PixelCircle({
+  width,
+  height,
+  radius,
+  fill,
+  borderColor,
+  borderWidth,
+}: {
+  width: number;
+  height: number;
+  radius: number | null;
+  fill: string;
+  borderColor: string;
+  borderWidth: number;
+}) {
+  const hasFill = fill !== "transparent";
+  const hasBorder = borderWidth > 0 && borderColor !== "transparent";
+  const outerColor = hasBorder ? borderColor : fill;
+  const innerW = Math.max(0, width - borderWidth * 2);
+  const innerH = Math.max(0, height - borderWidth * 2);
+  const innerRadius = radius ? Math.max(0, radius - borderWidth) : null;
+
+  return (
+    <svg
+      data-testid="pixel-circle"
+      aria-hidden
+      viewBox={`0 0 ${width} ${height}`}
+      preserveAspectRatio="none"
+      shapeRendering="crispEdges"
+      style={{ display: "block", width: "100%", height: "100%" }}
+    >
+      {(hasFill || hasBorder) && outerColor !== "transparent"
+        ? Array.from({ length: height }, (_, y) => {
+            const span = ellipseScanline(y, width, height, radius);
+            if (!span) return null;
+            if (!hasBorder || hasFill) {
+              return (
+                <rect
+                  key={`outer-${y}`}
+                  x={span.x}
+                  y={y}
+                  width={span.width}
+                  height={1}
+                  fill={outerColor}
+                />
+              );
+            }
+
+            const innerSpan =
+              y >= borderWidth && y < height - borderWidth
+                ? ellipseScanline(y - borderWidth, innerW, innerH, innerRadius)
+                : null;
+            if (!innerSpan) {
+              return (
+                <rect
+                  key={`border-${y}`}
+                  x={span.x}
+                  y={y}
+                  width={span.width}
+                  height={1}
+                  fill={borderColor}
+                />
+              );
+            }
+            const innerX = innerSpan.x + borderWidth;
+            const innerRight = innerX + innerSpan.width;
+            const outerRight = span.x + span.width;
+            return (
+              <g key={`border-${y}`}>
+                {innerX > span.x ? (
+                  <rect x={span.x} y={y} width={innerX - span.x} height={1} fill={borderColor} />
+                ) : null}
+                {innerRight < outerRight ? (
+                  <rect x={innerRight} y={y} width={outerRight - innerRight} height={1} fill={borderColor} />
+                ) : null}
+              </g>
+            );
+          })
+        : null}
+      {hasBorder && hasFill
+        ? Array.from({ length: innerH }, (_, y) => {
+            const span = ellipseScanline(y, innerW, innerH, innerRadius);
+            if (!span) return null;
+            return (
+              <rect
+                key={`inner-${y}`}
+                x={span.x + borderWidth}
+                y={y + borderWidth}
+                width={span.width}
+                height={1}
+                fill={fill}
+              />
+            );
+          })
+        : null}
+    </svg>
+  );
+}
+
+function PixelTriangle({
+  width,
+  height,
+  direction,
+  fill,
+  borderColor,
+  borderWidth,
+}: {
+  width: number;
+  height: number;
+  direction: NonNullable<TriangleProps["direction"]>;
+  fill: string;
+  borderColor: string;
+  borderWidth: number;
+}) {
+  const hasFill = fill !== "transparent";
+  const hasBorder = borderWidth > 0 && borderColor !== "transparent";
+
+  return (
+    <svg
+      data-testid="pixel-triangle"
+      aria-hidden
+      viewBox={`0 0 ${width} ${height}`}
+      preserveAspectRatio="none"
+      shapeRendering="crispEdges"
+      style={{ display: "block", width: "100%", height: "100%", imageRendering: "pixelated" }}
+    >
+      {Array.from({ length: height }, (_, y) => {
+        const outer = triangleScanline(y, width, height, direction);
+        if (!outer) return null;
+
+        const isCapRow = hasBorder && (y < borderWidth || y >= height - borderWidth);
+        const innerWidth = outer.width - borderWidth * 2;
+
+        if (hasBorder && !isCapRow && innerWidth > 0) {
+          const innerX = outer.x + borderWidth;
+          const outerRight = outer.x + outer.width;
+          const innerRight = innerX + innerWidth;
+          return (
+            <g key={`row-${y}`}>
+              <rect
+                x={outer.x}
+                y={y}
+                width={borderWidth}
+                height={1}
+                fill={borderColor}
+              />
+              <rect
+                x={innerRight}
+                y={y}
+                width={outerRight - innerRight}
+                height={1}
+                fill={borderColor}
+              />
+              {hasFill ? (
+                <rect x={innerX} y={y} width={innerWidth} height={1} fill={fill} />
+              ) : null}
+            </g>
+          );
+        }
+
+        if (hasBorder && (isCapRow || innerWidth <= 0)) {
+          return (
+            <rect
+              key={`border-${y}`}
+              x={outer.x}
+              y={y}
+              width={outer.width}
+              height={1}
+              fill={borderColor}
+            />
+          );
+        }
+
+        if (hasFill) {
+          return (
+            <rect
+              key={`fill-${y}`}
+              x={outer.x}
+              y={y}
+              width={outer.width}
+              height={1}
+              fill={fill}
+            />
+          );
+        }
+
+        return null;
+      })}
+    </svg>
+  );
+}
+
+function ellipseScanline(
+  y: number,
+  width: number,
+  height: number,
+  radius: number | null,
+): { x: number; width: number } | null {
+  if (width <= 0 || height <= 0) return null;
+  const rx = Math.max(0.5, radius ?? width / 2);
+  const ry = Math.max(0.5, radius ?? height / 2);
+  const cx = (width - 1) / 2;
+  const cy = (height - 1) / 2;
+  const normalizedY = (y - cy) / ry;
+  const remaining = 1 - normalizedY * normalizedY;
+  if (remaining < 0) return null;
+  const halfWidth = rx * Math.sqrt(remaining);
+  const left = Math.max(0, Math.ceil(cx - halfWidth));
+  const right = Math.min(width - 1, Math.floor(cx + halfWidth));
+  return right >= left ? { x: left, width: right - left + 1 } : null;
+}
+
+function triangleScanline(
+  y: number,
+  width: number,
+  height: number,
+  direction: NonNullable<TriangleProps["direction"]>,
+): { x: number; width: number } | null {
+  if (width <= 0 || height <= 0) return null;
+  if (direction === "up" || direction === "down") {
+    const sourceY = direction === "up" ? y : height - 1 - y;
+    const progress = height <= 1 ? 1 : sourceY / (height - 1);
+    const rowWidth = Math.max(1, Math.round(1 + progress * (width - 1)));
+    const x = Math.max(0, Math.floor((width - rowWidth) / 2));
+    return { x, width: Math.min(width - x, rowWidth) };
+  }
+
+  const progress = width <= 1
+    ? 1
+    : direction === "right"
+      ? y / Math.max(1, height - 1)
+      : 1 - y / Math.max(1, height - 1);
+  const rowWidth = Math.max(1, Math.round(width * (1 - Math.abs(progress - 0.5) * 2)));
+  const x = direction === "right" ? 0 : width - rowWidth;
+  return { x, width: rowWidth };
+}
+
+function FreehandVisual({ node, ctx }: { node: WidgetNode; ctx: RenderCtx }) {
+  const props = (node.props ?? {}) as FreehandProps;
+  const strokeWidth = Math.max(1, node.style?.borderWidth ?? props.strokeWidth ?? 1);
+  const color = resolveColor(node.style?.borderColor ?? node.style?.textColor, ctx.palette, "#FFFFFF");
+  return (
+    <div data-testid="freehand-visual" style={{ position: "relative", width: "100%", height: "100%" }}>
+      {(props.points ?? []).map((point, index) => (
+        <div
+          key={`${point.x}:${point.y}:${index}`}
+          style={{
+            position: "absolute",
+            left: point.x,
+            top: point.y,
+            width: strokeWidth,
+            height: strokeWidth,
+            background: color,
+          }}
+        />
+      ))}
+    </div>
   );
 }
 

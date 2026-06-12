@@ -35,6 +35,27 @@ describe("PropertiesPanel: empty state", () => {
     expect(screen.getByText("Undo")).toBeInTheDocument();
     expect(screen.getByText("Zoom canvas")).toBeInTheDocument();
   });
+
+  it("shows marker settings immediately when marker tool is active", async () => {
+    get().setActiveTool("marker");
+    const { container } = selectAndRender(null);
+
+    expect(screen.getByText(/Properties · marker/)).toBeInTheDocument();
+    expect(screen.getByText("Marker")).toBeInTheDocument();
+    expect(screen.getByText("Stroke")).toBeInTheDocument();
+    expect(container.querySelector('input[type="color"]')).toBeTruthy();
+
+    const widthInput = screen.getByRole("spinbutton");
+    await userEvent.clear(widthInput);
+    await userEvent.type(widthInput, "4");
+    await userEvent.tab();
+    expect(get().markerStyle.width).toBe(4);
+
+    const colorInput = container.querySelector('input[type="color"]') as HTMLInputElement;
+    fireEvent.change(colorInput, { target: { value: "#ff0000" } });
+    fireEvent.blur(colorInput);
+    expect(get().markerStyle.color).toEqual({ kind: "hex", value: "#FF0000" });
+  });
 });
 
 describe("PropertiesPanel: per-type groups", () => {

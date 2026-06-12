@@ -10,12 +10,15 @@ import { FrameGroup } from "./groups/FrameGroup";
 import { IconGroup } from "./groups/IconGroup";
 import { LabelGroup } from "./groups/LabelGroup";
 import { LayoutGroup } from "./groups/LayoutGroup";
+import { MarkerGroup } from "./groups/MarkerGroup";
 import { SelectedGroup } from "./groups/SelectedGroup";
 import { StyleGroup } from "./groups/StyleGroup";
 import { EditorShortcutsList } from "./ui/EditorShortcutsList";
 
 export function PropertiesPanel() {
   const project = useEditorStore((s) => s.project);
+  const activeTool = useEditorStore((s) => s.activeTool);
+  const markerStyle = useEditorStore((s) => s.markerStyle);
   const selectedNodeId = useEditorStore((s) => s.selectedNodeId);
   const draftFrame = useEditorStore((s) => s.draftFrame);
   const updateNode = useEditorStore((s) => s.updateNode);
@@ -23,6 +26,7 @@ export function PropertiesPanel() {
   const updateProps = useEditorStore((s) => s.updateProps);
   const updateLayout = useEditorStore((s) => s.updateLayout);
   const updateStyle = useEditorStore((s) => s.updateStyle);
+  const updateMarkerStyle = useEditorStore((s) => s.updateMarkerStyle);
 
   const node = useMemo(
     () => (selectedNodeId ? findNode(project, selectedNodeId) : null),
@@ -30,6 +34,19 @@ export function PropertiesPanel() {
   );
 
   if (!selectedNodeId) {
+    if (activeTool === "marker") {
+      return (
+        <>
+          <SectionTitle>Properties · marker</SectionTitle>
+          <MarkerGroup
+            markerStyle={markerStyle}
+            palette={project.palette}
+            onChange={updateMarkerStyle}
+          />
+        </>
+      );
+    }
+
     return (
       <>
         <SectionTitle>Properties</SectionTitle>
@@ -53,6 +70,7 @@ export function PropertiesPanel() {
           project={project}
           draftFrame={draftFrame?.nodeId === node.id ? draftFrame.frame : null}
           updateFrame={updateFrame}
+          updateNode={updateNode}
         />
       ) : null}
 

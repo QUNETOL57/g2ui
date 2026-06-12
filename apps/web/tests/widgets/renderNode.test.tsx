@@ -8,12 +8,15 @@ import { PreviewNode } from "@widgets/canvas-workspace/renderNode";
 
 import {
   makeButton,
+  makeCircle,
   makeFixtureProject,
+  makeFreehand,
   makeIcon,
   makeLabel,
   makeLine,
   makePanel,
   makeRect,
+  makeTriangle,
   withChildren,
 } from "../fixtures/projects";
 
@@ -155,6 +158,86 @@ describe("PreviewNode: per-type rendering", () => {
     const { container } = renderProject([rect]);
     const pixelBox = container.querySelector('[data-widget-type="rect"] [data-testid="pixel-rounded-box"]');
     expect(pixelBox).toBeTruthy();
+  });
+
+  it("renders circle and triangle shapes", () => {
+    const { container } = renderProject([makeCircle("cir_1"), makeTriangle("tri_1")]);
+    const circle = container.querySelector('[data-widget-type="circle"] [data-testid="pixel-circle"]');
+    const triangle = container.querySelector('[data-widget-type="triangle"] [data-testid="pixel-triangle"]');
+    expect(circle).toBeTruthy();
+    expect(triangle).toBeTruthy();
+    expect(circle?.querySelector("ellipse")).toBeNull();
+    expect(triangle?.querySelector("polygon")).toBeNull();
+    expect(circle?.querySelectorAll("rect").length).toBeGreaterThan(0);
+    expect(triangle?.querySelectorAll("rect").length).toBeGreaterThan(0);
+  });
+
+  it("renders triangle border without filling the interior when fill is disabled", () => {
+    const triangle = makeTriangle("tri_1");
+    triangle.style = {
+      ...(triangle.style ?? {}),
+      drawBackground: false,
+      drawBorder: true,
+      borderColor: { kind: "hex", value: "#FFFFFF" },
+      borderWidth: 1,
+    };
+    const { container } = renderProject([triangle]);
+    const middleRow = [
+      ...container.querySelectorAll('[data-widget-type="triangle"] [data-testid="pixel-triangle"] rect[y="20"]'),
+    ] as SVGRectElement[];
+    const bottomRow = [
+      ...container.querySelectorAll('[data-widget-type="triangle"] [data-testid="pixel-triangle"] rect[y="31"]'),
+    ] as SVGRectElement[];
+
+    const middleWidth = middleRow.reduce((sum, rect) => sum + Number(rect.getAttribute("width")), 0);
+    expect(middleWidth).toBeLessThan(10);
+    expect(bottomRow).toHaveLength(1);
+    expect(bottomRow[0]).toHaveAttribute("width", "36");
+
+    const leftEdge = [...container.querySelectorAll('[data-widget-type="triangle"] [data-testid="pixel-triangle"] rect')]
+      .map((rect) => Number(rect.getAttribute("y")))
+      .filter((y, index, rows) => rows.indexOf(y) === index)
+      .sort((a, b) => a - b)
+      .map((y) => {
+        const rowRects = [
+          ...container.querySelectorAll(`[data-widget-type="triangle"] [data-testid="pixel-triangle"] rect[y="${y}"]`),
+        ] as SVGRectElement[];
+        return Math.min(...rowRects.map((rect) => Number(rect.getAttribute("x"))));
+      });
+    for (let index = 1; index < leftEdge.length; index += 1) {
+      expect(leftEdge[index] - leftEdge[index - 1]).toBeLessThanOrEqual(1);
+      expect(leftEdge[index - 1] - leftEdge[index]).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it("scales triangle border evenly when width is increased", () => {
+    const triangle = makeTriangle("tri_1");
+    triangle.style = {
+      ...(triangle.style ?? {}),
+      drawBackground: false,
+      drawBorder: true,
+      borderColor: { kind: "hex", value: "#FFFFFF" },
+      borderWidth: 4,
+    };
+    const { container } = renderProject([triangle]);
+    const middleRow = [
+      ...container.querySelectorAll('[data-widget-type="triangle"] [data-testid="pixel-triangle"] rect[y="16"]'),
+    ] as SVGRectElement[];
+    expect(middleRow).toHaveLength(2);
+    expect(middleRow.every((rect) => Number(rect.getAttribute("width")) === 4)).toBe(true);
+  });
+
+  it("renders freehand pixel strokes", () => {
+    const { container } = renderProject([makeFreehand("fre_1")]);
+    const freehand = container.querySelector('[data-widget-type="freehand"] [data-testid="freehand-visual"]');
+    expect(freehand?.querySelectorAll("div")).toHaveLength(2);
+  });
+
+  it("applies rotation to shape nodes", () => {
+    const rect = { ...makeRect("rc_1"), rotation: 45 };
+    const { container } = renderProject([rect]);
+    const node = container.querySelector('[data-widget-type="rect"]') as HTMLElement;
+    expect(node.style.transform).toBe("rotate(45deg)");
   });
 
   it("renders panel container", () => {

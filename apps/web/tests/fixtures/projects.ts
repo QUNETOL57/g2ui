@@ -121,6 +121,45 @@ export function makeRect(id: string): WidgetNode {
   };
 }
 
+export function makeCircle(id: string): WidgetNode {
+  return {
+    id,
+    type: "circle",
+    visible: true,
+    enabled: true,
+    layout: { mode: "absolute" },
+    style: { textColor: { kind: "hex", value: "#FFFFFF" } },
+    props: { radius: 0 },
+    frame: { x: 4, y: 4, width: 32, height: 32 },
+  };
+}
+
+export function makeTriangle(id: string): WidgetNode {
+  return {
+    id,
+    type: "triangle",
+    visible: true,
+    enabled: true,
+    layout: { mode: "absolute" },
+    style: { textColor: { kind: "hex", value: "#FFFFFF" } },
+    props: { direction: "up" },
+    frame: { x: 4, y: 4, width: 36, height: 32 },
+  };
+}
+
+export function makeFreehand(id: string): WidgetNode {
+  return {
+    id,
+    type: "freehand",
+    visible: true,
+    enabled: true,
+    layout: { mode: "absolute" },
+    style: { borderColor: { kind: "hex", value: "#FFFFFF" }, borderWidth: 1 },
+    props: { points: [{ x: 0, y: 0 }, { x: 1, y: 1 }], strokeWidth: 1 },
+    frame: { x: 4, y: 4, width: 2, height: 2 },
+  };
+}
+
 export function withChildren(project: UiProject, children: WidgetNode[]): UiProject {
   const next = JSON.parse(JSON.stringify(project)) as UiProject;
   next.screens[0].children = children;

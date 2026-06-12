@@ -67,6 +67,7 @@ export interface WidgetNode {
   name?: string;
   visible?: boolean;
   enabled?: boolean;
+  rotation?: number;
   frame?: Frame;
   layout?: LayoutSpec;
   style?: StyleRef;
@@ -128,6 +129,24 @@ export interface RectProps {
   radius?: number;
 }
 
+export interface CircleProps {
+  radius?: number;
+}
+
+export interface TriangleProps {
+  direction?: "up" | "right" | "down" | "left";
+}
+
+export interface PixelPoint {
+  x: number;
+  y: number;
+}
+
+export interface FreehandProps {
+  points: PixelPoint[];
+  strokeWidth?: number;
+}
+
 export interface PanelProps {
   scrollable?: boolean;
 }
@@ -143,6 +162,9 @@ export type WidgetProps =
   | ImageProps
   | LineProps
   | RectProps
+  | CircleProps
+  | TriangleProps
+  | FreehandProps
   | PanelProps
   | ScreenProps
   | Record<string, never>;

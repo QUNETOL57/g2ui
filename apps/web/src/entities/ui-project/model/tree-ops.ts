@@ -115,6 +115,12 @@ export function defaultFrameFor(type: WidgetType, parentId: string, p: UiProject
       return { x: 8, y: 8, width: 60, height: 1 };
     case "rect":
       return { x: 8, y: 8, width: 40, height: 24 };
+    case "circle":
+      return { x: 8, y: 8, width: 32, height: 32 };
+    case "triangle":
+      return { x: 8, y: 8, width: 36, height: 32 };
+    case "freehand":
+      return { x: 8, y: 8, width: 1, height: 1 };
     case "image":
       return { x: 8, y: 8, width: 32, height: 32 };
     default:

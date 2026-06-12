@@ -1,4 +1,4 @@
-import type { Frame, UiProject, WidgetNode } from "@entities/ui-project";
+import type { Frame, ScreenNode, UiProject, WidgetNode } from "@entities/ui-project";
 
 export type ParentAlignHorizontal = "left" | "center" | "right";
 export type ParentAlignVertical = "top" | "center" | "bottom";
@@ -20,11 +20,12 @@ export function parentFrameFor(
 ): Frame {
   if (parent.frame) return parent.frame;
   if (parent.type === "screen") {
+    const screen = parent as ScreenNode;
     return {
       x: 0,
       y: 0,
-      width: parent.width ?? project?.display.width ?? 0,
-      height: parent.height ?? project?.display.height ?? 0,
+      width: screen.width ?? project?.display.width ?? 0,
+      height: screen.height ?? project?.display.height ?? 0,
     };
   }
   return { x: 0, y: 0, width: 0, height: 0 };

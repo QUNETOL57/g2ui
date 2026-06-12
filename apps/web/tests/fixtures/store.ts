@@ -8,6 +8,8 @@ export function resetEditorStore(project?: UiProject) {
   useEditorStore.setState({
     project: next,
     activeScreenId: next.screens[0]?.id ?? next.initialScreenId,
+    activeTool: "select",
+    markerStyle: { color: { kind: "hex", value: "#FFFFFF" }, width: 1 },
     selectedNodeId: null,
     selectedNodeIds: [],
     editingLabelId: null,

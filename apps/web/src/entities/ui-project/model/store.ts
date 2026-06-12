@@ -1,10 +1,13 @@
 import { create } from "zustand";
 import type {
   ButtonProps,
+  ColorRef,
   Frame,
+  FreehandProps,
   IconProps,
   LabelProps,
   PaletteEntry,
+  PixelPoint,
   ScreenNode,
   UiProject,
   WidgetNode,
@@ -39,9 +42,23 @@ import {
   type HistorySnapshot,
 } from "./history";
 
+export type EditorTool = "select" | "marker";
+
+export interface MarkerStyle {
+  color: ColorRef;
+  width: number;
+}
+
+const DEFAULT_MARKER_STYLE: MarkerStyle = {
+  color: { kind: "hex", value: "#FFFFFF" },
+  width: 1,
+};
+
 interface EditorState {
   project: UiProject;
   activeScreenId: string;
+  activeTool: EditorTool;
+  markerStyle: MarkerStyle;
   selectedNodeId: string | null;
   selectedNodeIds: string[];
   editingLabelId: string | null;
@@ -52,6 +69,8 @@ interface EditorState {
   historyFuture: HistorySnapshot[];
 
   setProject: (project: UiProject) => void;
+  setActiveTool: (tool: EditorTool) => void;
+  updateMarkerStyle: (patch: Partial<MarkerStyle>) => void;
   setActiveScreen: (screenId: string) => void;
   addScreen: (name?: string) => string | null;
   duplicateScreen: (screenId: string) => string | null;
@@ -70,6 +89,7 @@ interface EditorState {
   redo: () => void;
 
   addWidget: (parentId: string, type: WidgetType) => string | null;
+  addFreehandStroke: (parentId: string, points: PixelPoint[]) => string | null;
   deleteNode: (id: string) => void;
   deleteNodes: (ids: string[]) => void;
   moveNode: (id: string, direction: "up" | "down") => void;
@@ -102,6 +122,8 @@ function resolveActiveScreenId(project: UiProject): string {
 export const useEditorStore = create<EditorState>((set, get) => ({
   project: initialProject,
   activeScreenId: resolveActiveScreenId(initialProject),
+  activeTool: "select",
+  markerStyle: DEFAULT_MARKER_STYLE,
   selectedNodeId: null,
   selectedNodeIds: [],
   editingLabelId: null,
@@ -117,6 +139,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       ...recordHistory(state),
       project,
       activeScreenId: resolveActiveScreenId(project),
+      activeTool: "select",
       selectedNodeId: null,
       selectedNodeIds: [],
       editingLabelId: null,
@@ -125,9 +148,21 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     }));
   },
 
+  setActiveTool: (activeTool) => set({ activeTool }),
+
+  updateMarkerStyle: (patch) =>
+    set((state) => ({
+      markerStyle: {
+        ...state.markerStyle,
+        ...patch,
+        width: Math.max(1, Math.round(patch.width ?? state.markerStyle.width)),
+      },
+    })),
+
   setActiveScreen: (screenId) =>
     set({
       activeScreenId: screenId,
+      activeTool: "select",
       selectedNodeId: null,
       selectedNodeIds: [],
       editingLabelId: null,
@@ -395,6 +430,30 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       return {
         ...recordHistory(state),
         project: nextProject,
+        activeTool: "select",
+        selectedNodeId: id,
+        selectedNodeIds: [id],
+        draftFrame: null,
+      };
+    });
+    return newId;
+  },
+
+  addFreehandStroke: (parentId, points) => {
+    let newId: string | null = null;
+    const normalizedPoints = normalizeStrokePoints(points);
+    if (normalizedPoints.length === 0) return null;
+    set((state) => {
+      const nextProject = cloneProject(state.project);
+      const usedIds = collectIds(nextProject);
+      const id = nextId("fre", usedIds);
+      const stroke = makeFreehandStroke(id, parentId, normalizedPoints, nextProject, state.markerStyle);
+      insertChild(nextProject, parentId, stroke);
+      newId = id;
+      return {
+        ...recordHistory(state),
+        project: nextProject,
+        activeTool: "select",
         selectedNodeId: id,
         selectedNodeIds: [id],
         draftFrame: null,
@@ -751,6 +810,52 @@ function makeWidgetWithFrame(id: string, type: WidgetType, parentId: string, p: 
   const node = makeWidget(id, type);
   node.frame = defaultFrameFor(type, parentId, p);
   return node;
+}
+
+function makeFreehandStroke(
+  id: string,
+  parentId: string,
+  points: PixelPoint[],
+  p: UiProject,
+  markerStyle: MarkerStyle,
+): WidgetNode {
+  const strokeWidth = Math.max(1, Math.round(markerStyle.width));
+  const minX = Math.min(...points.map((point) => point.x));
+  const minY = Math.min(...points.map((point) => point.y));
+  const maxX = Math.max(...points.map((point) => point.x));
+  const maxY = Math.max(...points.map((point) => point.y));
+  const node = makeWidgetWithFrame(id, "freehand", parentId, p);
+  node.frame = {
+    x: minX,
+    y: minY,
+    width: Math.max(1, maxX - minX + strokeWidth),
+    height: Math.max(1, maxY - minY + strokeWidth),
+  };
+  node.style = {
+    ...(node.style ?? {}),
+    borderColor: markerStyle.color,
+    borderWidth: strokeWidth,
+  };
+  node.props = {
+    ...((node.props ?? {}) as FreehandProps),
+    points: points.map((point) => ({ x: point.x - minX, y: point.y - minY })),
+    strokeWidth,
+  } satisfies FreehandProps;
+  return node;
+}
+
+function normalizeStrokePoints(points: PixelPoint[]): PixelPoint[] {
+  const result: PixelPoint[] = [];
+  const seen = new Set<string>();
+  for (const point of points) {
+    const x = Math.round(point.x);
+    const y = Math.round(point.y);
+    const key = `${x}:${y}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push({ x, y });
+  }
+  return result;
 }
 
 function historySnapshotMatchesState(snapshot: HistorySnapshot, state: EditorState): boolean {

@@ -45,6 +45,32 @@ describe("CanvasToolbar: create tools", () => {
     expect(node?.type).toBe("line");
   });
 
+  it("adds circle and triangle shape tools from the dropdown", async () => {
+    render(<CanvasToolbar />);
+    await userEvent.click(screen.getByRole("button", { name: "Shapes tools" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Circle" }));
+    expect(get().project.screens[0].children?.[0].type).toBe("circle");
+
+    await userEvent.click(screen.getByRole("button", { name: "Shapes tools" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Triangle" }));
+    expect(get().project.screens[0].children?.[1].type).toBe("triangle");
+  });
+
+  it("toggles marker drawing mode", async () => {
+    render(<CanvasToolbar />);
+    await userEvent.click(screen.getByRole("button", { name: "Marker" }));
+    expect(get().activeTool).toBe("marker");
+    await userEvent.click(screen.getByRole("button", { name: "Select" }));
+    expect(get().activeTool).toBe("select");
+  });
+
+  it("keeps active tool focus to a single visual outline", async () => {
+    render(<CanvasToolbar />);
+    const marker = screen.getByRole("button", { name: "Marker" });
+    await userEvent.click(marker);
+    expect(marker.className).toMatch(/toolActive/);
+  });
+
   it("adds child into selected panel", async () => {
     const project = withChildren(makeFixtureProject(), [makePanel("pn_1")]);
     get().setProject(project);

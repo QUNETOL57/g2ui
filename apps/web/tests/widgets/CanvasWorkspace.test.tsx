@@ -71,6 +71,102 @@ describe("CanvasWorkspace: zoom", () => {
   });
 });
 
+describe("CanvasWorkspace: marker drawing", () => {
+  it("creates a freehand pixel stroke by dragging on the canvas", () => {
+    get().setActiveTool("marker");
+    render(<CanvasWorkspace />);
+
+    const frame = screen.getByTestId("canvas-device-frame") as HTMLElement;
+    vi.spyOn(frame, "getBoundingClientRect").mockReturnValue({
+      x: 0,
+      y: 0,
+      left: 0,
+      top: 0,
+      right: 320,
+      bottom: 256,
+      width: 320,
+      height: 256,
+      toJSON: () => ({}),
+    } as DOMRect);
+
+    fireEvent.mouseDown(frame, { button: 0, clientX: 10, clientY: 10 });
+    fireEvent.mouseMove(window, { clientX: 12, clientY: 12 });
+    fireEvent.mouseUp(window);
+
+    const node = get().project.screens[0].children?.[0];
+    expect(node?.type).toBe("freehand");
+    expect(node?.frame).toEqual({ x: 5, y: 5, width: 2, height: 2 });
+    expect(node?.props).toEqual({ points: [{ x: 0, y: 0 }, { x: 1, y: 1 }], strokeWidth: 1 });
+    expect(get().activeTool).toBe("select");
+  });
+
+  it("fills skipped pixels when marker movement jumps between mouse events", () => {
+    get().setActiveTool("marker");
+    render(<CanvasWorkspace />);
+
+    const frame = screen.getByTestId("canvas-device-frame") as HTMLElement;
+    vi.spyOn(frame, "getBoundingClientRect").mockReturnValue({
+      x: 0,
+      y: 0,
+      left: 0,
+      top: 0,
+      right: 320,
+      bottom: 256,
+      width: 320,
+      height: 256,
+      toJSON: () => ({}),
+    } as DOMRect);
+
+    fireEvent.mouseDown(frame, { button: 0, clientX: 10, clientY: 10 });
+    fireEvent.mouseMove(window, { clientX: 20, clientY: 10 });
+    fireEvent.mouseUp(window);
+
+    const node = get().project.screens[0].children?.[0];
+    expect(node?.type).toBe("freehand");
+    expect(node?.frame).toEqual({ x: 5, y: 5, width: 6, height: 1 });
+    expect(node?.props).toEqual({
+      points: [
+        { x: 0, y: 0 },
+        { x: 1, y: 0 },
+        { x: 2, y: 0 },
+        { x: 3, y: 0 },
+        { x: 4, y: 0 },
+        { x: 5, y: 0 },
+      ],
+      strokeWidth: 1,
+    });
+  });
+
+  it("uses configured marker color and width for new strokes", () => {
+    get().setActiveTool("marker");
+    get().updateMarkerStyle({ color: { kind: "hex", value: "#FF0000" }, width: 3 });
+    render(<CanvasWorkspace />);
+
+    const frame = screen.getByTestId("canvas-device-frame") as HTMLElement;
+    vi.spyOn(frame, "getBoundingClientRect").mockReturnValue({
+      x: 0,
+      y: 0,
+      left: 0,
+      top: 0,
+      right: 320,
+      bottom: 256,
+      width: 320,
+      height: 256,
+      toJSON: () => ({}),
+    } as DOMRect);
+
+    fireEvent.mouseDown(frame, { button: 0, clientX: 10, clientY: 10 });
+    fireEvent.mouseUp(window);
+
+    const node = get().project.screens[0].children?.[0];
+    expect(node?.type).toBe("freehand");
+    expect(node?.frame).toEqual({ x: 5, y: 5, width: 3, height: 3 });
+    expect(node?.style?.borderColor).toEqual({ kind: "hex", value: "#FF0000" });
+    expect(node?.style?.borderWidth).toBe(3);
+    expect(node?.props).toEqual({ points: [{ x: 0, y: 0 }], strokeWidth: 3 });
+  });
+});
+
 describe("CanvasWorkspace: selection", () => {
   it("clicking a node selects it; clicking stage clears selection", async () => {
     const project = withChildren(makeFixtureProject(), [makeLabel("lbl_1", "Pick me")]);

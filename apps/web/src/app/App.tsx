@@ -125,6 +125,11 @@ export function App() {
     setView("editor");
   };
 
+  const copyProject = async (card: ProjectCard) => {
+    const saved = await persistNewCanvas(card, persistCallbacks);
+    setProjects((items) => [saved, ...items.filter((item) => item.id !== saved.id)]);
+  };
+
   const deleteProject = (projectId: string) => {
     removeLocalDraft(projectId);
     setProjects((items) => items.filter((item) => item.id !== projectId));
@@ -233,6 +238,7 @@ export function App() {
         error={libraryError}
         onOpenProject={openProject}
         onCreateProject={createProject}
+        onCopyProject={copyProject}
         onDeleteProject={deleteProject}
         onUpdateProject={updateProject}
       />

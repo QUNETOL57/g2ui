@@ -233,11 +233,60 @@ describe("PreviewNode: per-type rendering", () => {
     expect(freehand?.querySelectorAll("div")).toHaveLength(2);
   });
 
+  it("renders freehand strokes with configured width", () => {
+    const stroke = makeFreehand("fre_1");
+    stroke.style = { ...(stroke.style ?? {}), borderWidth: 3 };
+    stroke.props = { points: [{ x: 0, y: 0 }], strokeWidth: 3 };
+    const { container } = renderProject([stroke]);
+    const pixel = container.querySelector(
+      '[data-widget-type="freehand"] [data-testid="freehand-visual"] div',
+    ) as HTMLElement;
+    expect(pixel.style.width).toBe("3px");
+    expect(pixel.style.height).toBe("3px");
+  });
+
+  it("renders circle border as a pixel ring", () => {
+    const circle = makeCircle("cir_1");
+    circle.style = {
+      ...(circle.style ?? {}),
+      drawBackground: false,
+      drawBorder: true,
+      borderColor: { kind: "hex", value: "#FFFFFF" },
+      borderWidth: 2,
+    };
+    const { container } = renderProject([circle]);
+    const middleRow = [
+      ...container.querySelectorAll('[data-widget-type="circle"] [data-testid="pixel-circle"] rect[y="16"]'),
+    ] as SVGRectElement[];
+    expect(middleRow.length).toBeGreaterThan(0);
+    const totalWidth = middleRow.reduce((sum, rect) => sum + Number(rect.getAttribute("width")), 0);
+    expect(totalWidth).toBeLessThan(32);
+    expect(middleRow.some((rect) => Number(rect.getAttribute("width")) === 2)).toBe(true);
+  });
+
   it("applies rotation to shape nodes", () => {
     const rect = { ...makeRect("rc_1"), rotation: 45 };
     const { container } = renderProject([rect]);
     const node = container.querySelector('[data-widget-type="rect"]') as HTMLElement;
     expect(node.style.transform).toBe("rotate(45deg)");
+  });
+
+  it("applies rotation to circle and triangle nodes", () => {
+    const circle = { ...makeCircle("cir_1"), rotation: 30 };
+    const triangle = { ...makeTriangle("tri_1"), rotation: -15 };
+    const { container } = renderProject([circle, triangle]);
+    expect((container.querySelector('[data-widget-type="circle"]') as HTMLElement).style.transform).toBe(
+      "rotate(30deg)",
+    );
+    expect((container.querySelector('[data-widget-type="triangle"]') as HTMLElement).style.transform).toBe(
+      "rotate(-15deg)",
+    );
+  });
+
+  it("uses pixelated rendering on triangle svg", () => {
+    const { container } = renderProject([makeTriangle("tri_1")]);
+    const svg = container.querySelector('[data-testid="pixel-triangle"]') as SVGElement;
+    expect(svg.style.imageRendering).toBe("pixelated");
   });
 
   it("renders panel container", () => {

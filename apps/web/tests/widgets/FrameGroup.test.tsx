@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { FrameGroup } from "@widgets/properties-panel/groups/FrameGroup";
 
-import { makeButton, makeFixtureProject, makeIcon, makeLabel, makeRect, withChildren } from "../fixtures/projects";
+import { makeButton, makeCircle, makeFixtureProject, makeFreehand, makeIcon, makeLabel, makeRect, makeTriangle, withChildren } from "../fixtures/projects";
 
 describe("FrameGroup", () => {
   const project = withChildren(makeFixtureProject(), [makeLabel("lbl_1")]);
@@ -68,6 +68,26 @@ describe("FrameGroup", () => {
     await userEvent.tab();
 
     expect(updateNode).toHaveBeenCalledWith("rc_1", { rotation: 45 });
+  });
+
+  it("shows rotation for circle, triangle and freehand", () => {
+    for (const node of [
+      { ...makeCircle("cir_1"), rotation: 10 },
+      { ...makeTriangle("tri_1"), rotation: 20 },
+      { ...makeFreehand("fre_1"), rotation: 30 },
+    ]) {
+      const { unmount } = render(
+        <FrameGroup
+          node={node}
+          project={project}
+          draftFrame={null}
+          updateFrame={() => undefined}
+          updateNode={() => undefined}
+        />,
+      );
+      expect(screen.getByText("R")).toBeInTheDocument();
+      unmount();
+    }
   });
 
   it("clamps W to icon definition size for icon nodes", async () => {

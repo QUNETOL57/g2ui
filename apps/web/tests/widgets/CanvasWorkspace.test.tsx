@@ -165,6 +165,56 @@ describe("CanvasWorkspace: marker drawing", () => {
     expect(node?.style?.borderWidth).toBe(3);
     expect(node?.props).toEqual({ points: [{ x: 0, y: 0 }], strokeWidth: 3 });
   });
+
+  it("does not create strokes when select tool is active", () => {
+    render(<CanvasWorkspace />);
+
+    const frame = screen.getByTestId("canvas-device-frame") as HTMLElement;
+    vi.spyOn(frame, "getBoundingClientRect").mockReturnValue({
+      x: 0,
+      y: 0,
+      left: 0,
+      top: 0,
+      right: 320,
+      bottom: 256,
+      width: 320,
+      height: 256,
+      toJSON: () => ({}),
+    } as DOMRect);
+
+    fireEvent.mouseDown(frame, { button: 0, clientX: 10, clientY: 10 });
+    fireEvent.mouseMove(window, { clientX: 20, clientY: 10 });
+    fireEvent.mouseUp(window);
+
+    expect(get().project.screens[0].children).toEqual([]);
+    expect(get().activeTool).toBe("select");
+  });
+
+  it("can draw marker strokes over existing widgets", () => {
+    const project = withChildren(makeFixtureProject(), [makeLabel("lbl_1", "Hi")]);
+    get().setProject(project);
+    get().setActiveTool("marker");
+    render(<CanvasWorkspace />);
+
+    const frame = screen.getByTestId("canvas-device-frame") as HTMLElement;
+    vi.spyOn(frame, "getBoundingClientRect").mockReturnValue({
+      x: 0,
+      y: 0,
+      left: 0,
+      top: 0,
+      right: 320,
+      bottom: 256,
+      width: 320,
+      height: 256,
+      toJSON: () => ({}),
+    } as DOMRect);
+
+    fireEvent.mouseDown(frame, { button: 0, clientX: 10, clientY: 10 });
+    fireEvent.mouseUp(window);
+
+    expect(get().project.screens[0].children).toHaveLength(2);
+    expect(get().project.screens[0].children?.[1]?.type).toBe("freehand");
+  });
 });
 
 describe("CanvasWorkspace: selection", () => {

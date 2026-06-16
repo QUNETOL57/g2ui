@@ -30,7 +30,7 @@ export function CanvasRulers({
   showSelectionLabels,
 }: CanvasRulersProps) {
   return (
-    <>
+    <div data-testid="canvas-rulers">
       <div
         className={styles.ruler}
         style={{ left: RULER_SIZE, top: 0, width: scaledW, height: RULER_SIZE }}
@@ -164,6 +164,6 @@ export function CanvasRulers({
           </>
         ) : null}
       </div>
-    </>
+    </div>
   );
 }

@@ -6,8 +6,8 @@ import { SelectionOverlay } from "@widgets/canvas-workspace/SelectionOverlay";
 describe("SelectionOverlay", () => {
   const rect = { x: 5, y: 5, width: 20, height: 30 };
 
-  it("renders 4 guides", () => {
-    const { container } = render(
+  it("renders guide segments outside the selected object bounds", () => {
+    const { getAllByTestId } = render(
       <SelectionOverlay
         rect={rect}
         renderZoom={2}
@@ -20,8 +20,88 @@ describe("SelectionOverlay", () => {
         onLineEndpointMouseDown={() => () => undefined}
       />,
     );
-    const guides = container.querySelectorAll('[class*="guide"]');
-    expect(guides.length).toBe(4);
+    const guides = getAllByTestId("selection-guide");
+    expect(guides).toHaveLength(8);
+
+    const horizontalGuides = guides.filter((guide) => guide.className.includes("guideHorizontal"));
+    const verticalGuides = guides.filter((guide) => guide.className.includes("guideVertical"));
+
+    expect(horizontalGuides).toHaveLength(4);
+    expect(verticalGuides).toHaveLength(4);
+    expect(horizontalGuides.every((guide) => guide.style.left !== "10px")).toBe(true);
+    expect(horizontalGuides.every((guide) => guide.style.width !== "40px")).toBe(true);
+    expect(verticalGuides.every((guide) => guide.style.top !== "10px")).toBe(true);
+    expect(verticalGuides.every((guide) => guide.style.height !== "60px")).toBe(true);
+  });
+
+  it("keeps object frame visible while canvas-edge guides are visible", () => {
+    const { getAllByTestId } = render(
+      <SelectionOverlay
+        rect={rect}
+        renderZoom={2}
+        scaledW={200}
+        scaledH={200}
+        showGuides
+        showMoveMask={false}
+        showResizeHandles={false}
+        lineEndpoints={null}
+        onResizeHandleMouseDown={() => () => undefined}
+        onLineEndpointMouseDown={() => () => undefined}
+      />,
+    );
+
+    expect(getAllByTestId("selection-frame")).toHaveLength(4);
+  });
+
+  it("keeps selection frame scoped to the object bounds when guides are hidden", () => {
+    const { getAllByTestId } = render(
+      <SelectionOverlay
+        rect={rect}
+        renderZoom={2}
+        scaledW={200}
+        scaledH={200}
+        showGuides={false}
+        showMoveMask={false}
+        showResizeHandles={false}
+        lineEndpoints={null}
+        onResizeHandleMouseDown={() => () => undefined}
+        onLineEndpointMouseDown={() => () => undefined}
+      />,
+    );
+
+    const frames = getAllByTestId("selection-frame");
+    const horizontalFrames = frames.filter((frame) => frame.className.includes("guideHorizontal"));
+    const verticalFrames = frames.filter((frame) => frame.className.includes("guideVertical"));
+
+    expect(frames).toHaveLength(4);
+    expect(horizontalFrames).toHaveLength(2);
+    expect(verticalFrames).toHaveLength(2);
+    expect(horizontalFrames.every((frame) => frame.style.left === "10px")).toBe(true);
+    expect(horizontalFrames.every((frame) => frame.style.width === "40px")).toBe(true);
+    expect(verticalFrames.every((frame) => frame.style.top === "10px")).toBe(true);
+    expect(verticalFrames.every((frame) => frame.style.height === "60px")).toBe(true);
+  });
+
+  it("hides only canvas-edge guides when showGuides=false", () => {
+    const { getAllByTestId, getByTestId, queryAllByTestId } = render(
+      <SelectionOverlay
+        rect={rect}
+        renderZoom={2}
+        scaledW={200}
+        scaledH={200}
+        showGuides={false}
+        showMoveMask={false}
+        showResizeHandles
+        lineEndpoints={null}
+        onResizeHandleMouseDown={() => () => undefined}
+        onLineEndpointMouseDown={() => () => undefined}
+      />,
+    );
+
+    expect(queryAllByTestId("selection-guide")).toHaveLength(0);
+    expect(getAllByTestId("selection-frame")).toHaveLength(4);
+    expect(getByTestId("resize-handle-nw")).toBeInTheDocument();
+    expect(getByTestId("resize-handle-se")).toBeInTheDocument();
   });
 
   it("renders 4 resize handles when showResizeHandles=true", () => {

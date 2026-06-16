@@ -65,6 +65,9 @@ interface DragPreview {
 interface CanvasWorkspaceProps {
   leftPanelOpen?: boolean;
   rightPanelOpen?: boolean;
+  showGrid?: boolean;
+  showRulers?: boolean;
+  showGuides?: boolean;
   onToggleLeftPanel?: () => void;
   onToggleRightPanel?: () => void;
 }
@@ -72,6 +75,9 @@ interface CanvasWorkspaceProps {
 export function CanvasWorkspace({
   leftPanelOpen = true,
   rightPanelOpen = true,
+  showGrid = true,
+  showRulers = true,
+  showGuides = true,
   onToggleLeftPanel,
   onToggleRightPanel,
 }: CanvasWorkspaceProps) {
@@ -180,8 +186,9 @@ export function CanvasWorkspace({
   const markerDraftWidth = Math.max(1, Math.round(markerStyle.width));
   const scaledW = Math.round(w * renderZoom);
   const scaledH = Math.round(h * renderZoom);
-  const showPixelGrid = renderZoom >= PIXEL_GRID_VISIBLE_ZOOM;
-  const showGuides = !!selectedLayoutNode && selectedLayoutNode.node.id !== screen.id;
+  const showPixelGrid = showGrid && renderZoom >= PIXEL_GRID_VISIBLE_ZOOM;
+  const showSelectionOverlay = !!selectedLayoutNode && selectedLayoutNode.node.id !== screen.id;
+  const showSelectionGuides = showGuides && showSelectionOverlay;
   const selectedRect = selectedLayoutNode?.rect ?? null;
   const rawDisplayedSelectedRect =
     dragPreview && dragPreview.nodeId === selectedNodeId
@@ -904,15 +911,17 @@ export function CanvasWorkspace({
               top: artboardOffsetY,
             }}
           >
-            <CanvasRulers
-              horizontalTicks={horizontalTicks}
-              verticalTicks={verticalTicks}
-              scaledW={scaledW}
-              scaledH={scaledH}
-              renderZoom={renderZoom}
-              selectionRect={showGuides ? displayedSelectedRect : null}
-              showSelectionLabels={showGuides}
-            />
+            {showRulers ? (
+              <CanvasRulers
+                horizontalTicks={horizontalTicks}
+                verticalTicks={verticalTicks}
+                scaledW={scaledW}
+                scaledH={scaledH}
+                renderZoom={renderZoom}
+                selectionRect={showSelectionGuides ? displayedSelectedRect : null}
+                showSelectionLabels={showSelectionGuides}
+              />
+            ) : null}
 
             <div
               className={styles.deviceFrame}
@@ -935,6 +944,7 @@ export function CanvasWorkspace({
               {showPixelGrid ? (
                 <div
                   className={styles.pixelGrid}
+                  data-testid="canvas-pixel-grid"
                   style={{
                     backgroundImage:
                       "linear-gradient(#171717 1px, transparent 1px), linear-gradient(90deg, #171717 1px, transparent 1px)",
@@ -974,13 +984,14 @@ export function CanvasWorkspace({
                   />
                 ))}
               </div>
-              {showGuides && displayedSelectedRect ? (
+              {showSelectionOverlay && displayedSelectedRect ? (
                 <div className={styles.selectionLayer}>
                   <SelectionOverlay
                     rect={displayedSelectedRect}
                     renderZoom={renderZoom}
                     scaledW={scaledW}
                     scaledH={scaledH}
+                    showGuides={showGuides}
                     showMoveMask={showSelectionMoveMask}
                     showResizeHandles={canResizeSelection}
                     lineEndpoints={displayedLineEndpoints}

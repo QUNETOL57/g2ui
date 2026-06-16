@@ -81,7 +81,15 @@
 }
 
 .menuItemLabel {
+  flex: 1;
   min-width: 0;
+}
+
+.menuItemCheck {
+  width: 16px;
+  color: var(--color-accent);
+  font-weight: 700;
+  text-align: center;
 }
 
 .menuItemShortcut {
@@ -98,4 +106,236 @@
   height: 1px;
   margin: 3px 4px;
   background: var(--color-border-soft);
+}
+
+.menuPreview {
+  position: absolute;
+  top: 0;
+  left: calc(100% + 8px);
+  width: 220px;
+  padding: 10px;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-deep);
+  box-shadow:
+    0 12px 28px var(--color-shadow-strong),
+    0 2px 6px var(--color-shadow);
+}
+
+.previewTitle {
+  color: var(--color-text);
+  font-size: var(--font-size-md);
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.previewCanvas {
+  position: relative;
+  height: 84px;
+  overflow: hidden;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-sm);
+  background: #000000;
+}
+
+.previewGrid {
+  position: absolute;
+  inset: 0;
+  background-color: #000000;
+  background-image:
+    linear-gradient(#171717 1px, transparent 1px),
+    linear-gradient(90deg, #171717 1px, transparent 1px);
+  background-position: 0 0;
+  background-size: 12px 12px;
+  image-rendering: pixelated;
+}
+
+.previewRulerGrid,
+.previewRulerTop,
+.previewRulerLeft {
+  position: absolute;
+}
+
+.previewRulerGrid {
+  top: 24px;
+  right: 0;
+  bottom: 0;
+  left: 24px;
+  background-color: #000000;
+  background-image:
+    linear-gradient(#171717 1px, transparent 1px),
+    linear-gradient(90deg, #171717 1px, transparent 1px);
+  background-position: 0 0;
+  background-size: 12px 12px;
+  image-rendering: pixelated;
+}
+
+.previewRulerTop,
+.previewRulerLeft {
+  background-color: transparent;
+}
+
+/* Ticks match the canvas ruler: minor 6px, major 11px every 8th step, color rgba(227,232,240,0.55) */
+.previewRulerTop {
+  top: 0;
+  left: 24px;
+  right: 0;
+  height: 24px;
+  /* minor ticks (6px) at every step + major ticks drawn as the 5px top extension only,
+     so layers never overlap and the long tick stays a single, uniform color */
+  background-image:
+    repeating-linear-gradient(to right, rgba(227, 232, 240, 0.55) 0 1px, transparent 1px 12px),
+    repeating-linear-gradient(to right, rgba(227, 232, 240, 0.55) 0 1px, transparent 1px 96px);
+  background-repeat: no-repeat, no-repeat;
+  /* 4px gap between the ticks and the grid, like the canvas ruler (tick bottom: 4px) */
+  background-position:
+    0 calc(100% - 4px),
+    0 calc(100% - 10px);
+  background-size:
+    100% 6px,
+    100% 5px;
+}
+
+.previewRulerLeft {
+  top: 24px;
+  left: 0;
+  bottom: 0;
+  width: 24px;
+  background-image:
+    repeating-linear-gradient(to bottom, rgba(227, 232, 240, 0.55) 0 1px, transparent 1px 12px),
+    repeating-linear-gradient(to bottom, rgba(227, 232, 240, 0.55) 0 1px, transparent 1px 96px);
+  background-repeat: no-repeat, no-repeat;
+  /* 4px gap between the ticks and the grid, like the canvas ruler (tick right: 4px) */
+  background-position:
+    calc(100% - 4px) 0,
+    calc(100% - 10px) 0;
+  background-size:
+    6px 100%,
+    5px 100%;
+}
+
+/* Dotted alignment guides + handles, matching the canvas SelectionOverlay.
+   Selection box is implied by the four guides crossing at x=72/150, y=42/64. */
+.previewGuideV,
+.previewGuideH {
+  position: absolute;
+  opacity: 0.85;
+  z-index: 2;
+}
+
+.previewGuideV {
+  top: 22px;
+  bottom: 0;
+  width: 1px;
+  background-image: linear-gradient(to bottom, rgba(227, 232, 240, 0.75) 0 2px, transparent 2px 6px);
+  background-size: 1px 6px;
+}
+
+.previewGuideVLeft {
+  left: 72px;
+}
+
+.previewGuideVRight {
+  left: 150px;
+}
+
+.previewGuideH {
+  left: 22px;
+  right: 0;
+  height: 1px;
+  background-image: linear-gradient(to right, rgba(227, 232, 240, 0.75) 0 2px, transparent 2px 6px);
+  background-size: 6px 1px;
+}
+
+.previewGuideHTop {
+  top: 42px;
+}
+
+.previewGuideHBottom {
+  top: 64px;
+}
+
+.previewGuideLabel {
+  position: absolute;
+  z-index: 4;
+  color: rgba(227, 232, 240, 0.85);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.previewGuideLabelTopLeft {
+  top: 6px;
+  left: 72px;
+  transform: translateX(-50%);
+}
+
+.previewGuideLabelTopRight {
+  top: 6px;
+  left: 150px;
+  transform: translateX(-50%);
+}
+
+.previewGuideLabelLeftTop {
+  top: 42px;
+  left: 11px;
+  transform: translate(-50%, -50%);
+}
+
+.previewGuideLabelLeftBottom {
+  top: 64px;
+  left: 11px;
+  transform: translate(-50%, -50%);
+}
+
+.previewSelectionText {
+  position: absolute;
+  top: 53px;
+  left: 111px;
+  z-index: 3;
+  transform: translate(-50%, -50%);
+  color: #ffffff;
+  font-family: monospace;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.previewHandle {
+  position: absolute;
+  z-index: 5;
+  width: 8px;
+  height: 8px;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(227, 232, 240, 0.75);
+  background: rgba(11, 14, 19, 0.96);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.previewHandleNw {
+  top: 42px;
+  left: 72px;
+}
+
+.previewHandleNe {
+  top: 42px;
+  left: 150px;
+}
+
+.previewHandleSw {
+  top: 64px;
+  left: 72px;
+}
+
+.previewHandleSe {
+  top: 64px;
+  left: 150px;
+}
+
+.previewDescription {
+  margin: 8px 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  line-height: 1.35;
 }

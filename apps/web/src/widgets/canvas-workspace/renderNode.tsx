@@ -606,6 +606,61 @@ function PixelRoundedBox({
   const outerColor = hasBorder ? borderColor : background;
   const innerW = Math.max(0, w - bw * 2);
   const innerH = Math.max(0, h - bw * 2);
+  const borderOnlyRows =
+    hasBorder && !hasFill
+      ? Array.from({ length: h }, (_, y) => {
+          const outerInset = roundedRowInset(y, w, h, radius);
+          const outerX = outerInset;
+          const outerRight = w - outerInset;
+          const outerWidth = Math.max(0, outerRight - outerX);
+
+          if (innerW <= 0 || innerH <= 0 || y < bw || y >= h - bw) {
+            return (
+              <rect
+                key={`border-${y}`}
+                x={outerX}
+                y={y}
+                width={outerWidth}
+                height={1}
+                fill={borderColor}
+              />
+            );
+          }
+
+          const innerY = y - bw;
+          const innerRadius = Math.max(0, radius - bw);
+          const innerInset = roundedRowInset(innerY, innerW, innerH, innerRadius);
+          const innerX = bw + innerInset;
+          const innerRight = bw + innerW - innerInset;
+          const innerWidth = Math.max(0, innerRight - innerX);
+          if (innerWidth <= 0) {
+            return (
+              <rect
+                key={`border-${y}`}
+                x={outerX}
+                y={y}
+                width={outerWidth}
+                height={1}
+                fill={borderColor}
+              />
+            );
+          }
+
+          const leftWidth = Math.max(0, innerX - outerX);
+          const rightWidth = Math.max(0, outerRight - innerRight);
+
+          return (
+            <g key={`border-${y}`}>
+              {leftWidth > 0 ? (
+                <rect x={outerX} y={y} width={leftWidth} height={1} fill={borderColor} />
+              ) : null}
+              {rightWidth > 0 ? (
+                <rect x={innerRight} y={y} width={rightWidth} height={1} fill={borderColor} />
+              ) : null}
+            </g>
+          );
+        })
+      : null;
 
   return (
     <svg
@@ -621,7 +676,7 @@ function PixelRoundedBox({
         shapeRendering: "crispEdges",
       }}
     >
-      {(hasBorder || hasFill) && outerColor !== "transparent"
+      {hasFill && outerColor !== "transparent"
         ? Array.from({ length: h }, (_, y) => {
             const inset = roundedRowInset(y, w, h, radius);
             return (
@@ -636,6 +691,7 @@ function PixelRoundedBox({
             );
           })
         : null}
+      {borderOnlyRows}
       {hasBorder && hasFill
         ? Array.from({ length: innerH }, (_, y) => {
             const svgY = bw + y;

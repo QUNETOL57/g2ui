@@ -160,6 +160,31 @@ describe("PreviewNode: per-type rendering", () => {
     expect(pixelBox).toBeTruthy();
   });
 
+  it.each([1, 3, 4, 5, 6, 7, 8])(
+    "renders rounded rect border without filling the interior for radius %i",
+    (borderRadius) => {
+    const rect = makeRect("rc_1");
+    rect.style = {
+      ...(rect.style ?? {}),
+      drawBackground: false,
+      drawBorder: true,
+      borderColor: { kind: "hex", value: "#FF0000" },
+      borderWidth: 1,
+      borderRadius,
+    };
+    const { container } = renderProject([rect]);
+    const pixelBox = container.querySelector('[data-widget-type="rect"] [data-testid="pixel-rounded-box"]');
+    const allRows = [...pixelBox!.querySelectorAll("rect")] as SVGRectElement[];
+    const middleRow = [...pixelBox!.querySelectorAll('rect[y="12"]')] as SVGRectElement[];
+
+    expect(allRows.length).toBeGreaterThan(0);
+    expect(allRows.some((row) => row.getAttribute("width") === "40")).toBe(false);
+    expect(middleRow).toHaveLength(2);
+    expect(middleRow.map((row) => Number(row.getAttribute("width")))).toEqual([1, 1]);
+    expect(middleRow.every((row) => row.getAttribute("fill") === "#FF0000")).toBe(true);
+    },
+  );
+
   it("renders circle and triangle shapes", () => {
     const { container } = renderProject([makeCircle("cir_1"), makeTriangle("tri_1")]);
     const circle = container.querySelector('[data-widget-type="circle"] [data-testid="pixel-circle"]');

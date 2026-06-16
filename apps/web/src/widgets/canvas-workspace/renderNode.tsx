@@ -437,8 +437,12 @@ function PixelTriangle({
   borderColor: string;
   borderWidth: number;
 }) {
+  const bw = Math.max(0, Math.round(borderWidth));
   const hasFill = fill !== "transparent";
-  const hasBorder = borderWidth > 0 && borderColor !== "transparent";
+  const hasBorder = bw > 0 && borderColor !== "transparent";
+  const innerW = Math.max(0, width - bw * 2);
+  const innerH = Math.max(0, height - bw * 2);
+  const borderSegments = hasBorder ? triangleBorderSegments(width, height, direction, bw) : [];
 
   return (
     <svg
@@ -449,68 +453,48 @@ function PixelTriangle({
       shapeRendering="crispEdges"
       style={{ display: "block", width: "100%", height: "100%", imageRendering: "pixelated" }}
     >
-      {Array.from({ length: height }, (_, y) => {
-        const outer = triangleScanline(y, width, height, direction);
-        if (!outer) return null;
-
-        const isCapRow = hasBorder && (y < borderWidth || y >= height - borderWidth);
-        const innerWidth = outer.width - borderWidth * 2;
-
-        if (hasBorder && !isCapRow && innerWidth > 0) {
-          const innerX = outer.x + borderWidth;
-          const outerRight = outer.x + outer.width;
-          const innerRight = innerX + innerWidth;
-          return (
-            <g key={`row-${y}`}>
-              <rect
-                x={outer.x}
-                y={y}
-                width={borderWidth}
-                height={1}
-                fill={borderColor}
-              />
-              <rect
-                x={innerRight}
-                y={y}
-                width={outerRight - innerRight}
-                height={1}
-                fill={borderColor}
-              />
-              {hasFill ? (
-                <rect x={innerX} y={y} width={innerWidth} height={1} fill={fill} />
-              ) : null}
-            </g>
-          );
-        }
-
-        if (hasBorder && (isCapRow || innerWidth <= 0)) {
+      {hasFill && !hasBorder
+        ? Array.from({ length: height }, (_, y) => {
+            const outer = triangleScanline(y, width, height, direction);
+            if (!outer) return null;
           return (
             <rect
-              key={`border-${y}`}
-              x={outer.x}
-              y={y}
-              width={outer.width}
-              height={1}
-              fill={borderColor}
-            />
-          );
-        }
-
-        if (hasFill) {
-          return (
-            <rect
-              key={`fill-${y}`}
+              key={`outer-${y}`}
               x={outer.x}
               y={y}
               width={outer.width}
               height={1}
               fill={fill}
             />
-          );
-        }
-
-        return null;
-      })}
+            );
+          })
+        : null}
+      {hasBorder && hasFill && innerW > 0 && innerH > 0
+        ? Array.from({ length: innerH }, (_, y) => {
+            const inner = triangleScanline(y, innerW, innerH, direction);
+            if (!inner) return null;
+            return (
+              <rect
+                key={`inner-${y}`}
+                x={inner.x + bw}
+                y={y + bw}
+                width={inner.width}
+                height={1}
+                fill={fill}
+              />
+            );
+          })
+        : null}
+      {borderSegments.map((segment, index) => (
+        <rect
+          key={`border-${segment.y}-${segment.x}-${index}`}
+          x={segment.x}
+          y={segment.y}
+          width={segment.width}
+          height={1}
+          fill={borderColor}
+        />
+      ))}
     </svg>
   );
 }
@@ -550,7 +534,7 @@ function triangleScanline(
     return { x, width: Math.min(width - x, rowWidth) };
   }
 
-  const progress = width <= 1
+  const progress = height <= 1
     ? 1
     : direction === "right"
       ? y / Math.max(1, height - 1)
@@ -558,6 +542,156 @@ function triangleScanline(
   const rowWidth = Math.max(1, Math.round(width * (1 - Math.abs(progress - 0.5) * 2)));
   const x = direction === "right" ? 0 : width - rowWidth;
   return { x, width: rowWidth };
+}
+
+function triangleVertices(
+  width: number,
+  height: number,
+  direction: NonNullable<TriangleProps["direction"]>,
+): [PixelPoint, PixelPoint, PixelPoint] {
+  const maxX = Math.max(0, width - 1);
+  const maxY = Math.max(0, height - 1);
+  const centerX = Math.floor(maxX / 2);
+  const centerY = Math.floor(height / 2);
+
+  switch (direction) {
+    case "down":
+      return [
+        { x: 0, y: 0 },
+        { x: maxX, y: 0 },
+        { x: centerX, y: maxY },
+      ];
+    case "left":
+      return [
+        { x: maxX, y: 0 },
+        { x: 0, y: centerY },
+        { x: maxX, y: maxY },
+      ];
+    case "right":
+      return [
+        { x: 0, y: 0 },
+        { x: maxX, y: centerY },
+        { x: 0, y: maxY },
+      ];
+    case "up":
+    default:
+      return [
+        { x: centerX, y: 0 },
+        { x: maxX, y: maxY },
+        { x: 0, y: maxY },
+      ];
+  }
+}
+
+function triangleBorderSegments(
+  width: number,
+  height: number,
+  direction: NonNullable<TriangleProps["direction"]>,
+  borderWidth: number,
+): { x: number; y: number; width: number }[] {
+  const vertices = triangleVertices(width, height, direction);
+  const brush = Math.max(1, borderWidth);
+  const brushStart = -Math.floor((brush - 1) / 2);
+  const brushEnd = brushStart + brush - 1;
+  const joinTrim = Math.max(1, Math.ceil(brush / 2));
+  const pixels = new Set<string>();
+  const edges = triangleEdges(vertices, direction, joinTrim);
+
+  for (const [from, to] of edges) {
+    for (const point of rasterLine(from.x, from.y, to.x, to.y)) {
+      for (let dy = brushStart; dy <= brushEnd; dy += 1) {
+        for (let dx = brushStart; dx <= brushEnd; dx += 1) {
+          const x = point.x + dx;
+          const y = point.y + dy;
+          if (x >= 0 && x < width && y >= 0 && y < height) {
+            pixels.add(`${y}:${x}`);
+          }
+        }
+      }
+    }
+  }
+
+  const rows = new Map<number, number[]>();
+  for (const pixel of pixels) {
+    const [y, x] = pixel.split(":").map(Number);
+    const row = rows.get(y) ?? [];
+    row.push(x);
+    rows.set(y, row);
+  }
+
+  return [...rows]
+    .sort(([a], [b]) => a - b)
+    .flatMap(([y, xs]) => {
+      const sorted = [...new Set(xs)].sort((a, b) => a - b);
+      const segments: { x: number; y: number; width: number }[] = [];
+      let start = sorted[0];
+      let previous = sorted[0];
+
+      for (let index = 1; index <= sorted.length; index += 1) {
+        const current = sorted[index];
+        if (current === previous + 1) {
+          previous = current;
+          continue;
+        }
+        segments.push({ x: start, y, width: previous - start + 1 });
+        start = current;
+        previous = current;
+      }
+
+      return segments;
+    });
+}
+
+function triangleEdges(
+  vertices: [PixelPoint, PixelPoint, PixelPoint],
+  direction: NonNullable<TriangleProps["direction"]>,
+  joinTrim: number,
+): [PixelPoint, PixelPoint][] {
+  const [a, b, c] = vertices;
+
+  switch (direction) {
+    case "down":
+      {
+        const leftBase = { x: a.x + joinTrim, y: a.y };
+        const rightBase = { x: b.x - joinTrim, y: b.y };
+        return [
+          [leftBase, rightBase],
+          [rightBase, c],
+          [c, leftBase],
+        ];
+      }
+    case "left":
+      {
+        const topBase = { x: a.x, y: a.y + joinTrim };
+        const bottomBase = { x: c.x, y: c.y - joinTrim };
+        return [
+          [topBase, bottomBase],
+          [topBase, b],
+          [b, bottomBase],
+        ];
+      }
+    case "right":
+      {
+        const topBase = { x: a.x, y: a.y + joinTrim };
+        const bottomBase = { x: c.x, y: c.y - joinTrim };
+        return [
+          [topBase, bottomBase],
+          [topBase, b],
+          [b, bottomBase],
+        ];
+      }
+    case "up":
+    default:
+      {
+        const rightBase = { x: b.x - joinTrim, y: b.y };
+        const leftBase = { x: c.x + joinTrim, y: c.y };
+        return [
+          [a, rightBase],
+          [rightBase, leftBase],
+          [leftBase, a],
+        ];
+      }
+  }
 }
 
 function FreehandVisual({ node, ctx }: { node: WidgetNode; ctx: RenderCtx }) {

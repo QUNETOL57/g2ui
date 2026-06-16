@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { useEditorStore } from "@entities/ui-project/model/store";
@@ -49,6 +49,7 @@ describe("EditorPage", () => {
     expect(screen.getByRole("menubar", { name: "Editor menu" })).toBeInTheDocument();
     expect(screen.getByRole("menuitem", { name: "Project" })).toBeInTheDocument();
     expect(screen.getByRole("menuitem", { name: "Edit" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "View" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Keyboard shortcuts" })).toBeInTheDocument();
     expect(screen.getByText("Enter / Double-click")).toBeInTheDocument();
   });
@@ -76,6 +77,40 @@ describe("EditorPage", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Show properties" }));
     expect(screen.getByText(/Select a widget/)).toBeInTheDocument();
+  });
+
+  it("toggles grid, rulers, and guides from the View menu", async () => {
+    const project = withChildren(makeFixtureProject(), [makeLabel("lbl_1")]);
+    get().setProject(project);
+    get().selectNode("lbl_1");
+    render(<EditorPage onBackToLibrary={() => undefined} />);
+
+    fireEvent.change(screen.getByRole("slider"), { target: { value: "5" } });
+    expect(screen.getAllByTestId("canvas-pixel-grid")).toHaveLength(1);
+    expect(screen.getByTestId("canvas-pixel-grid")).toBeInTheDocument();
+    expect(screen.getByTestId("canvas-rulers")).toBeInTheDocument();
+    expect(screen.getAllByTestId("selection-guide")).toHaveLength(8);
+    expect(screen.getAllByTestId("selection-frame")).toHaveLength(4);
+    expect(screen.getByTestId("resize-handle-nw")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("menuitem", { name: "View" }));
+    expect(screen.getByRole("menuitemcheckbox", { name: "Grid" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("menuitemcheckbox", { name: "Rulers" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("menuitemcheckbox", { name: "Guides" })).toHaveAttribute("aria-checked", "true");
+
+    await userEvent.click(screen.getByRole("menuitemcheckbox", { name: "Grid" }));
+    expect(screen.queryByTestId("canvas-pixel-grid")).not.toBeInTheDocument();
+    expect(screen.getByRole("menuitemcheckbox", { name: "Grid" })).toHaveAttribute("aria-checked", "false");
+
+    await userEvent.click(screen.getByRole("menuitemcheckbox", { name: "Rulers" }));
+    expect(screen.queryByTestId("canvas-rulers")).not.toBeInTheDocument();
+    expect(screen.getByRole("menuitemcheckbox", { name: "Rulers" })).toHaveAttribute("aria-checked", "false");
+
+    await userEvent.click(screen.getByRole("menuitemcheckbox", { name: "Guides" }));
+    expect(screen.queryAllByTestId("selection-guide")).toHaveLength(0);
+    expect(screen.getAllByTestId("selection-frame")).toHaveLength(4);
+    expect(screen.getByTestId("resize-handle-nw")).toBeInTheDocument();
+    expect(screen.getByRole("menuitemcheckbox", { name: "Guides" })).toHaveAttribute("aria-checked", "false");
   });
 });
 

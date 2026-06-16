@@ -33,6 +33,9 @@ export function EditorPage({
   const redo = useEditorStore((s) => s.redo);
   const [leftPanelOpen, setLeftPanelOpen] = useState(true);
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
+  const [showGrid, setShowGrid] = useState(true);
+  const [showRulers, setShowRulers] = useState(true);
+  const [showGuides, setShowGuides] = useState(true);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -111,7 +114,17 @@ export function EditorPage({
               />
             </button>
           </div>
-          <EditorMenu onBackToLibrary={onBackToLibrary} />
+          <EditorMenu
+            onBackToLibrary={onBackToLibrary}
+            viewSettings={{
+              showGrid,
+              showRulers,
+              showGuides,
+              onToggleGrid: () => setShowGrid((visible) => !visible),
+              onToggleRulers: () => setShowRulers((visible) => !visible),
+              onToggleGuides: () => setShowGuides((visible) => !visible),
+            }}
+          />
         </div>
       </TopBar>
       <aside
@@ -124,6 +137,9 @@ export function EditorPage({
         <CanvasWorkspace
           leftPanelOpen={leftPanelOpen}
           rightPanelOpen={rightPanelOpen}
+          showGrid={showGrid}
+          showRulers={showRulers}
+          showGuides={showGuides}
           onToggleLeftPanel={() => setLeftPanelOpen((open) => !open)}
           onToggleRightPanel={() => setRightPanelOpen((open) => !open)}
         />

@@ -38,6 +38,30 @@ function renderProject(children: ReturnType<typeof makeLabel>[]) {
   );
 }
 
+const triangleDirections = ["up", "down", "left", "right"] as const;
+
+function triangleSvg(container: HTMLElement) {
+  return container.querySelector('[data-widget-type="triangle"] [data-testid="pixel-triangle"]') as SVGElement;
+}
+
+function triangleRects(container: HTMLElement) {
+  return [...triangleSvg(container).querySelectorAll("rect")] as SVGRectElement[];
+}
+
+function rowRects(container: HTMLElement, y: number) {
+  return [...triangleSvg(container).querySelectorAll(`rect[y="${y}"]`)] as SVGRectElement[];
+}
+
+function rowTotalWidth(rects: SVGRectElement[]) {
+  return rects.reduce((sum, rect) => sum + Number(rect.getAttribute("width")), 0);
+}
+
+function rowBounds(rects: SVGRectElement[]) {
+  const left = Math.min(...rects.map((rect) => Number(rect.getAttribute("x"))));
+  const right = Math.max(...rects.map((rect) => Number(rect.getAttribute("x")) + Number(rect.getAttribute("width"))));
+  return { left, right };
+}
+
 describe("PreviewNode: per-type rendering", () => {
   it("renders label text via aria-label", () => {
     renderProject([makeLabel("lbl_1", "Hello")]);
@@ -160,6 +184,31 @@ describe("PreviewNode: per-type rendering", () => {
     expect(pixelBox).toBeTruthy();
   });
 
+  it.each([1, 3, 4, 5, 6, 7, 8])(
+    "renders rounded rect border without filling the interior for radius %i",
+    (borderRadius) => {
+    const rect = makeRect("rc_1");
+    rect.style = {
+      ...(rect.style ?? {}),
+      drawBackground: false,
+      drawBorder: true,
+      borderColor: { kind: "hex", value: "#FF0000" },
+      borderWidth: 1,
+      borderRadius,
+    };
+    const { container } = renderProject([rect]);
+    const pixelBox = container.querySelector('[data-widget-type="rect"] [data-testid="pixel-rounded-box"]');
+    const allRows = [...pixelBox!.querySelectorAll("rect")] as SVGRectElement[];
+    const middleRow = [...pixelBox!.querySelectorAll('rect[y="12"]')] as SVGRectElement[];
+
+    expect(allRows.length).toBeGreaterThan(0);
+    expect(allRows.some((row) => row.getAttribute("width") === "40")).toBe(false);
+    expect(middleRow).toHaveLength(2);
+    expect(middleRow.map((row) => Number(row.getAttribute("width")))).toEqual([1, 1]);
+    expect(middleRow.every((row) => row.getAttribute("fill") === "#FF0000")).toBe(true);
+    },
+  );
+
   it("renders circle and triangle shapes", () => {
     const { container } = renderProject([makeCircle("cir_1"), makeTriangle("tri_1")]);
     const circle = container.querySelector('[data-widget-type="circle"] [data-testid="pixel-circle"]');
@@ -172,59 +221,177 @@ describe("PreviewNode: per-type rendering", () => {
     expect(triangle?.querySelectorAll("rect").length).toBeGreaterThan(0);
   });
 
-  it("renders triangle border without filling the interior when fill is disabled", () => {
+  it.each(triangleDirections)("renders %s triangle fill as pixel scanlines", (direction) => {
     const triangle = makeTriangle("tri_1");
     triangle.style = {
       ...(triangle.style ?? {}),
-      drawBackground: false,
-      drawBorder: true,
-      borderColor: { kind: "hex", value: "#FFFFFF" },
-      borderWidth: 1,
+      drawBackground: true,
+      background: { kind: "hex", value: "#00FF00" },
+      drawBorder: false,
     };
+    triangle.props = { ...(triangle.props ?? {}), direction };
     const { container } = renderProject([triangle]);
-    const middleRow = [
-      ...container.querySelectorAll('[data-widget-type="triangle"] [data-testid="pixel-triangle"] rect[y="20"]'),
-    ] as SVGRectElement[];
-    const bottomRow = [
-      ...container.querySelectorAll('[data-widget-type="triangle"] [data-testid="pixel-triangle"] rect[y="31"]'),
-    ] as SVGRectElement[];
+    const rects = triangleRects(container);
 
-    const middleWidth = middleRow.reduce((sum, rect) => sum + Number(rect.getAttribute("width")), 0);
-    expect(middleWidth).toBeLessThan(10);
-    expect(bottomRow).toHaveLength(1);
-    expect(bottomRow[0]).toHaveAttribute("width", "36");
+    expect(rects).toHaveLength(32);
+    expect(rects.every((rect) => rect.getAttribute("fill") === "#00FF00")).toBe(true);
+    expect(rects.some((rect) => Number(rect.getAttribute("width")) > 30)).toBe(true);
+    expect(rects.some((rect) => Number(rect.getAttribute("width")) === 1)).toBe(true);
+  });
 
-    const leftEdge = [...container.querySelectorAll('[data-widget-type="triangle"] [data-testid="pixel-triangle"] rect')]
-      .map((rect) => Number(rect.getAttribute("y")))
-      .filter((y, index, rows) => rows.indexOf(y) === index)
-      .sort((a, b) => a - b)
-      .map((y) => {
-        const rowRects = [
-          ...container.querySelectorAll(`[data-widget-type="triangle"] [data-testid="pixel-triangle"] rect[y="${y}"]`),
-        ] as SVGRectElement[];
-        return Math.min(...rowRects.map((rect) => Number(rect.getAttribute("x"))));
-      });
-    for (let index = 1; index < leftEdge.length; index += 1) {
-      expect(leftEdge[index] - leftEdge[index - 1]).toBeLessThanOrEqual(1);
-      expect(leftEdge[index - 1] - leftEdge[index]).toBeLessThanOrEqual(1);
+  it.each([
+    ["up", 0, 31, 1, 36],
+    ["down", 0, 31, 36, 1],
+    ["right", 0, 16, 1, 35],
+    ["left", 0, 16, 1, 35],
+  ] as const)("orients %s triangle scanlines", (direction, tipY, wideY, tipWidth, wideWidth) => {
+    const triangle = makeTriangle("tri_1");
+    triangle.style = {
+      ...(triangle.style ?? {}),
+      drawBackground: true,
+      background: { kind: "hex", value: "#00FF00" },
+      drawBorder: false,
+    };
+    triangle.props = { ...(triangle.props ?? {}), direction };
+    const { container } = renderProject([triangle]);
+    const tipRow = rowRects(container, tipY);
+    const wideRow = rowRects(container, wideY);
+
+    expect(rowTotalWidth(tipRow)).toBe(tipWidth);
+    expect(rowTotalWidth(wideRow)).toBeGreaterThanOrEqual(wideWidth);
+    if (direction === "left") {
+      expect(Number(tipRow[0].getAttribute("x"))).toBe(35);
+      expect(Number(wideRow[0].getAttribute("x"))).toBeLessThanOrEqual(1);
+    }
+    if (direction === "right") {
+      expect(Number(tipRow[0].getAttribute("x"))).toBe(0);
+      expect(Number(wideRow[0].getAttribute("x"))).toBe(0);
     }
   });
 
-  it("scales triangle border evenly when width is increased", () => {
+  it("renders no triangle pixels when fill and border are disabled", () => {
+    const triangle = makeTriangle("tri_1");
+    triangle.style = {
+      ...(triangle.style ?? {}),
+      drawBackground: false,
+      drawBorder: false,
+    };
+    const { container } = renderProject([triangle]);
+
+    expect(triangleRects(container)).toHaveLength(0);
+  });
+
+  it.each(triangleDirections)("renders %s triangle border without filling the interior", (direction) => {
     const triangle = makeTriangle("tri_1");
     triangle.style = {
       ...(triangle.style ?? {}),
       drawBackground: false,
       drawBorder: true,
-      borderColor: { kind: "hex", value: "#FFFFFF" },
-      borderWidth: 4,
+      borderColor: { kind: "hex", value: "#00FF00" },
+      borderWidth: 1,
+    };
+    triangle.props = { ...(triangle.props ?? {}), direction };
+    const { container } = renderProject([triangle]);
+    const rects = triangleRects(container);
+    const middleRow = rowRects(container, 16);
+
+    expect(rects.length).toBeGreaterThan(0);
+    expect(rects.every((rect) => rect.getAttribute("fill") === "#00FF00")).toBe(true);
+    expect(middleRow.length).toBeGreaterThan(0);
+    expect(rowTotalWidth(middleRow)).toBeLessThan(36);
+    expect(rowTotalWidth(middleRow)).toBeGreaterThan(0);
+  });
+
+  it.each(triangleDirections)("renders %s triangle border without row gaps", (direction) => {
+    const triangle = makeTriangle("tri_1");
+    triangle.style = {
+      ...(triangle.style ?? {}),
+      drawBackground: false,
+      drawBorder: true,
+      borderColor: { kind: "hex", value: "#00FF00" },
+      borderWidth: 1,
+    };
+    triangle.props = { ...(triangle.props ?? {}), direction };
+    const { container } = renderProject([triangle]);
+
+    const startY = direction === "left" || direction === "right" ? 1 : 0;
+    const endY = direction === "left" || direction === "right" ? 31 : 32;
+    for (let y = startY; y < endY; y += 1) {
+      expect(rowTotalWidth(rowRects(container, y)), `missing triangle border pixels at y=${y}`).toBeGreaterThan(0);
+    }
+  });
+
+  it("trims up triangle base at diagonal joins", () => {
+    const triangle = makeTriangle("tri_1");
+    triangle.style = {
+      ...(triangle.style ?? {}),
+      drawBackground: false,
+      drawBorder: true,
+      borderColor: { kind: "hex", value: "#00FF00" },
+      borderWidth: 1,
     };
     const { container } = renderProject([triangle]);
-    const middleRow = [
-      ...container.querySelectorAll('[data-widget-type="triangle"] [data-testid="pixel-triangle"] rect[y="16"]'),
-    ] as SVGRectElement[];
-    expect(middleRow).toHaveLength(2);
-    expect(middleRow.every((rect) => Number(rect.getAttribute("width")) === 4)).toBe(true);
+    const bottom = rowBounds(rowRects(container, 31));
+
+    expect(bottom.left).toBeGreaterThan(0);
+    expect(bottom.right).toBeLessThan(36);
+  });
+
+  it("trims down triangle base at diagonal joins", () => {
+    const triangle = makeTriangle("tri_1");
+    triangle.style = {
+      ...(triangle.style ?? {}),
+      drawBackground: false,
+      drawBorder: true,
+      borderColor: { kind: "hex", value: "#00FF00" },
+      borderWidth: 1,
+    };
+    triangle.props = { ...(triangle.props ?? {}), direction: "down" };
+    const { container } = renderProject([triangle]);
+    const top = rowBounds(rowRects(container, 0));
+
+    expect(top.left).toBeGreaterThan(0);
+    expect(top.right).toBeLessThan(36);
+  });
+
+  it.each([1, 2, 4, 6])("keeps triangle border hollow when border width is %i", (borderWidth) => {
+    const triangle = makeTriangle("tri_1");
+    triangle.style = {
+      ...(triangle.style ?? {}),
+      drawBackground: false,
+      drawBorder: true,
+      borderColor: { kind: "hex", value: "#00FF00" },
+      borderWidth,
+    };
+    const { container } = renderProject([triangle]);
+    const middleRow = rowRects(container, 16);
+
+    expect(middleRow.length).toBeGreaterThan(0);
+    expect(rowTotalWidth(middleRow)).toBeLessThan(36);
+    expect(rowTotalWidth(middleRow)).toBeGreaterThanOrEqual(borderWidth);
+  });
+
+  it.each(triangleDirections)("renders %s triangle fill inside border", (direction) => {
+    const triangle = makeTriangle("tri_1");
+    triangle.style = {
+      ...(triangle.style ?? {}),
+      drawBackground: true,
+      background: { kind: "hex", value: "#003300" },
+      drawBorder: true,
+      borderColor: { kind: "hex", value: "#00FF00" },
+      borderWidth: 3,
+    };
+    triangle.props = { ...(triangle.props ?? {}), direction };
+    const { container } = renderProject([triangle]);
+    const rects = triangleRects(container);
+    const borderRows = rects.filter((rect) => rect.getAttribute("fill") === "#00FF00");
+    const fillRows = rects.filter((rect) => rect.getAttribute("fill") === "#003300");
+
+    expect(borderRows.length).toBeGreaterThan(0);
+    expect(fillRows.length).toBeGreaterThan(0);
+    expect(fillRows.every((rect) => Number(rect.getAttribute("x")) >= 3)).toBe(true);
+    expect(fillRows.every((rect) => Number(rect.getAttribute("y")) >= 3)).toBe(true);
+    expect(fillRows.every((rect) => Number(rect.getAttribute("y")) < 29)).toBe(true);
   });
 
   it("renders freehand pixel strokes", () => {
@@ -233,11 +400,60 @@ describe("PreviewNode: per-type rendering", () => {
     expect(freehand?.querySelectorAll("div")).toHaveLength(2);
   });
 
+  it("renders freehand strokes with configured width", () => {
+    const stroke = makeFreehand("fre_1");
+    stroke.style = { ...(stroke.style ?? {}), borderWidth: 3 };
+    stroke.props = { points: [{ x: 0, y: 0 }], strokeWidth: 3 };
+    const { container } = renderProject([stroke]);
+    const pixel = container.querySelector(
+      '[data-widget-type="freehand"] [data-testid="freehand-visual"] div',
+    ) as HTMLElement;
+    expect(pixel.style.width).toBe("3px");
+    expect(pixel.style.height).toBe("3px");
+  });
+
+  it("renders circle border as a pixel ring", () => {
+    const circle = makeCircle("cir_1");
+    circle.style = {
+      ...(circle.style ?? {}),
+      drawBackground: false,
+      drawBorder: true,
+      borderColor: { kind: "hex", value: "#FFFFFF" },
+      borderWidth: 2,
+    };
+    const { container } = renderProject([circle]);
+    const middleRow = [
+      ...container.querySelectorAll('[data-widget-type="circle"] [data-testid="pixel-circle"] rect[y="16"]'),
+    ] as SVGRectElement[];
+    expect(middleRow.length).toBeGreaterThan(0);
+    const totalWidth = middleRow.reduce((sum, rect) => sum + Number(rect.getAttribute("width")), 0);
+    expect(totalWidth).toBeLessThan(32);
+    expect(middleRow.some((rect) => Number(rect.getAttribute("width")) === 2)).toBe(true);
+  });
+
   it("applies rotation to shape nodes", () => {
     const rect = { ...makeRect("rc_1"), rotation: 45 };
     const { container } = renderProject([rect]);
     const node = container.querySelector('[data-widget-type="rect"]') as HTMLElement;
     expect(node.style.transform).toBe("rotate(45deg)");
+  });
+
+  it("applies rotation to circle and triangle nodes", () => {
+    const circle = { ...makeCircle("cir_1"), rotation: 30 };
+    const triangle = { ...makeTriangle("tri_1"), rotation: -15 };
+    const { container } = renderProject([circle, triangle]);
+    expect((container.querySelector('[data-widget-type="circle"]') as HTMLElement).style.transform).toBe(
+      "rotate(30deg)",
+    );
+    expect((container.querySelector('[data-widget-type="triangle"]') as HTMLElement).style.transform).toBe(
+      "rotate(-15deg)",
+    );
+  });
+
+  it("uses pixelated rendering on triangle svg", () => {
+    const { container } = renderProject([makeTriangle("tri_1")]);
+    const svg = container.querySelector('[data-testid="pixel-triangle"]') as SVGElement;
+    expect(svg.style.imageRendering).toBe("pixelated");
   });
 
   it("renders panel container", () => {

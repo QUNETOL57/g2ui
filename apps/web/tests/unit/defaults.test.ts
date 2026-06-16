@@ -113,4 +113,17 @@ describe("makeWidget", () => {
     const node = makeWidget("sc_1", "screen");
     expect(node.children).toEqual([]);
   });
+
+  it("creates drawing widgets with expected props and styles", () => {
+    const circle = makeWidget("cir_1", "circle");
+    expect(circle.props).toEqual({ radius: 0 });
+
+    const triangle = makeWidget("tri_1", "triangle");
+    expect(triangle.props).toEqual({ direction: "up" });
+
+    const freehand = makeWidget("fre_1", "freehand");
+    expect(freehand.props).toEqual({ points: [], strokeWidth: 1 });
+    expect(freehand.style?.borderColor).toEqual({ kind: "hex", value: "#FFFFFF" });
+    expect(freehand.style?.borderWidth).toBe(1);
+  });
 });

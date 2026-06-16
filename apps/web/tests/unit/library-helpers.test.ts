@@ -1,11 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  copyProjectCard,
   findPresetIdForSize,
   formatEditedAt,
   orientSize,
   templateLabel,
+  type ProjectCard,
 } from "@pages/library/lib/library-helpers";
+import { makeProjectFromTemplate } from "@entities/ui-project/lib/projectTemplates";
 import { DEFAULT_PRESET_ID, DISPLAY_PRESETS } from "@shared/config/displayPresets";
 
 describe("orientSize", () => {
@@ -65,5 +68,45 @@ describe("templateLabel", () => {
   it("returns human-readable labels", () => {
     expect(templateLabel("hello")).toBe("Hello");
     expect(templateLabel("blank")).toBe("Blank");
+  });
+});
+
+describe("copyProjectCard", () => {
+  function makeCard(id: string, name = "Demo"): ProjectCard {
+    const project = makeProjectFromTemplate({
+      id,
+      name,
+      width: 160,
+      height: 128,
+      template: "blank",
+    });
+    return {
+      id,
+      name,
+      width: 160,
+      height: 128,
+      template: "blank",
+      updatedAt: new Date("2024-01-01"),
+      project,
+    };
+  }
+
+  it("clones project with a new id and copy suffix name", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-12T10:00:00Z"));
+    const source = makeCard("p1", "Original");
+    const copied = copyProjectCard(source);
+
+    expect(copied.id).toBe(`project-${Date.now()}`);
+    expect(copied.name).toBe("Original copy");
+    expect(copied.width).toBe(source.width);
+    expect(copied.height).toBe(source.height);
+    expect(copied.template).toBe(source.template);
+    expect(copied.updatedAt).toEqual(new Date("2026-06-12T10:00:00Z"));
+    expect(copied.project.id).toBe(copied.id);
+    expect(copied.project.name).toBe("Original copy");
+    expect(copied.project).not.toBe(source.project);
+    expect(copied.project.screens).toEqual(source.project.screens);
+    vi.useRealTimers();
   });
 });

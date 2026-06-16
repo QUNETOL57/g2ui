@@ -23,6 +23,9 @@ import {
   makeIcon,
   makeLabel,
   makePanel,
+  makeCircle,
+  makeTriangle,
+  makeFreehand,
   withChildren,
 } from "../fixtures/projects";
 
@@ -34,6 +37,23 @@ describe("cloneProject", () => {
     expect(copy.screens).not.toBe(project.screens);
     expect(copy.screens[0].children).not.toBe(project.screens[0].children);
     expect(copy).toEqual(project);
+  });
+
+  it("deep-copies drawing widgets", () => {
+    const project = withChildren(makeFixtureProject(), [
+      makeCircle("cir_1"),
+      makeTriangle("tri_1"),
+      makeFreehand("fre_1"),
+    ]);
+    const copy = cloneProject(project);
+    expect(copy.screens[0].children?.map((node) => node.type)).toEqual([
+      "circle",
+      "triangle",
+      "freehand",
+    ]);
+    expect(copy.screens[0].children?.[2].props).toEqual(project.screens[0].children?.[2].props);
+    copy.screens[0].children![0].frame!.x = 99;
+    expect(project.screens[0].children![0].frame!.x).toBe(4);
   });
 });
 

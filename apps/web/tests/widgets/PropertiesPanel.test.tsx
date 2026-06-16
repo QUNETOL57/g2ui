@@ -7,11 +7,14 @@ import { PropertiesPanel } from "@widgets/properties-panel/PropertiesPanel";
 
 import {
   makeButton,
+  makeCircle,
   makeFixtureProject,
+  makeFreehand,
   makeIcon,
   makeLabel,
   makeLine,
   makePanel,
+  makeTriangle,
   withChildren,
 } from "../fixtures/projects";
 import { resetEditorStore } from "../fixtures/store";
@@ -56,6 +59,17 @@ describe("PropertiesPanel: empty state", () => {
     fireEvent.blur(colorInput);
     expect(get().markerStyle.color).toEqual({ kind: "hex", value: "#FF0000" });
   });
+
+  it("prefers selected widget properties over marker settings", () => {
+    const project = withChildren(makeFixtureProject(), [makeTriangle("tri_1")]);
+    get().setProject(project);
+    get().setActiveTool("marker");
+    get().selectNode("tri_1");
+    selectAndRender("tri_1");
+    expect(screen.getByText(/Properties · triangle/)).toBeInTheDocument();
+    expect(screen.queryByText(/Properties · marker/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Marker")).not.toBeInTheDocument();
+  });
 });
 
 describe("PropertiesPanel: per-type groups", () => {
@@ -99,6 +113,33 @@ describe("PropertiesPanel: per-type groups", () => {
     get().setProject(project);
     selectAndRender("ln_1");
     expect(screen.getByText("Stroke")).toBeInTheDocument();
+  });
+
+  it("for circle shows fill, border and rotation", () => {
+    const project = withChildren(makeFixtureProject(), [makeCircle("cir_1")]);
+    get().setProject(project);
+    selectAndRender("cir_1");
+    expect(screen.getByText(/Properties · circle/)).toBeInTheDocument();
+    expect(screen.getByText("Fill")).toBeInTheDocument();
+    expect(screen.getByText("Border")).toBeInTheDocument();
+    expect(screen.getByText("R")).toBeInTheDocument();
+  });
+
+  it("for triangle shows fill, border and rotation", () => {
+    const project = withChildren(makeFixtureProject(), [makeTriangle("tri_1")]);
+    get().setProject(project);
+    selectAndRender("tri_1");
+    expect(screen.getByText(/Properties · triangle/)).toBeInTheDocument();
+    expect(screen.getByText("R")).toBeInTheDocument();
+  });
+
+  it("for freehand shows stroke controls", () => {
+    const project = withChildren(makeFixtureProject(), [makeFreehand("fre_1")]);
+    get().setProject(project);
+    selectAndRender("fre_1");
+    expect(screen.getByText(/Properties · freehand/)).toBeInTheDocument();
+    expect(screen.getByText("Stroke")).toBeInTheDocument();
+    expect(screen.queryByText("Fill")).not.toBeInTheDocument();
   });
 });
 

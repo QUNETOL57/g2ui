@@ -11,6 +11,7 @@ interface SelectionOverlayProps {
   renderZoom: number;
   scaledW: number;
   scaledH: number;
+  showGuides?: boolean;
   showMoveMask: boolean;
   showResizeHandles: boolean;
   lineEndpoints: { start: Point; end: Point } | null;
@@ -46,6 +47,7 @@ export function SelectionOverlay({
   renderZoom,
   scaledW,
   scaledH,
+  showGuides = true,
   showMoveMask,
   showResizeHandles,
   lineEndpoints,
@@ -96,10 +98,70 @@ export function SelectionOverlay({
 
   return (
     <>
-      <div className={cn(styles.guide, styles.guideVertical)} style={{ left, top: 0, height: scaledH }} />
-      <div className={cn(styles.guide, styles.guideVertical)} style={{ left: right, top: 0, height: scaledH }} />
-      <div className={cn(styles.guide, styles.guideHorizontal)} style={{ top, left: 0, width: scaledW }} />
-      <div className={cn(styles.guide, styles.guideHorizontal)} style={{ top: bottom, left: 0, width: scaledW }} />
+      {showGuides ? (
+        <>
+          <div
+            className={cn(styles.guide, styles.guideVertical)}
+            data-testid="selection-guide"
+            style={{ left, top: 0, height: top }}
+          />
+          <div
+            className={cn(styles.guide, styles.guideVertical)}
+            data-testid="selection-guide"
+            style={{ left, top: bottom, height: Math.max(0, scaledH - bottom) }}
+          />
+          <div
+            className={cn(styles.guide, styles.guideVertical)}
+            data-testid="selection-guide"
+            style={{ left: right, top: 0, height: top }}
+          />
+          <div
+            className={cn(styles.guide, styles.guideVertical)}
+            data-testid="selection-guide"
+            style={{ left: right, top: bottom, height: Math.max(0, scaledH - bottom) }}
+          />
+          <div
+            className={cn(styles.guide, styles.guideHorizontal)}
+            data-testid="selection-guide"
+            style={{ top, left: 0, width: left }}
+          />
+          <div
+            className={cn(styles.guide, styles.guideHorizontal)}
+            data-testid="selection-guide"
+            style={{ top, left: right, width: Math.max(0, scaledW - right) }}
+          />
+          <div
+            className={cn(styles.guide, styles.guideHorizontal)}
+            data-testid="selection-guide"
+            style={{ top: bottom, left: 0, width: left }}
+          />
+          <div
+            className={cn(styles.guide, styles.guideHorizontal)}
+            data-testid="selection-guide"
+            style={{ top: bottom, left: right, width: Math.max(0, scaledW - right) }}
+          />
+        </>
+      ) : null}
+      <div
+        className={cn(styles.guide, styles.guideVertical)}
+        data-testid="selection-frame"
+        style={{ left, top, height: maskHeight }}
+      />
+      <div
+        className={cn(styles.guide, styles.guideVertical)}
+        data-testid="selection-frame"
+        style={{ left: right, top, height: maskHeight }}
+      />
+      <div
+        className={cn(styles.guide, styles.guideHorizontal)}
+        data-testid="selection-frame"
+        style={{ top, left, width: maskWidth }}
+      />
+      <div
+        className={cn(styles.guide, styles.guideHorizontal)}
+        data-testid="selection-frame"
+        style={{ top: bottom, left, width: maskWidth }}
+      />
       {showBorderMove
         ? frameEdges.map((edge) => (
             <div

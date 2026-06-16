@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { StyleGroup } from "@widgets/properties-panel/groups/StyleGroup";
 
-import { makeButton, makeIcon, makeLine, makePanel } from "../fixtures/projects";
+import { makeButton, makeFreehand, makeIcon, makeLine, makePanel } from "../fixtures/projects";
 
 const palette = [
   { token: "bg", hex: "#000000" },
@@ -36,6 +36,26 @@ describe("StyleGroup: line variant", () => {
     await userEvent.type(widthInput, "3");
     await userEvent.tab();
     expect(handler).toHaveBeenCalledWith("ln_1", expect.objectContaining({ borderWidth: 3 }));
+  });
+});
+
+describe("StyleGroup: freehand variant", () => {
+  it("shows stroke controls like line", () => {
+    const node = makeFreehand("fre_1");
+    render(<StyleGroup node={node} palette={palette} updateStyle={() => undefined} />);
+    expect(screen.getByText("Stroke")).toBeInTheDocument();
+    expect(screen.queryByText("Fill")).not.toBeInTheDocument();
+  });
+
+  it("emits stroke width updates", async () => {
+    const handler = vi.fn();
+    const node = makeFreehand("fre_1");
+    render(<StyleGroup node={node} palette={palette} updateStyle={handler} />);
+    const widthInput = screen.getByRole("spinbutton");
+    await userEvent.clear(widthInput);
+    await userEvent.type(widthInput, "2");
+    await userEvent.tab();
+    expect(handler).toHaveBeenCalledWith("fre_1", expect.objectContaining({ borderWidth: 2 }));
   });
 });
 

@@ -4,7 +4,7 @@ import { validateProject } from "@entities/ui-project/validate";
 import { emptyProject } from "@entities/ui-project/defaults";
 import { IR_SCHEMA_VERSION } from "@entities/ui-project/schema";
 
-import { makeFixtureProject, makeLabel, withChildren } from "../fixtures/projects";
+import { makeFixtureProject, makeCircle, makeFreehand, makeLabel, makeTriangle, withChildren } from "../fixtures/projects";
 
 describe("validateProject", () => {
   it("returns ok for a fresh empty project", () => {
@@ -109,6 +109,15 @@ describe("validateProject", () => {
     const result = validateProject(project);
     expect(result.ok).toBe(false);
     expect(result.issues.some((i) => /invalid id/.test(i.message))).toBe(true);
+  });
+
+  it("returns ok for circle, triangle and freehand widgets", () => {
+    const project = withChildren(makeFixtureProject(), [
+      makeCircle("cir_1"),
+      makeTriangle("tri_1"),
+      makeFreehand("fre_1"),
+    ]);
+    expect(validateProject(project)).toEqual({ ok: true, issues: [] });
   });
 
   it("schema version constant is stable", () => {

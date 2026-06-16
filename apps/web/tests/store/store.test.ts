@@ -31,6 +31,14 @@ describe("store: initial state", () => {
     expect(s.historyFuture).toEqual([]);
     expect(s.lastError).toBeNull();
   });
+
+  it("starts with select tool and default marker style", () => {
+    expect(get().activeTool).toBe("select");
+    expect(get().markerStyle).toEqual({
+      color: { kind: "hex", value: "#FFFFFF" },
+      width: 1,
+    });
+  });
 });
 
 describe("store: setProject / loadHelloSample", () => {
@@ -429,5 +437,75 @@ describe("store: import / export JSON", () => {
     const ok = get().importJson("not json");
     expect(ok).toBe(false);
     expect(get().lastError).toBeTruthy();
+  });
+});
+
+describe("store: marker tool and freehand strokes", () => {
+  it("starts with select tool and default marker style", () => {
+    expect(get().activeTool).toBe("select");
+    expect(get().markerStyle).toEqual({
+      color: { kind: "hex", value: "#FFFFFF" },
+      width: 1,
+    });
+  });
+
+  it("setActiveTool switches between select and marker", () => {
+    get().setActiveTool("marker");
+    expect(get().activeTool).toBe("marker");
+    get().setActiveTool("select");
+    expect(get().activeTool).toBe("select");
+  });
+
+  it("updateMarkerStyle clamps width to at least 1", () => {
+    get().updateMarkerStyle({ width: 0 });
+    expect(get().markerStyle.width).toBe(1);
+    get().updateMarkerStyle({ width: 3.7 });
+    expect(get().markerStyle.width).toBe(4);
+    get().updateMarkerStyle({ color: { kind: "hex", value: "#FF0000" } });
+    expect(get().markerStyle.color).toEqual({ kind: "hex", value: "#FF0000" });
+  });
+
+  it("addWidget resets activeTool to select", () => {
+    get().setActiveTool("marker");
+    get().addWidget("screen_main", "circle");
+    expect(get().activeTool).toBe("select");
+  });
+
+  it("addFreehandStroke creates a normalized freehand node and selects it", () => {
+    get().updateMarkerStyle({ color: { kind: "hex", value: "#00FF00" }, width: 2 });
+    const id = get().addFreehandStroke("screen_main", [
+      { x: 10, y: 10 },
+      { x: 12, y: 10 },
+      { x: 12, y: 10 },
+    ]);
+    expect(id).toBeTruthy();
+
+    const node = findNode(get().project, id!);
+    expect(node?.type).toBe("freehand");
+    expect(node?.frame).toEqual({ x: 10, y: 10, width: 4, height: 2 });
+    expect(node?.props).toEqual({
+      points: [
+        { x: 0, y: 0 },
+        { x: 2, y: 0 },
+      ],
+      strokeWidth: 2,
+    });
+    expect(node?.style?.borderColor).toEqual({ kind: "hex", value: "#00FF00" });
+    expect(node?.style?.borderWidth).toBe(2);
+    expect(get().selectedNodeId).toBe(id);
+    expect(get().activeTool).toBe("select");
+    expect(get().historyPast).toHaveLength(1);
+  });
+
+  it("addFreehandStroke returns null for empty point lists", () => {
+    const id = get().addFreehandStroke("screen_main", []);
+    expect(id).toBeNull();
+    expect(get().project.screens[0].children).toEqual([]);
+  });
+
+  it("setActiveScreen resets marker tool to select", () => {
+    get().setActiveTool("marker");
+    get().setActiveScreen("screen_main");
+    expect(get().activeTool).toBe("select");
   });
 });

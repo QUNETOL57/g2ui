@@ -11,6 +11,7 @@ import {
   makeFixtureProject,
   makeLabel,
   makePanel,
+  makeTriangle,
   withChildren,
 } from "../fixtures/projects";
 import { resetEditorStore } from "../fixtures/store";
@@ -64,6 +65,16 @@ describe("CanvasToolbar: create tools", () => {
     expect(get().activeTool).toBe("select");
   });
 
+  it("resets marker tool to select after adding a shape", async () => {
+    render(<CanvasToolbar />);
+    await userEvent.click(screen.getByRole("button", { name: "Marker" }));
+    expect(get().activeTool).toBe("marker");
+    await userEvent.click(screen.getByRole("button", { name: "Shapes tools" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Triangle" }));
+    expect(get().activeTool).toBe("select");
+    expect(get().project.screens[0].children?.[0].type).toBe("triangle");
+  });
+
   it("keeps active tool focus to a single visual outline", async () => {
     render(<CanvasToolbar />);
     const marker = screen.getByRole("button", { name: "Marker" });
@@ -108,6 +119,18 @@ describe("CanvasToolbar: arrange actions", () => {
     render(<CanvasToolbar />);
     await userEvent.click(screen.getByRole("button", { name: "Delete" }));
     expect(get().project.screens[0].children).toEqual([]);
+  });
+
+  it("clears selection after deleting shape while marker tool is active", async () => {
+    const project = withChildren(makeFixtureProject(), [makeTriangle("tri_1")]);
+    get().setProject(project);
+    get().setActiveTool("marker");
+    get().selectNode("tri_1");
+    render(<CanvasToolbar />);
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    expect(get().selectedNodeId).toBeNull();
+    expect(get().activeTool).toBe("marker");
+    expect(screen.getByRole("button", { name: "Marker" }).className).toMatch(/toolActive/);
   });
 
   it("delete is disabled when only the screen is selected", () => {

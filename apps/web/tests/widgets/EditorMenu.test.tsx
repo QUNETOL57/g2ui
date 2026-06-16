@@ -33,6 +33,125 @@ describe("EditorMenu", () => {
     expect(screen.getByRole("menuitem", { name: /Undo/ })).toBeDisabled();
   });
 
+  it("opens View menu with checked display settings", async () => {
+    render(
+      <EditorMenu
+        onBackToLibrary={() => undefined}
+        viewSettings={{
+          showGrid: true,
+          showRulers: false,
+          showGuides: true,
+          onToggleGrid: vi.fn(),
+          onToggleRulers: vi.fn(),
+          onToggleGuides: vi.fn(),
+        }}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("menuitem", { name: "View" }));
+    expect(screen.getByRole("menuitemcheckbox", { name: "Grid" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("menuitemcheckbox", { name: "Rulers" })).toHaveAttribute("aria-checked", "false");
+    expect(screen.getByRole("menuitemcheckbox", { name: "Guides" })).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("toggles display settings from View menu", async () => {
+    const onToggleGrid = vi.fn();
+    const onToggleRulers = vi.fn();
+    const onToggleGuides = vi.fn();
+    render(
+      <EditorMenu
+        onBackToLibrary={() => undefined}
+        viewSettings={{
+          showGrid: true,
+          showRulers: true,
+          showGuides: true,
+          onToggleGrid,
+          onToggleRulers,
+          onToggleGuides,
+        }}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("menuitem", { name: "View" }));
+    await userEvent.click(screen.getByRole("menuitemcheckbox", { name: "Grid" }));
+    await userEvent.click(screen.getByRole("menuitemcheckbox", { name: "Rulers" }));
+    await userEvent.click(screen.getByRole("menuitemcheckbox", { name: "Guides" }));
+
+    expect(onToggleGrid).toHaveBeenCalledTimes(1);
+    expect(onToggleRulers).toHaveBeenCalledTimes(1);
+    expect(onToggleGuides).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows a side preview when hovering View settings", async () => {
+    render(
+      <EditorMenu
+        onBackToLibrary={() => undefined}
+        viewSettings={{
+          showGrid: true,
+          showRulers: true,
+          showGuides: true,
+          onToggleGrid: vi.fn(),
+          onToggleRulers: vi.fn(),
+          onToggleGuides: vi.fn(),
+        }}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("menuitem", { name: "View" }));
+    await userEvent.hover(screen.getByRole("menuitemcheckbox", { name: "Guides" }));
+
+    expect(screen.getByTestId("view-setting-preview")).toHaveTextContent("Guides");
+    expect(screen.getByText(/alignment guide lines/i)).toBeInTheDocument();
+    expect(screen.getByText("Text")).toBeInTheDocument();
+  });
+
+  it("renders grid preview with the canvas grid pattern", async () => {
+    render(
+      <EditorMenu
+        onBackToLibrary={() => undefined}
+        viewSettings={{
+          showGrid: true,
+          showRulers: true,
+          showGuides: true,
+          onToggleGrid: vi.fn(),
+          onToggleRulers: vi.fn(),
+          onToggleGuides: vi.fn(),
+        }}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("menuitem", { name: "View" }));
+    await userEvent.hover(screen.getByRole("menuitemcheckbox", { name: "Grid" }));
+
+    const preview = screen.getByTestId("view-setting-preview");
+    expect(preview.querySelector('[class*="previewGrid"]')).toBeTruthy();
+    expect(preview).toHaveTextContent("Grid");
+  });
+
+  it("renders rulers preview with a canvas-like grid area", async () => {
+    render(
+      <EditorMenu
+        onBackToLibrary={() => undefined}
+        viewSettings={{
+          showGrid: true,
+          showRulers: true,
+          showGuides: true,
+          onToggleGrid: vi.fn(),
+          onToggleRulers: vi.fn(),
+          onToggleGuides: vi.fn(),
+        }}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("menuitem", { name: "View" }));
+    await userEvent.hover(screen.getByRole("menuitemcheckbox", { name: "Rulers" }));
+
+    const preview = screen.getByTestId("view-setting-preview");
+    expect(preview.querySelector('[class*="previewRulerGrid"]')).toBeTruthy();
+    expect(preview.querySelector('[class*="previewRulerTop"]')).toBeTruthy();
+    expect(preview.querySelector('[class*="previewRulerLeft"]')).toBeTruthy();
+  });
+
   it("runs undo from Edit menu when history exists", async () => {
     const id = useEditorStore.getState().addWidget("screen_main", "label")!;
     expect(useEditorStore.getState().historyPast.length).toBeGreaterThan(0);

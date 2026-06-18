@@ -1,6 +1,7 @@
 import type { UiProject } from "@entities/ui-project";
 import { layoutTree } from "@entities/ui-project/lib/layoutEngine";
 import { PreviewNode } from "@widgets/canvas-workspace/renderNode";
+import { computeWidgetStackIndices } from "@widgets/canvas-workspace/lib/widgetStackIndices";
 
 import styles from "./ScreenThumbnail.module.css";
 
@@ -19,6 +20,7 @@ export function ScreenThumbnail({
 }) {
   const screen = project.screens.find((item) => item.id === screenId) ?? project.screens[0];
   const layout = screen ? layoutTree(screen, project.display.width, project.display.height) : null;
+  const stackIndices = layout ? computeWidgetStackIndices(layout) : new Map<string, number>();
   const { width: displayWidth, height: displayHeight } = project.display;
   const innerWidth = SCREEN_THUMB_MAX_WIDTH - SCREEN_THUMB_PADDING * 2;
   const innerHeight = SCREEN_THUMB_MAX_HEIGHT - SCREEN_THUMB_PADDING * 2;
@@ -55,6 +57,7 @@ export function ScreenThumbnail({
               layoutNode={layout}
               ctx={{
                 palette: project.palette,
+                stackIndices,
                 selectedId: null,
                 movableId: null,
                 dragPreview: null,

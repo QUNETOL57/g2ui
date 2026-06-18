@@ -3,7 +3,9 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { findFontFace, measureTextWidth } from "@entities/font/fontLibrary";
+import type { LayoutNode } from "@entities/ui-project/lib/layoutEngine";
 import { layoutTree } from "@entities/ui-project/lib/layoutEngine";
+import { computeWidgetStackIndices } from "@widgets/canvas-workspace/lib/widgetStackIndices";
 import { PreviewNode } from "@widgets/canvas-workspace/renderNode";
 
 import {
@@ -20,6 +22,27 @@ import {
   withChildren,
 } from "../fixtures/projects";
 
+function makePreviewCtx(
+  project: ReturnType<typeof makeFixtureProject>,
+  layout: LayoutNode,
+  overrides: Record<string, unknown> = {},
+) {
+  return {
+    palette: project.palette,
+    stackIndices: computeWidgetStackIndices(layout),
+    selectedId: null,
+    movableId: null,
+    dragPreview: null,
+    onSelect: vi.fn(),
+    ...overrides,
+  };
+}
+
+function widgetZ(container: HTMLElement, id: string, testId = "canvas-widget") {
+  return (container.querySelector(`[data-widget-id="${id}"][data-testid="${testId}"]`) as HTMLElement)
+    .style.zIndex;
+}
+
 function renderProject(children: ReturnType<typeof makeLabel>[]) {
   const project = withChildren(makeFixtureProject(), children);
   const screenNode = project.screens[0];
@@ -27,13 +50,7 @@ function renderProject(children: ReturnType<typeof makeLabel>[]) {
   return render(
     <PreviewNode
       layoutNode={layout}
-      ctx={{
-        palette: project.palette,
-        selectedId: null,
-        movableId: null,
-        dragPreview: null,
-        onSelect: vi.fn(),
-      }}
+      ctx={makePreviewCtx(project, layout)}
     />,
   );
 }
@@ -491,19 +508,11 @@ describe("PreviewNode: behavior", () => {
     const { container } = render(
       <PreviewNode
         layoutNode={layout}
-        ctx={{
-          palette: project.palette,
-          selectedId: null,
-          movableId: null,
-          dragPreview: null,
-          onSelect: vi.fn(),
-        }}
+        ctx={makePreviewCtx(project, layout)}
       />,
     );
 
-    const [, panelEl, labelEl] = [...container.querySelectorAll('[class*="previewNode"]')] as HTMLElement[];
-    expect(panelEl.style.zIndex).toBe("2");
-    expect(labelEl.style.zIndex).toBe("1");
+    expect(Number(widgetZ(container, "pan_1"))).toBeGreaterThan(Number(widgetZ(container, "lbl_1")));
   });
 
   it("hides nodes with visible=false", () => {
@@ -519,17 +528,29 @@ describe("PreviewNode: behavior", () => {
     render(
       <PreviewNode
         layoutNode={layout}
-        ctx={{
-          palette: project.palette,
-          selectedId: null,
-          movableId: null,
-          dragPreview: null,
-          onSelect,
-        }}
+        ctx={makePreviewCtx(project, layout, { onSelect })}
       />,
     );
     await userEvent.pointer({ keys: "[MouseLeft]", target: screen.getByLabelText("X") });
-    expect(onSelect).toHaveBeenCalled();
+    expect(onSelect).toHaveBeenCalledWith("lbl_1");
+  });
+
+  it("selects a child inside a panel instead of the panel", async () => {
+    const label = makeLabel("lbl_1", "Inside");
+    const panel = makePanel("pn_1", [label]);
+    const project = withChildren(makeFixtureProject(), [panel]);
+    const layout = layoutTree(project.screens[0], project.display.width, project.display.height);
+    const onSelect = vi.fn();
+    render(
+      <PreviewNode
+        layoutNode={layout}
+        ctx={makePreviewCtx(project, layout, { onSelect })}
+      />,
+    );
+
+    await userEvent.pointer({ keys: "[MouseLeft]", target: screen.getByLabelText("Inside") });
+    expect(onSelect).toHaveBeenCalledWith("lbl_1");
+    expect(onSelect).not.toHaveBeenCalledWith("pn_1");
   });
 
   it("starts text editing for a button on double-click", async () => {
@@ -539,14 +560,10 @@ describe("PreviewNode: behavior", () => {
     render(
       <PreviewNode
         layoutNode={layout}
-        ctx={{
-          palette: project.palette,
-          selectedId: null,
-          movableId: null,
-          dragPreview: null,
+        ctx={makePreviewCtx(project, layout, {
           onSelect: vi.fn(),
           onLabelEditStart,
-        }}
+        })}
       />,
     );
 
@@ -563,15 +580,10 @@ describe("PreviewNode: behavior", () => {
     render(
       <PreviewNode
         layoutNode={layout}
-        ctx={{
-          palette: project.palette,
-          selectedId: null,
-          movableId: null,
-          dragPreview: null,
+        ctx={makePreviewCtx(project, layout, {
           editingLabelId: "bt_1",
-          onSelect: vi.fn(),
           onLabelTextCommit: vi.fn(),
-        }}
+        })}
       />,
     );
 
@@ -588,15 +600,10 @@ describe("PreviewNode: behavior", () => {
     render(
       <PreviewNode
         layoutNode={layout}
-        ctx={{
-          palette: project.palette,
-          selectedId: null,
-          movableId: null,
-          dragPreview: null,
+        ctx={makePreviewCtx(project, layout, {
           editingLabelId: "lbl_1",
-          onSelect: vi.fn(),
           onLabelTextCommit: vi.fn(),
-        }}
+        })}
       />,
     );
 
@@ -628,15 +635,10 @@ describe("PreviewNode: behavior", () => {
     render(
       <PreviewNode
         layoutNode={layout}
-        ctx={{
-          palette: project.palette,
-          selectedId: null,
-          movableId: null,
-          dragPreview: null,
+        ctx={makePreviewCtx(project, layout, {
           editingLabelId: "lbl_1",
-          onSelect: vi.fn(),
           onLabelTextCommit: vi.fn(),
-        }}
+        })}
       />,
     );
 
@@ -668,15 +670,10 @@ describe("PreviewNode: behavior", () => {
     render(
       <PreviewNode
         layoutNode={layout}
-        ctx={{
-          palette: project.palette,
-          selectedId: null,
-          movableId: null,
-          dragPreview: null,
+        ctx={makePreviewCtx(project, layout, {
           editingLabelId: "bt_1",
-          onSelect: vi.fn(),
           onLabelTextCommit: vi.fn(),
-        }}
+        })}
       />,
     );
 
@@ -709,15 +706,10 @@ describe("PreviewNode: behavior", () => {
     render(
       <PreviewNode
         layoutNode={layout}
-        ctx={{
-          palette: project.palette,
-          selectedId: null,
-          movableId: null,
-          dragPreview: null,
+        ctx={makePreviewCtx(project, layout, {
           editingLabelId: "bt_1",
-          onSelect: vi.fn(),
           onLabelTextCommit: vi.fn(),
-        }}
+        })}
       />,
     );
 
@@ -737,5 +729,353 @@ describe("PreviewNode: behavior", () => {
     fireEvent.mouseDown(input, { clientX: 20 + clickX * 2 });
 
     expect(input.selectionStart).toBe(2);
+  });
+});
+
+describe("PreviewNode: z-index stacking", () => {
+  it("applies computed z-index values to every rendered widget", () => {
+    const panel = makePanel("pan_1", [makeLabel("lbl_in", "In"), makeIcon("ico_1")]);
+    const project = withChildren(makeFixtureProject(), [makeLabel("lbl_top"), panel]);
+    const layout = layoutTree(project.screens[0], project.display.width, project.display.height);
+    const stackIndices = computeWidgetStackIndices(layout);
+
+    const { container } = render(
+      <PreviewNode layoutNode={layout} ctx={makePreviewCtx(project, layout)} />,
+    );
+
+    for (const [id, value] of stackIndices) {
+      expect(widgetZ(container, id)).toBe(String(value));
+    }
+  });
+
+  it("renders a panel hit layer at the same z-index as the panel body", () => {
+    const panel = makePanel("pan_1", [makeLabel("lbl_in", "In")]);
+    const project = withChildren(makeFixtureProject(), [panel]);
+    const layout = layoutTree(project.screens[0], project.display.width, project.display.height);
+
+    const { container } = render(
+      <PreviewNode layoutNode={layout} ctx={makePreviewCtx(project, layout)} />,
+    );
+
+    expect(widgetZ(container, "pan_1", "canvas-widget-hit")).toBe(widgetZ(container, "pan_1"));
+  });
+
+  it("does not render a hit layer for an empty panel", () => {
+    const project = withChildren(makeFixtureProject(), [makePanel("pan_1")]);
+    const layout = layoutTree(project.screens[0], project.display.width, project.display.height);
+
+    const { container } = render(
+      <PreviewNode layoutNode={layout} ctx={makePreviewCtx(project, layout)} />,
+    );
+
+    expect(container.querySelector('[data-testid="canvas-widget-hit"]')).toBeNull();
+  });
+
+  it("orders three screen siblings in the DOM by tree position", () => {
+    const project = withChildren(makeFixtureProject(), [
+      makeLabel("lbl_top", "Top"),
+      makeRect("rec_mid"),
+      makeButton("btn_bottom", "Bottom"),
+    ]);
+    const layout = layoutTree(project.screens[0], project.display.width, project.display.height);
+
+    const { container } = render(
+      <PreviewNode layoutNode={layout} ctx={makePreviewCtx(project, layout)} />,
+    );
+
+    expect(Number(widgetZ(container, "lbl_top"))).toBeGreaterThan(Number(widgetZ(container, "rec_mid")));
+    expect(Number(widgetZ(container, "rec_mid"))).toBeGreaterThan(Number(widgetZ(container, "btn_bottom")));
+  });
+
+  it("orders panel children in the DOM by tree position", () => {
+    const panel = makePanel("pan_1", [
+      makeIcon("ico_top"),
+      makeIcon("ico_mid"),
+      makeIcon("ico_bottom"),
+    ]);
+    const project = withChildren(makeFixtureProject(), [panel]);
+    const layout = layoutTree(project.screens[0], project.display.width, project.display.height);
+
+    const { container } = render(
+      <PreviewNode layoutNode={layout} ctx={makePreviewCtx(project, layout)} />,
+    );
+
+    expect(Number(widgetZ(container, "pan_1"))).toBeLessThan(Number(widgetZ(container, "ico_bottom")));
+    expect(Number(widgetZ(container, "ico_top"))).toBeGreaterThan(Number(widgetZ(container, "ico_mid")));
+    expect(Number(widgetZ(container, "ico_mid"))).toBeGreaterThan(Number(widgetZ(container, "ico_bottom")));
+  });
+
+  it("selects the topmost panel child on click instead of the panel", async () => {
+    const panel = makePanel("pan_1", [
+      makeLabel("lbl_top", "Top"),
+      makeLabel("lbl_bottom", "Bottom"),
+    ]);
+    const project = withChildren(makeFixtureProject(), [panel]);
+    const layout = layoutTree(project.screens[0], project.display.width, project.display.height);
+    const onSelect = vi.fn();
+
+    render(
+      <PreviewNode layoutNode={layout} ctx={makePreviewCtx(project, layout, { onSelect })} />,
+    );
+
+    await userEvent.pointer({ keys: "[MouseLeft]", target: screen.getByLabelText("Bottom") });
+    expect(onSelect).toHaveBeenCalledWith("lbl_bottom");
+    expect(onSelect).not.toHaveBeenCalledWith("pan_1");
+  });
+
+  it("selects the first panel child when it is higher in the tree", async () => {
+    const panel = makePanel("pan_1", [
+      makeLabel("lbl_top", "Top"),
+      makeLabel("lbl_bottom", "Bottom"),
+    ]);
+    const project = withChildren(makeFixtureProject(), [panel]);
+    const layout = layoutTree(project.screens[0], project.display.width, project.display.height);
+    const onSelect = vi.fn();
+
+    render(
+      <PreviewNode layoutNode={layout} ctx={makePreviewCtx(project, layout, { onSelect })} />,
+    );
+
+    await userEvent.pointer({ keys: "[MouseLeft]", target: screen.getByLabelText("Top") });
+    expect(onSelect).toHaveBeenCalledWith("lbl_top");
+    expect(onSelect).not.toHaveBeenCalledWith("pan_1");
+  });
+
+  it("selects the panel when clicking the hit layer", async () => {
+    const panel = makePanel("pan_1", [makeLabel("lbl_corner", "Corner")]);
+    const project = withChildren(makeFixtureProject(), [panel]);
+    const layout = layoutTree(project.screens[0], project.display.width, project.display.height);
+    const onSelect = vi.fn();
+
+    const { container } = render(
+      <PreviewNode layoutNode={layout} ctx={makePreviewCtx(project, layout, { onSelect })} />,
+    );
+
+    const hitLayer = container.querySelector(
+      '[data-widget-id="pan_1"][data-testid="canvas-widget-hit"]',
+    ) as HTMLElement;
+    await userEvent.pointer({ keys: "[MouseLeft]", target: hitLayer });
+    expect(onSelect).toHaveBeenCalledWith("pan_1");
+  });
+
+  it("selects the higher screen sibling instead of a lower panel child", async () => {
+    const panel = makePanel("pan_1", [makeLabel("lbl_in", "Inside")]);
+    const project = withChildren(makeFixtureProject(), [makeLabel("lbl_above", "Above"), panel]);
+    const layout = layoutTree(project.screens[0], project.display.width, project.display.height);
+    const onSelect = vi.fn();
+
+    render(
+      <PreviewNode layoutNode={layout} ctx={makePreviewCtx(project, layout, { onSelect })} />,
+    );
+
+    await userEvent.pointer({ keys: "[MouseLeft]", target: screen.getByLabelText("Above") });
+    expect(onSelect).toHaveBeenCalledWith("lbl_above");
+  });
+
+  it("selects a deeply nested label instead of its parent panels", async () => {
+    const inner = makePanel("pan_inner", [makeLabel("lbl_deep", "Deep")]);
+    const outer = makePanel("pan_outer", [inner]);
+    const project = withChildren(makeFixtureProject(), [outer]);
+    const layout = layoutTree(project.screens[0], project.display.width, project.display.height);
+    const onSelect = vi.fn();
+
+    render(
+      <PreviewNode layoutNode={layout} ctx={makePreviewCtx(project, layout, { onSelect })} />,
+    );
+
+    await userEvent.pointer({ keys: "[MouseLeft]", target: screen.getByLabelText("Deep") });
+    expect(onSelect).toHaveBeenCalledWith("lbl_deep");
+    expect(onSelect).not.toHaveBeenCalledWith("pan_outer");
+    expect(onSelect).not.toHaveBeenCalledWith("pan_inner");
+  });
+
+  it("selects the higher of two competing panel subtrees by tree order", async () => {
+    const panelTop = makePanel("pan_top", [makeLabel("lbl_top", "TopIn")]);
+    const panelBottom = makePanel("pan_bottom", [makeLabel("lbl_bottom", "BottomIn")]);
+    const project = withChildren(makeFixtureProject(), [panelTop, panelBottom]);
+    const layout = layoutTree(project.screens[0], project.display.width, project.display.height);
+    const onSelect = vi.fn();
+
+    render(
+      <PreviewNode layoutNode={layout} ctx={makePreviewCtx(project, layout, { onSelect })} />,
+    );
+
+    await userEvent.pointer({ keys: "[MouseLeft]", target: screen.getByLabelText("TopIn") });
+    expect(onSelect).toHaveBeenCalledWith("lbl_top");
+    expect(onSelect).not.toHaveBeenCalledWith("pan_bottom");
+  });
+});
+
+describe("PreviewNode: z-index stacking", () => {
+  it("applies computed z-index values to every rendered widget", () => {
+    const panel = makePanel("pan_1", [makeLabel("lbl_in", "In"), makeIcon("ico_1")]);
+    const project = withChildren(makeFixtureProject(), [makeLabel("lbl_top"), panel]);
+    const layout = layoutTree(project.screens[0], project.display.width, project.display.height);
+    const stackIndices = computeWidgetStackIndices(layout);
+
+    const { container } = render(
+      <PreviewNode layoutNode={layout} ctx={makePreviewCtx(project, layout)} />,
+    );
+
+    for (const [id, value] of stackIndices) {
+      expect(widgetZ(container, id)).toBe(String(value));
+    }
+  });
+
+  it("renders a panel hit layer at the same z-index as the panel body", () => {
+    const panel = makePanel("pan_1", [makeLabel("lbl_in", "In")]);
+    const project = withChildren(makeFixtureProject(), [panel]);
+    const layout = layoutTree(project.screens[0], project.display.width, project.display.height);
+
+    const { container } = render(
+      <PreviewNode layoutNode={layout} ctx={makePreviewCtx(project, layout)} />,
+    );
+
+    expect(widgetZ(container, "pan_1", "canvas-widget-hit")).toBe(widgetZ(container, "pan_1"));
+  });
+
+  it("does not render a hit layer for an empty panel", () => {
+    const project = withChildren(makeFixtureProject(), [makePanel("pan_1")]);
+    const layout = layoutTree(project.screens[0], project.display.width, project.display.height);
+
+    const { container } = render(
+      <PreviewNode layoutNode={layout} ctx={makePreviewCtx(project, layout)} />,
+    );
+
+    expect(container.querySelector('[data-testid="canvas-widget-hit"]')).toBeNull();
+  });
+
+  it("orders three screen siblings in the DOM by tree position", () => {
+    const project = withChildren(makeFixtureProject(), [
+      makeLabel("lbl_top", "Top"),
+      makeRect("rec_mid"),
+      makeButton("btn_bottom", "Bottom"),
+    ]);
+    const layout = layoutTree(project.screens[0], project.display.width, project.display.height);
+
+    const { container } = render(
+      <PreviewNode layoutNode={layout} ctx={makePreviewCtx(project, layout)} />,
+    );
+
+    expect(Number(widgetZ(container, "lbl_top"))).toBeGreaterThan(Number(widgetZ(container, "rec_mid")));
+    expect(Number(widgetZ(container, "rec_mid"))).toBeGreaterThan(Number(widgetZ(container, "btn_bottom")));
+  });
+
+  it("orders panel children in the DOM by tree position", () => {
+    const panel = makePanel("pan_1", [
+      makeIcon("ico_top"),
+      makeIcon("ico_mid"),
+      makeIcon("ico_bottom"),
+    ]);
+    const project = withChildren(makeFixtureProject(), [panel]);
+    const layout = layoutTree(project.screens[0], project.display.width, project.display.height);
+
+    const { container } = render(
+      <PreviewNode layoutNode={layout} ctx={makePreviewCtx(project, layout)} />,
+    );
+
+    expect(Number(widgetZ(container, "pan_1"))).toBeLessThan(Number(widgetZ(container, "ico_bottom")));
+    expect(Number(widgetZ(container, "ico_top"))).toBeGreaterThan(Number(widgetZ(container, "ico_mid")));
+    expect(Number(widgetZ(container, "ico_mid"))).toBeGreaterThan(Number(widgetZ(container, "ico_bottom")));
+  });
+
+  it("selects the topmost panel child on click instead of the panel", async () => {
+    const panel = makePanel("pan_1", [
+      makeLabel("lbl_top", "Top"),
+      makeLabel("lbl_bottom", "Bottom"),
+    ]);
+    const project = withChildren(makeFixtureProject(), [panel]);
+    const layout = layoutTree(project.screens[0], project.display.width, project.display.height);
+    const onSelect = vi.fn();
+
+    render(
+      <PreviewNode layoutNode={layout} ctx={makePreviewCtx(project, layout, { onSelect })} />,
+    );
+
+    await userEvent.pointer({ keys: "[MouseLeft]", target: screen.getByLabelText("Bottom") });
+    expect(onSelect).toHaveBeenCalledWith("lbl_bottom");
+    expect(onSelect).not.toHaveBeenCalledWith("pan_1");
+  });
+
+  it("selects the first panel child when it is higher in the tree", async () => {
+    const panel = makePanel("pan_1", [
+      makeLabel("lbl_top", "Top"),
+      makeLabel("lbl_bottom", "Bottom"),
+    ]);
+    const project = withChildren(makeFixtureProject(), [panel]);
+    const layout = layoutTree(project.screens[0], project.display.width, project.display.height);
+    const onSelect = vi.fn();
+
+    render(
+      <PreviewNode layoutNode={layout} ctx={makePreviewCtx(project, layout, { onSelect })} />,
+    );
+
+    await userEvent.pointer({ keys: "[MouseLeft]", target: screen.getByLabelText("Top") });
+    expect(onSelect).toHaveBeenCalledWith("lbl_top");
+    expect(onSelect).not.toHaveBeenCalledWith("pan_1");
+  });
+
+  it("selects the panel when clicking the hit layer", async () => {
+    const panel = makePanel("pan_1", [makeLabel("lbl_corner", "Corner")]);
+    const project = withChildren(makeFixtureProject(), [panel]);
+    const layout = layoutTree(project.screens[0], project.display.width, project.display.height);
+    const onSelect = vi.fn();
+
+    const { container } = render(
+      <PreviewNode layoutNode={layout} ctx={makePreviewCtx(project, layout, { onSelect })} />,
+    );
+
+    const hitLayer = container.querySelector(
+      '[data-widget-id="pan_1"][data-testid="canvas-widget-hit"]',
+    ) as HTMLElement;
+    await userEvent.pointer({ keys: "[MouseLeft]", target: hitLayer });
+    expect(onSelect).toHaveBeenCalledWith("pan_1");
+  });
+
+  it("selects the higher screen sibling instead of a lower panel child", async () => {
+    const panel = makePanel("pan_1", [makeLabel("lbl_in", "Inside")]);
+    const project = withChildren(makeFixtureProject(), [makeLabel("lbl_above", "Above"), panel]);
+    const layout = layoutTree(project.screens[0], project.display.width, project.display.height);
+    const onSelect = vi.fn();
+
+    render(
+      <PreviewNode layoutNode={layout} ctx={makePreviewCtx(project, layout, { onSelect })} />,
+    );
+
+    await userEvent.pointer({ keys: "[MouseLeft]", target: screen.getByLabelText("Above") });
+    expect(onSelect).toHaveBeenCalledWith("lbl_above");
+  });
+
+  it("selects a deeply nested label instead of its parent panels", async () => {
+    const inner = makePanel("pan_inner", [makeLabel("lbl_deep", "Deep")]);
+    const outer = makePanel("pan_outer", [inner]);
+    const project = withChildren(makeFixtureProject(), [outer]);
+    const layout = layoutTree(project.screens[0], project.display.width, project.display.height);
+    const onSelect = vi.fn();
+
+    render(
+      <PreviewNode layoutNode={layout} ctx={makePreviewCtx(project, layout, { onSelect })} />,
+    );
+
+    await userEvent.pointer({ keys: "[MouseLeft]", target: screen.getByLabelText("Deep") });
+    expect(onSelect).toHaveBeenCalledWith("lbl_deep");
+    expect(onSelect).not.toHaveBeenCalledWith("pan_outer");
+    expect(onSelect).not.toHaveBeenCalledWith("pan_inner");
+  });
+
+  it("selects the higher of two competing panel subtrees by tree order", async () => {
+    const panelTop = makePanel("pan_top", [makeLabel("lbl_top", "TopIn")]);
+    const panelBottom = makePanel("pan_bottom", [makeLabel("lbl_bottom", "BottomIn")]);
+    const project = withChildren(makeFixtureProject(), [panelTop, panelBottom]);
+    const layout = layoutTree(project.screens[0], project.display.width, project.display.height);
+    const onSelect = vi.fn();
+
+    render(
+      <PreviewNode layoutNode={layout} ctx={makePreviewCtx(project, layout, { onSelect })} />,
+    );
+
+    await userEvent.pointer({ keys: "[MouseLeft]", target: screen.getByLabelText("TopIn") });
+    expect(onSelect).toHaveBeenCalledWith("lbl_top");
+    expect(onSelect).not.toHaveBeenCalledWith("pan_bottom");
   });
 });

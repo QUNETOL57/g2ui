@@ -4,6 +4,7 @@ import type { UiProject } from "@entities/ui-project";
 import { layoutTree } from "@entities/ui-project/lib/layoutEngine";
 import { cn } from "@shared/lib/cn";
 import { PreviewNode } from "@widgets/canvas-workspace/renderNode";
+import { computeWidgetStackIndices } from "@widgets/canvas-workspace/lib/widgetStackIndices";
 
 import styles from "./ProjectPreview.module.css";
 
@@ -32,6 +33,7 @@ export function ProjectPreview({
   const resolvedScreenId = screenId ?? project.screens[0]?.id;
   const screen = project.screens.find((item) => item.id === resolvedScreenId) ?? project.screens[0];
   const layout = screen ? layoutTree(screen, project.display.width, project.display.height) : null;
+  const stackIndices = layout ? computeWidgetStackIndices(layout) : new Map<string, number>();
   const previewSize = size ?? (compact ? "compact" : "default");
   const bounds = PREVIEW_BOUNDS[previewSize];
   const maxWidth = bounds.width;
@@ -89,6 +91,7 @@ export function ProjectPreview({
                 layoutNode={layout}
                 ctx={{
                   palette: project.palette,
+                  stackIndices,
                   selectedId: null,
                   movableId: null,
                   dragPreview: null,

@@ -26,6 +26,7 @@ import styles from "./renderNode.module.css";
 
 interface RenderCtx {
   palette: PaletteEntry[] | undefined;
+  stackIndices: ReadonlyMap<string, number>;
   selectedId: string | null;
   movableId: string | null;
   dragPreview: { nodeId: string; rect: Frame; lineProps?: Partial<LineProps> } | null;
@@ -42,12 +43,10 @@ function PreviewNodeImpl({
   layoutNode,
   ctx,
   dragOffset = { x: 0, y: 0 },
-  stackIndex = 0,
 }: {
   layoutNode: LayoutNode;
   ctx: RenderCtx;
   dragOffset?: { x: number; y: number };
-  stackIndex?: number;
 }) {
   const { node, rect, children } = layoutNode;
   if (node.visible === false) return null;
@@ -65,7 +64,9 @@ function PreviewNodeImpl({
     ? Math.max(displayRect.height, lineStrokeWidth)
     : displayRect.height;
   const isLayerNode = node.type !== "screen";
+  const hasPanelChildren = node.type === "panel" && children.length > 0;
   const rotation = node.type !== "screen" ? node.rotation ?? 0 : 0;
+  const layerZIndex = isLayerNode ? ctx.stackIndices.get(node.id) : undefined;
   const style: React.CSSProperties = {
     left: rect.x + nextDragOffset.x,
     top: rect.y + nextDragOffset.y,
@@ -74,7 +75,18 @@ function PreviewNodeImpl({
     transform: rotation ? `rotate(${rotation}deg)` : undefined,
     transformOrigin: rotation ? "center center" : undefined,
     cursor: node.id === ctx.movableId ? "move" : undefined,
-    zIndex: isLayerNode ? stackIndex : undefined,
+    zIndex: layerZIndex,
+  };
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    ctx.onSelect(node.id);
+    ctx.onNodeMouseDown?.(node.id, e);
+  };
+  const handleDoubleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    if (node.type === "label" || node.type === "button") {
+      ctx.onLabelEditStart?.(node.id);
+    }
   };
   const visualNode: WidgetNode =
     node.type === "line" && preview?.lineProps
@@ -83,33 +95,36 @@ function PreviewNodeImpl({
 
   return (
     <>
+      {hasPanelChildren ? (
+        <div
+          className={styles.previewNode}
+          data-testid="canvas-widget-hit"
+          data-widget-id={node.id}
+          data-widget-type={node.type}
+          style={style}
+          onMouseDown={handleMouseDown}
+        />
+      ) : null}
       <div
         className={styles.previewNode}
         data-testid="canvas-widget"
         data-widget-id={node.id}
         data-widget-type={node.type}
-        style={style}
-        onMouseDown={(e) => {
-          e.stopPropagation();
-          ctx.onSelect(node.id);
-          ctx.onNodeMouseDown?.(node.id, e);
+        style={{
+          ...style,
+          pointerEvents: hasPanelChildren ? "none" : undefined,
         }}
-        onDoubleClick={(e) => {
-          e.stopPropagation();
-          if (node.type === "label" || node.type === "button") {
-            ctx.onLabelEditStart?.(node.id);
-          }
-        }}
+        onMouseDown={hasPanelChildren ? undefined : handleMouseDown}
+        onDoubleClick={hasPanelChildren ? undefined : handleDoubleClick}
       >
         <NodeVisual node={visualNode} ctx={ctx} rect={{ ...displayRect, height: visualHeight }} />
       </div>
-      {children.map((child, index) => (
+      {children.map((child) => (
         <PreviewNode
           key={child.node.id}
           layoutNode={child}
           ctx={ctx}
           dragOffset={nextDragOffset}
-          stackIndex={children.length - index}
         />
       ))}
     </>
@@ -120,7 +135,7 @@ const PreviewNode = memo(PreviewNodeImpl, (prev, next) => {
   if (prev.layoutNode !== next.layoutNode) return false;
   if (prev.dragOffset?.x !== next.dragOffset?.x) return false;
   if (prev.dragOffset?.y !== next.dragOffset?.y) return false;
-  if (prev.stackIndex !== next.stackIndex) return false;
+  if (prev.ctx.stackIndices !== next.ctx.stackIndices) return false;
 
   const pc = prev.ctx;
   const nc = next.ctx;

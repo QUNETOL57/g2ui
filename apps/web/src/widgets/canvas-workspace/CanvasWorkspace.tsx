@@ -16,6 +16,7 @@ import { CanvasZoomToolbar } from "./CanvasZoomToolbar";
 import styles from "./CanvasWorkspace.module.css";
 import { SelectionOverlay } from "./SelectionOverlay";
 import { PreviewNode } from "./renderNode";
+import { computeWidgetStackIndices } from "./lib/widgetStackIndices";
 import {
   PIXEL_GRID_VISIBLE_ZOOM,
   RULER_SIZE,
@@ -125,6 +126,10 @@ export function CanvasWorkspace({
     return layoutTree(screen, project.display.width, project.display.height);
   }, [screen, project.display.width, project.display.height]);
   layoutRef.current = layout;
+  const stackIndices = useMemo(
+    () => (layout ? computeWidgetStackIndices(layout) : new Map<string, number>()),
+    [layout],
+  );
   const w = project.display.width;
   const h = project.display.height;
   const renderZoom = renderZoomFor(zoom);
@@ -810,6 +815,7 @@ export function CanvasWorkspace({
   const renderCtx = useMemo(
     () => ({
       palette: project.palette,
+      stackIndices,
       selectedId: selectedNodeId,
       movableId: canMoveSelection ? selectedNodeId : null,
       dragPreview,
@@ -838,6 +844,7 @@ export function CanvasWorkspace({
     }),
     [
       project.palette,
+      stackIndices,
       selectedNodeId,
       canMoveSelection,
       dragPreview,

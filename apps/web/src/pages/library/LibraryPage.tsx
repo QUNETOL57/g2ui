@@ -35,22 +35,26 @@ interface LibraryPageProps {
   projects: ProjectCard[];
   status?: "local" | "loading" | "synced" | "saving" | "error";
   error?: string | null;
+  userEmail?: string | null;
   onOpenProject: (project: ProjectCard) => void;
   onCreateProject: (card: ProjectCard) => void;
   onCopyProject: (card: ProjectCard) => void;
   onDeleteProject: (projectId: string) => void;
   onUpdateProject: (card: ProjectCard) => void;
+  onLogout?: () => void;
 }
 
 export function LibraryPage({
   projects,
   status = "local",
   error = null,
+  userEmail = null,
   onOpenProject,
   onCreateProject,
   onCopyProject,
   onDeleteProject,
   onUpdateProject,
+  onLogout,
 }: LibraryPageProps) {
   const [selectedPresetId, setSelectedPresetId] = useState(DEFAULT_PRESET_ID);
   const [orientation, setOrientation] = useState<Orientation>("landscape");
@@ -158,7 +162,15 @@ export function LibraryPage({
     <main className={styles.libraryPage}>
       <TopBar>
         <BrandLogo />
-        <span className={styles.syncStatus}>{statusLabel(status, error)}</span>
+        <TopBar.Controls>
+          <span className={styles.syncStatus}>{statusLabel(status, error)}</span>
+          {userEmail ? <span className={styles.userEmail}>{userEmail}</span> : null}
+          {onLogout ? (
+            <Button variant="ghost" size="sm" onClick={onLogout}>
+              Sign out
+            </Button>
+          ) : null}
+        </TopBar.Controls>
       </TopBar>
 
       <section className={styles.libraryContent}>

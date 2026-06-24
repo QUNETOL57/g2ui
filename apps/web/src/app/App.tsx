@@ -9,8 +9,11 @@ import {
   listCanvases,
   updateCanvas,
 } from "@shared/api/canvases";
+import { isApiConfigured } from "@shared/api/client";
+import { useSessionStore } from "@entities/session/model/store";
 import { useEditorStore } from "@entities/ui-project/model/store";
 import { cloneProject } from "@entities/ui-project/model/tree-ops";
+import { AuthPage } from "@pages/auth/AuthPage";
 import { EditorPage } from "@pages/editor/EditorPage";
 import { LibraryPage } from "@pages/library/LibraryPage";
 import type { ProjectCard } from "@pages/library/lib/library-helpers";
@@ -26,6 +29,10 @@ const LOCAL_DRAFT_PREFIX = "g2ui:project-draft:";
 export function App() {
   const project = useEditorStore((s) => s.project);
   const setProject = useEditorStore((s) => s.setProject);
+  const sessionStatus = useSessionStore((s) => s.status);
+  const sessionUser = useSessionStore((s) => s.user);
+  const hydrateSession = useSessionStore((s) => s.hydrate);
+  const logout = useSessionStore((s) => s.logout);
 
   const [view, setView] = useState<AppView>("library");
   const [projects, setProjects] = useState<ProjectCard[]>(() => mergeLocalDrafts([projectToCard(project)]));
@@ -58,7 +65,17 @@ export function App() {
   };
 
   useEffect(() => {
+    if (!isApiConfigured()) {
+      useSessionStore.setState({ user: null, status: "guest" });
+      return;
+    }
+
+    void hydrateSession();
+  }, [hydrateSession]);
+
+  useEffect(() => {
     if (!isCanvasApiConfigured()) return;
+    if (sessionStatus !== "authenticated") return;
 
     let ignore = false;
     setLibraryStatus("loading");
@@ -78,7 +95,7 @@ export function App() {
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [sessionStatus]);
 
   const openProject = (card: ProjectCard) => {
     const draft = readLocalDraft(card.id);
@@ -230,17 +247,36 @@ export function App() {
     };
   }, [activeProjectMeta.id, activeProjectMeta.template, project, setProject, view]);
 
+  const handleLogout = () => {
+    logout();
+    setView("library");
+    setLibraryStatus(isCanvasApiConfigured() ? "loading" : "local");
+    setLibraryError(null);
+    setAutosaveStatus(isCanvasApiConfigured() ? "saved" : "local");
+    setAutosaveError(null);
+  };
+
+  if (isApiConfigured() && sessionStatus === "unknown") {
+    return null;
+  }
+
+  if (isApiConfigured() && sessionStatus === "guest") {
+    return <AuthPage />;
+  }
+
   if (view === "library") {
     return (
       <LibraryPage
         projects={projects}
         status={libraryStatus}
         error={libraryError}
+        userEmail={sessionUser?.email ?? null}
         onOpenProject={openProject}
         onCreateProject={createProject}
         onCopyProject={copyProject}
         onDeleteProject={deleteProject}
         onUpdateProject={updateProject}
+        onLogout={isApiConfigured() ? handleLogout : undefined}
       />
     );
   }

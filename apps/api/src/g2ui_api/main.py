@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .routers import canvases, health
+from .routers import auth, canvases, health
 from .settings import settings
 
 
@@ -23,6 +23,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
 
     api_v1 = "/api/v1"
+    app.include_router(auth.router, prefix=api_v1)
     app.include_router(canvases.router, prefix=api_v1)
 
     return app

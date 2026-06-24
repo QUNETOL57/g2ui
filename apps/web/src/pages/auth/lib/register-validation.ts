@@ -1,3 +1,5 @@
+import { hasFormErrors, validateEmail } from "./auth-validation";
+
 export interface RegisterFormValues {
   email: string;
   password: string;
@@ -12,13 +14,8 @@ export interface RegisterFormErrors {
 
 export function validateRegisterForm(values: RegisterFormValues): RegisterFormErrors {
   const errors: RegisterFormErrors = {};
-  const email = values.email.trim();
-
-  if (!email) {
-    errors.email = "Email is required";
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    errors.email = "Enter a valid email address";
-  }
+  const emailError = validateEmail(values.email);
+  if (emailError) errors.email = emailError;
 
   if (!values.password) {
     errors.password = "Password is required";
@@ -36,5 +33,5 @@ export function validateRegisterForm(values: RegisterFormValues): RegisterFormEr
 }
 
 export function hasRegisterFormErrors(errors: RegisterFormErrors): boolean {
-  return Object.keys(errors).length > 0;
+  return hasFormErrors(errors);
 }

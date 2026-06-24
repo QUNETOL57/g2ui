@@ -1,16 +1,50 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+import { Modal } from "@shared/ui/Modal";
 
 import { LoginPage } from "./LoginPage";
 import { RegisterPage } from "./RegisterPage";
 
-type AuthMode = "login" | "register";
+export type AuthMode = "login" | "register";
 
-export function AuthPage() {
-  const [mode, setMode] = useState<AuthMode>("login");
+interface AuthPageProps {
+  open: boolean;
+  initialMode?: AuthMode;
+  onClose: () => void;
+  onAuthenticated?: () => Promise<void> | void;
+}
+
+export function AuthPage({
+  open,
+  initialMode = "login",
+  onClose,
+  onAuthenticated,
+}: AuthPageProps) {
+  const [mode, setMode] = useState<AuthMode>(initialMode);
+
+  useEffect(() => {
+    if (open) {
+      setMode(initialMode);
+    }
+  }, [initialMode, open]);
 
   if (mode === "register") {
-    return <RegisterPage onSwitchToLogin={() => setMode("login")} />;
+    return (
+      <Modal open={open} onClose={onClose} size="md">
+        <RegisterPage
+          onSwitchToLogin={() => setMode("login")}
+          onAuthenticated={onAuthenticated}
+        />
+      </Modal>
+    );
   }
 
-  return <LoginPage onSwitchToRegister={() => setMode("register")} />;
+  return (
+    <Modal open={open} onClose={onClose} size="md">
+      <LoginPage
+        onSwitchToRegister={() => setMode("register")}
+        onAuthenticated={onAuthenticated}
+      />
+    </Modal>
+  );
 }

@@ -14,8 +14,21 @@
 }
 
 .syncStatus {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  width: 24px;
+  height: 24px;
   color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
+  font-size: 16px;
+  line-height: 0;
+}
+
+.syncStatus svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
 }
 
 .userEmail {

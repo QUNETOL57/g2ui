@@ -1,9 +1,16 @@
 import { useMemo, useState } from "react";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
+import CloudDoneOutlinedIcon from "@mui/icons-material/CloudDoneOutlined";
+import CloudOffOutlinedIcon from "@mui/icons-material/CloudOffOutlined";
+import CloudSyncOutlinedIcon from "@mui/icons-material/CloudSyncOutlined";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import ControlPointDuplicateOutlinedIcon from "@mui/icons-material/ControlPointDuplicateOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
+import ErrorOutlineOutlinedIcon from "@mui/icons-material/ErrorOutlineOutlined";
+import LoginOutlinedIcon from "@mui/icons-material/LoginOutlined";
+import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
+import SyncOutlinedIcon from "@mui/icons-material/SyncOutlined";
 
 import { cloneProject } from "@entities/ui-project/model/tree-ops";
 import type { TemplateId } from "@entities/ui-project/lib/projectTemplates";
@@ -17,6 +24,7 @@ import { Button } from "@shared/ui/Button";
 import { IconButton } from "@shared/ui/IconButton";
 import { Modal } from "@shared/ui/Modal";
 import { TopBar } from "@shared/ui/TopBar";
+import type { AuthMode } from "@pages/auth/AuthPage";
 
 import { CreateProjectPanel } from "./CreateProjectPanel";
 import styles from "./LibraryPage.module.css";
@@ -41,6 +49,8 @@ interface LibraryPageProps {
   onCopyProject: (card: ProjectCard) => void;
   onDeleteProject: (projectId: string) => void;
   onUpdateProject: (card: ProjectCard) => void;
+  singleProjectMode?: boolean;
+  onOpenAuth?: (mode: AuthMode) => void;
   onLogout?: () => void;
 }
 
@@ -54,6 +64,8 @@ export function LibraryPage({
   onCopyProject,
   onDeleteProject,
   onUpdateProject,
+  singleProjectMode = false,
+  onOpenAuth,
   onLogout,
 }: LibraryPageProps) {
   const [selectedPresetId, setSelectedPresetId] = useState(DEFAULT_PRESET_ID);
@@ -67,6 +79,7 @@ export function LibraryPage({
   const [editTemplate, setEditTemplate] = useState<TemplateId>("blank");
   const [editProjectName, setEditProjectName] = useState("Untitled");
   const [projectPendingDelete, setProjectPendingDelete] = useState<ProjectCard | null>(null);
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
 
   const selectedPreset = useMemo(
     () => DISPLAY_PRESETS.find((preset) => preset.id === selectedPresetId) ?? DISPLAY_PRESETS[0],
@@ -157,18 +170,31 @@ export function LibraryPage({
     onDeleteProject(projectPendingDelete.id);
     setProjectPendingDelete(null);
   };
+  const confirmLogout = () => {
+    setIsLogoutConfirmOpen(false);
+    onLogout?.();
+  };
+  const canCreateProject = !singleProjectMode || projects.length === 0;
 
   return (
     <main className={styles.libraryPage}>
       <TopBar>
         <BrandLogo />
         <TopBar.Controls>
-          <span className={styles.syncStatus}>{statusLabel(status, error)}</span>
+          <SyncStatusIcon status={status} error={error} />
           {userEmail ? <span className={styles.userEmail}>{userEmail}</span> : null}
           {onLogout ? (
-            <Button variant="ghost" size="sm" onClick={onLogout}>
-              Sign out
-            </Button>
+            <IconButton
+              title="Sign out"
+              aria-label="Sign out"
+              onClick={() => setIsLogoutConfirmOpen(true)}
+            >
+              <LogoutOutlinedIcon fontSize="inherit" />
+            </IconButton>
+          ) : onOpenAuth ? (
+            <IconButton title="Sign in" aria-label="Sign in" onClick={() => onOpenAuth("login")}>
+              <LoginOutlinedIcon fontSize="inherit" />
+            </IconButton>
           ) : null}
         </TopBar.Controls>
       </TopBar>
@@ -178,17 +204,19 @@ export function LibraryPage({
           <div className={styles.cardGrid}>
             {projects.map((item) => (
               <article className={styles.card} key={item.id}>
-                <IconButton
-                  className={styles.copyButton}
-                  title={`Copy ${item.name}`}
-                  aria-label={`Copy ${item.name}`}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onCopyProject(copyProjectCard(item));
-                  }}
-                >
-                  <ControlPointDuplicateOutlinedIcon fontSize="inherit" />
-                </IconButton>
+                {!singleProjectMode ? (
+                  <IconButton
+                    className={styles.copyButton}
+                    title={`Copy ${item.name}`}
+                    aria-label={`Copy ${item.name}`}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onCopyProject(copyProjectCard(item));
+                    }}
+                  >
+                    <ControlPointDuplicateOutlinedIcon fontSize="inherit" />
+                  </IconButton>
+                ) : null}
                 <IconButton
                   className={styles.editButton}
                   title={`Edit ${item.name}`}
@@ -229,19 +257,21 @@ export function LibraryPage({
                 </button>
               </article>
             ))}
-            <article className={`${styles.card} ${styles.createCard}`}>
-              <button
-                className={styles.createCardButton}
-                type="button"
-                onClick={() => setIsCreateModalOpen(true)}
-              >
-                <span className={styles.createCardIcon} aria-hidden="true">
-                  <AddRoundedIcon />
-                </span>
-                <strong>New project</strong>
-                <small>Create display project</small>
-              </button>
-            </article>
+            {canCreateProject ? (
+              <article className={`${styles.card} ${styles.createCard}`}>
+                <button
+                  className={styles.createCardButton}
+                  type="button"
+                  onClick={() => setIsCreateModalOpen(true)}
+                >
+                  <span className={styles.createCardIcon} aria-hidden="true">
+                    <AddRoundedIcon />
+                  </span>
+                  <strong>New project</strong>
+                  <small>Create display project</small>
+                </button>
+              </article>
+            ) : null}
           </div>
         </div>
 
@@ -339,9 +369,52 @@ export function LibraryPage({
             </>
           ) : null}
         </Modal>
+
+        <Modal
+          open={isLogoutConfirmOpen}
+          onClose={() => setIsLogoutConfirmOpen(false)}
+          size="sm"
+          className={styles.deleteDialog}
+          closeOnBackdrop={false}
+        >
+          <h2>Sign out?</h2>
+          <p>You will leave this account. Local drafts will stay in this browser.</p>
+          <div className={styles.deleteActions}>
+            <Button type="button" size="sm" onClick={() => setIsLogoutConfirmOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="button" size="sm" variant="danger" onClick={confirmLogout}>
+              Sign out
+            </Button>
+          </div>
+        </Modal>
       </section>
     </main>
   );
+}
+
+function SyncStatusIcon({
+  status,
+  error,
+}: {
+  status: NonNullable<LibraryPageProps["status"]>;
+  error: string | null;
+}) {
+  const label = statusLabel(status, error);
+  const Icon = statusIcon(status);
+  return (
+    <span className={styles.syncStatus} title={label} aria-label={label} role="img">
+      <Icon fontSize="inherit" />
+    </span>
+  );
+}
+
+function statusIcon(status: NonNullable<LibraryPageProps["status"]>) {
+  if (status === "loading" || status === "saving") return SyncOutlinedIcon;
+  if (status === "synced") return CloudDoneOutlinedIcon;
+  if (status === "error") return ErrorOutlineOutlinedIcon;
+  if (status === "local") return CloudOffOutlinedIcon;
+  return CloudSyncOutlinedIcon;
 }
 
 function statusLabel(status: NonNullable<LibraryPageProps["status"]>, error: string | null): string {

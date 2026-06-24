@@ -3,8 +3,13 @@ import { expect, type Page } from "@playwright/test";
 /** Library → create blank project → editor. */
 export async function openBlankEditor(page: Page) {
   await page.goto("/");
-  await page.getByRole("button", { name: "New project" }).click();
-  await page.getByRole("button", { name: "Create project", exact: true }).click();
+  const newProjectButton = page.getByRole("button", { name: "New project" });
+  if (await newProjectButton.isVisible()) {
+    await newProjectButton.click();
+    await page.getByRole("button", { name: "Create project", exact: true }).click();
+  } else {
+    await page.getByText("Untitled").first().click();
+  }
   await expect(page.getByText("Widget tree")).toBeVisible();
 }
 

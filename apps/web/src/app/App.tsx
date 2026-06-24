@@ -14,6 +14,7 @@ import { useSessionStore } from "@entities/session/model/store";
 import { useEditorStore } from "@entities/ui-project/model/store";
 import { cloneProject } from "@entities/ui-project/model/tree-ops";
 import { AuthPage } from "@pages/auth/AuthPage";
+import type { AuthMode } from "@pages/auth/AuthPage";
 import { EditorPage } from "@pages/editor/EditorPage";
 import { LibraryPage } from "@pages/library/LibraryPage";
 import type { ProjectCard } from "@pages/library/lib/library-helpers";
@@ -35,23 +36,26 @@ export function App() {
   const logout = useSessionStore((s) => s.logout);
 
   const [view, setView] = useState<AppView>("library");
-  const [projects, setProjects] = useState<ProjectCard[]>(() => mergeLocalDrafts([projectToCard(project)]));
+  const [authModalMode, setAuthModalMode] = useState<AuthMode | null>(null);
+  const [projects, setProjects] = useState<ProjectCard[]>(() =>
+    mergeLocalDrafts(isApiConfigured() ? [] : [projectToCard(project)]),
+  );
   const [activeProjectMeta, setActiveProjectMeta] = useState<Pick<ProjectCard, "id" | "template">>({
     id: project.id,
     template: "hello",
   });
-  const [libraryStatus, setLibraryStatus] = useState<LibraryStatus>(
-    isCanvasApiConfigured() ? "loading" : "local",
-  );
+  const [libraryStatus, setLibraryStatus] = useState<LibraryStatus>("local");
   const [libraryError, setLibraryError] = useState<string | null>(null);
-  const [autosaveStatus, setAutosaveStatus] = useState<AutosaveStatus>(
-    isCanvasApiConfigured() ? "saved" : "local",
-  );
+  const [autosaveStatus, setAutosaveStatus] = useState<AutosaveStatus>("local");
   const [autosaveError, setAutosaveError] = useState<string | null>(null);
   const autosaveTimerRef = useRef<number | null>(null);
   const autosaveTokenRef = useRef(0);
   const lastAutosavedSnapshotRef = useRef<string | null>(null);
   const suppressNextAutosaveRef = useRef(false);
+  const skipNextRemoteLoadRef = useRef(false);
+  const canSyncRemote = isCanvasApiConfigured() && sessionStatus === "authenticated";
+  const isSignedIn = sessionStatus === "authenticated";
+  const isHostedGuest = isApiConfigured() && sessionStatus !== "authenticated";
   const persistCallbacks: PersistCallbacks = {
     onSaving: () => setLibraryStatus("saving"),
     onSynced: () => {
@@ -75,7 +79,19 @@ export function App() {
 
   useEffect(() => {
     if (!isCanvasApiConfigured()) return;
-    if (sessionStatus !== "authenticated") return;
+    if (sessionStatus !== "authenticated") {
+      setLibraryStatus("local");
+      setLibraryError(null);
+      setAutosaveStatus("local");
+      setAutosaveError(null);
+      return;
+    }
+
+    if (authModalMode !== null) return;
+    if (skipNextRemoteLoadRef.current) {
+      skipNextRemoteLoadRef.current = false;
+      return;
+    }
 
     let ignore = false;
     setLibraryStatus("loading");
@@ -95,7 +111,7 @@ export function App() {
     return () => {
       ignore = true;
     };
-  }, [sessionStatus]);
+  }, [authModalMode, sessionStatus]);
 
   const openProject = (card: ProjectCard) => {
     const draft = readLocalDraft(card.id);
@@ -104,7 +120,7 @@ export function App() {
     setActiveProjectMeta({ id: nextCard.id, template: nextCard.template });
     lastAutosavedSnapshotRef.current = restoredFromDraft ? null : JSON.stringify(nextCard.project);
     suppressNextAutosaveRef.current = !restoredFromDraft;
-    setAutosaveStatus(restoredFromDraft ? "unsynced" : isCanvasApiConfigured() ? "saved" : "local");
+    setAutosaveStatus(restoredFromDraft ? "unsynced" : canSyncRemote ? "saved" : "local");
     setAutosaveError(null);
     setProject(cloneProject(nextCard.project));
     setView("editor");
@@ -119,7 +135,7 @@ export function App() {
     setActiveProjectMeta({ id: card.id, template: card.template });
     setProjects((items) => items.map((item) => (item.id === card.id ? card : item)));
     setView("library");
-    void persistCanvas(card, persistCallbacks).then((saved) => {
+    void persistCanvas(card, persistCallbacks, canSyncRemote).then((saved) => {
       replaceProject(card.id, saved);
       if (saved.id !== card.id) {
         moveLocalDraft(card.id, saved.id, saved);
@@ -130,9 +146,11 @@ export function App() {
   };
 
   const createProject = async (card: ProjectCard) => {
-    const saved = await persistNewCanvas(card, persistCallbacks);
-    const isSavedRemotely = isCanvasApiConfigured() && isPersistedCanvasId(saved.id);
-    setProjects((items) => [saved, ...items.filter((item) => item.id !== saved.id)]);
+    const saved = await persistNewCanvas(card, persistCallbacks, canSyncRemote);
+    const isSavedRemotely = canSyncRemote && isPersistedCanvasId(saved.id);
+    setProjects((items) =>
+      isHostedGuest ? [saved] : [saved, ...items.filter((item) => item.id !== saved.id)],
+    );
     setActiveProjectMeta({ id: saved.id, template: saved.template });
     lastAutosavedSnapshotRef.current = isSavedRemotely ? JSON.stringify(saved.project) : null;
     suppressNextAutosaveRef.current = isSavedRemotely;
@@ -143,14 +161,14 @@ export function App() {
   };
 
   const copyProject = async (card: ProjectCard) => {
-    const saved = await persistNewCanvas(card, persistCallbacks);
+    const saved = await persistNewCanvas(card, persistCallbacks, canSyncRemote);
     setProjects((items) => [saved, ...items.filter((item) => item.id !== saved.id)]);
   };
 
   const deleteProject = (projectId: string) => {
     removeLocalDraft(projectId);
     setProjects((items) => items.filter((item) => item.id !== projectId));
-    if (isCanvasApiConfigured() && isPersistedCanvasId(projectId)) {
+    if (canSyncRemote && isPersistedCanvasId(projectId)) {
       setLibraryStatus("saving");
       deleteCanvas(projectId)
         .then(() => {
@@ -169,7 +187,7 @@ export function App() {
     if (project.id === card.id) {
       setProject(cloneProject(card.project));
     }
-    void persistCanvas(card, persistCallbacks).then((saved) => {
+    void persistCanvas(card, persistCallbacks, canSyncRemote).then((saved) => {
       replaceProject(card.id, saved);
       if (project.id === card.id && saved.id !== card.id) {
         setProject(cloneProject(saved.project));
@@ -181,6 +199,78 @@ export function App() {
     setProjects((items) =>
       items.map((item) => (item.id === previousId || item.id === saved.id ? saved : item)),
     );
+  };
+
+  const currentProjectCard = (): ProjectCard => {
+    const existing = projects.find((item) => item.id === activeProjectMeta.id);
+    if (view === "library" && existing) {
+      return { ...existing, project: cloneProject(existing.project) };
+    }
+
+    const card = projectToCard(project, activeProjectMeta.template);
+    card.id = activeProjectMeta.id;
+    const existingTemplate = existing?.template ?? activeProjectMeta.template;
+    return { ...card, template: existingTemplate };
+  };
+
+  const hasCurrentProjectToPersist = (): boolean => {
+    return view === "editor" || projects.some((item) => item.id === activeProjectMeta.id);
+  };
+
+  const loadRemoteProjects = async (preferredCard?: ProjectCard): Promise<void> => {
+    if (!isCanvasApiConfigured()) return;
+
+    setLibraryStatus("loading");
+    try {
+      const canvases = await listCanvases();
+      const remoteCards = canvases.map(canvasToProjectCard).filter(Boolean) as ProjectCard[];
+      const nextProjects = mergeLocalDrafts(remoteCards);
+      setProjects(nextProjects);
+      setLibraryStatus("synced");
+      setLibraryError(null);
+
+      const activeCard =
+        (preferredCard ? nextProjects.find((item) => item.id === preferredCard.id) : null) ??
+        preferredCard ??
+        nextProjects[0];
+      if (activeCard) {
+        setActiveProjectMeta({ id: activeCard.id, template: activeCard.template });
+        lastAutosavedSnapshotRef.current = JSON.stringify(activeCard.project);
+        suppressNextAutosaveRef.current = true;
+        setProject(cloneProject(activeCard.project));
+      }
+    } catch (error) {
+      setLibraryStatus("error");
+      setLibraryError(errorMessage(error));
+    }
+  };
+
+  const persistCurrentProjectToAccount = async (): Promise<ProjectCard | undefined> => {
+    if (!isCanvasApiConfigured()) return undefined;
+    if (!hasCurrentProjectToPersist()) return undefined;
+
+    const card = currentProjectCard();
+    setLibraryStatus("saving");
+    const saved = await persistCanvas(card, undefined, true);
+    setProjects((items) => upsertProjectCard(items.filter((item) => item.id !== card.id), saved));
+    removeLocalDraft(card.id);
+    removeLocalDraft(saved.id);
+    setActiveProjectMeta({ id: saved.id, template: saved.template });
+    lastAutosavedSnapshotRef.current = JSON.stringify(saved.project);
+    suppressNextAutosaveRef.current = true;
+    setAutosaveStatus("saved");
+    setAutosaveError(null);
+    setProject(cloneProject(saved.project));
+    setLibraryStatus("synced");
+    setLibraryError(null);
+    return saved;
+  };
+
+  const handleAuthenticated = async () => {
+    const saved = await persistCurrentProjectToAccount();
+    await loadRemoteProjects(saved);
+    skipNextRemoteLoadRef.current = true;
+    setAuthModalMode(null);
   };
 
   useEffect(() => {
@@ -201,7 +291,7 @@ export function App() {
 
     if (snapshot === lastAutosavedSnapshotRef.current) return;
 
-    if (!isCanvasApiConfigured()) {
+    if (!canSyncRemote) {
       setAutosaveStatus("local");
       return;
     }
@@ -217,7 +307,7 @@ export function App() {
     autosaveTimerRef.current = window.setTimeout(() => {
       autosaveTimerRef.current = null;
       setAutosaveStatus("saving");
-      void persistCanvas(card)
+      void persistCanvas(card, undefined, canSyncRemote)
         .then((saved) => {
           if (token !== autosaveTokenRef.current) return;
           lastAutosavedSnapshotRef.current = JSON.stringify(saved.project);
@@ -245,48 +335,61 @@ export function App() {
         autosaveTimerRef.current = null;
       }
     };
-  }, [activeProjectMeta.id, activeProjectMeta.template, project, setProject, view]);
+  }, [activeProjectMeta.id, activeProjectMeta.template, canSyncRemote, project, setProject, view]);
 
   const handleLogout = () => {
     logout();
     setView("library");
-    setLibraryStatus(isCanvasApiConfigured() ? "loading" : "local");
+    setLibraryStatus("local");
     setLibraryError(null);
-    setAutosaveStatus(isCanvasApiConfigured() ? "saved" : "local");
+    setAutosaveStatus("local");
     setAutosaveError(null);
   };
 
-  if (isApiConfigured() && sessionStatus === "unknown") {
-    return null;
-  }
-
-  if (isApiConfigured() && sessionStatus === "guest") {
-    return <AuthPage />;
-  }
-
   if (view === "library") {
     return (
-      <LibraryPage
-        projects={projects}
-        status={libraryStatus}
-        error={libraryError}
-        userEmail={sessionUser?.email ?? null}
-        onOpenProject={openProject}
-        onCreateProject={createProject}
-        onCopyProject={copyProject}
-        onDeleteProject={deleteProject}
-        onUpdateProject={updateProject}
-        onLogout={isApiConfigured() ? handleLogout : undefined}
-      />
+      <>
+        <LibraryPage
+          projects={isHostedGuest ? projects.slice(0, 1) : projects}
+          status={libraryStatus}
+          error={libraryError}
+          userEmail={sessionUser?.email ?? null}
+          singleProjectMode={isHostedGuest}
+          onOpenProject={openProject}
+          onCreateProject={createProject}
+          onCopyProject={copyProject}
+          onDeleteProject={deleteProject}
+          onUpdateProject={updateProject}
+          onOpenAuth={isApiConfigured() && !isSignedIn ? setAuthModalMode : undefined}
+          onLogout={isSignedIn ? handleLogout : undefined}
+        />
+        <AuthPage
+          open={authModalMode !== null}
+          initialMode={authModalMode ?? "login"}
+          onClose={() => setAuthModalMode(null)}
+          onAuthenticated={handleAuthenticated}
+        />
+      </>
     );
   }
 
   return (
-    <EditorPage
-      autosaveStatus={autosaveStatus}
-      autosaveError={autosaveError}
-      onBackToLibrary={showLibrary}
-    />
+    <>
+      <EditorPage
+        autosaveStatus={autosaveStatus}
+        autosaveError={autosaveError}
+        userEmail={sessionUser?.email ?? null}
+        onOpenAuth={isApiConfigured() && !isSignedIn ? setAuthModalMode : undefined}
+        onLogout={isSignedIn ? handleLogout : undefined}
+        onBackToLibrary={showLibrary}
+      />
+      <AuthPage
+        open={authModalMode !== null}
+        initialMode={authModalMode ?? "login"}
+        onClose={() => setAuthModalMode(null)}
+        onAuthenticated={handleAuthenticated}
+      />
+    </>
   );
 }
 
@@ -422,8 +525,9 @@ interface PersistCallbacks {
 async function persistNewCanvas(
   card: ProjectCard,
   callbacks: PersistCallbacks,
+  remoteEnabled: boolean,
 ): Promise<ProjectCard> {
-  if (!isCanvasApiConfigured()) return card;
+  if (!remoteEnabled) return card;
 
   try {
     callbacks.onSaving();
@@ -443,8 +547,9 @@ async function persistNewCanvas(
 async function persistCanvas(
   card: ProjectCard,
   callbacks?: PersistCallbacks,
+  remoteEnabled = isCanvasApiConfigured(),
 ): Promise<ProjectCard> {
-  if (!isCanvasApiConfigured()) return card;
+  if (!remoteEnabled) return card;
   try {
     callbacks?.onSaving();
     const wasPersisted = isPersistedCanvasId(card.id);

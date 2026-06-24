@@ -1,40 +1,17 @@
 .page {
   min-height: 100vh;
+  background:
+    linear-gradient(90deg, rgba(247, 79, 158, 0.06), transparent 38%),
+    var(--color-bg-deep);
+  color: var(--color-text);
+}
+
+.content {
   display: grid;
   place-items: center;
-  padding: var(--space-8);
-  background:
-    radial-gradient(circle at top, rgba(247, 79, 158, 0.12), transparent 42%),
-    var(--color-bg);
-}
-
-.card {
-  width: min(100%, 420px);
-  display: grid;
-  gap: var(--space-7);
-  padding: var(--space-8);
-  border: 1px solid var(--color-border-soft);
-  border-radius: var(--radius-lg);
-  background: var(--color-panel);
-  box-shadow: 0 18px 48px var(--color-shadow);
-}
-
-.header {
-  display: grid;
-  gap: var(--space-3);
-}
-
-.title {
-  margin: 0;
-  font-size: var(--font-size-xl);
-  color: var(--color-text-strong);
-}
-
-.subtitle {
-  margin: 0;
-  color: var(--color-text-muted);
-  font-size: var(--font-size-base);
-  line-height: 1.5;
+  min-height: calc(100vh - 48px);
+  padding: var(--space-8) var(--space-7);
+  background: #121212;
 }
 
 .form {
@@ -46,10 +23,14 @@
   position: relative;
 }
 
+.passwordInput {
+  padding-right: 36px;
+}
+
 .passwordToggle {
   position: absolute;
   top: 50%;
-  right: var(--space-3);
+  right: 4px;
   transform: translateY(-50%);
 }
 
@@ -58,8 +39,14 @@
   gap: var(--space-4);
 }
 
-.switchMode {
+.submitButton {
+  width: 100%;
+}
+
+.footer {
   margin: 0;
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-border-soft);
   text-align: center;
   color: var(--color-text-muted);
   font-size: var(--font-size-base);
@@ -72,13 +59,20 @@
   color: var(--color-accent);
   cursor: pointer;
   font: inherit;
+  transition: color 120ms ease;
+}
+
+.switchButton:hover {
+  color: var(--hover-text);
 }
 
 .errorBanner {
   margin: 0;
   padding: var(--space-4);
-  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 51, 71, 0.35);
+  border-radius: var(--radius-sm);
   background: var(--color-danger-bg);
   color: var(--color-danger);
   font-size: var(--font-size-base);
+  line-height: 1.45;
 }

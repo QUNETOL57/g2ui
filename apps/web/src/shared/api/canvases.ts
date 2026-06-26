@@ -3,8 +3,8 @@ import { validateProject } from "@entities/ui-project";
 import type { TemplateId } from "@entities/ui-project/lib/projectTemplates";
 import { cloneProject } from "@entities/ui-project/model/tree-ops";
 import type { ProjectCard } from "@pages/library/lib/library-helpers";
+import { fetchJson, isApiConfigured } from "@shared/api/client";
 
-const API_BASE_URL = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
 const CANVAS_SCHEMA_VERSION = 1;
 
 interface CanvasSettings {
@@ -31,7 +31,7 @@ interface CanvasPayload {
 }
 
 export function isCanvasApiConfigured(): boolean {
-  return import.meta.env.MODE !== "test" && API_BASE_URL.length > 0;
+  return isApiConfigured();
 }
 
 export function isPersistedCanvasId(id: string): boolean {
@@ -96,31 +96,6 @@ function projectCardToPayload(card: ProjectCard): CanvasPayload {
     },
     schema_version: CANVAS_SCHEMA_VERSION,
   };
-}
-
-async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {
-  if (!isCanvasApiConfigured()) {
-    throw new Error("VITE_API_URL is not configured");
-  }
-
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...init.headers,
-    },
-  });
-
-  if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || `Request failed with ${response.status}`);
-  }
-
-  if (response.status === 204) {
-    return undefined as T;
-  }
-
-  return (await response.json()) as T;
 }
 
 function normalizeTemplate(template: unknown): TemplateId {

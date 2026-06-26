@@ -17,7 +17,7 @@ beforeEach(() => {
 describe("EditorStatusBar: project JSON", () => {
   it("renders save status and separate Export / Import actions", () => {
     render(<EditorStatusBar autosaveStatus="saved" />);
-    expect(screen.getByText("Saved")).toBeInTheDocument();
+    expect(screen.getByText("Synced")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^Palette$/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^Export$/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^Import$/ })).toBeInTheDocument();

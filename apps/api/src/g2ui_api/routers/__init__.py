@@ -1,3 +1,3 @@
-from . import canvases, health
+from . import auth, canvases, health
 
-__all__ = ["canvases", "health"]
+__all__ = ["auth", "canvases", "health"]

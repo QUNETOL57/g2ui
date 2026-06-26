@@ -2,25 +2,27 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..auth import CurrentUserDep
 from ..db import get_db
 from ..models import Canvas
 from ..schemas import CanvasCreate, CanvasRead, CanvasUpdate
+from ..settings import settings
 
 router = APIRouter(prefix="/canvases", tags=["canvases"])
-SINGLE_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 DbDep = Annotated[AsyncSession, Depends(get_db)]
 
 
 @router.get("", response_model=list[CanvasRead])
 async def list_canvases(
     db: DbDep,
+    current_user: CurrentUserDep,
 ) -> list[Canvas]:
     result = await db.execute(
         select(Canvas)
-        .where(Canvas.owner_id == SINGLE_USER_ID)
+        .where(Canvas.owner_id == current_user.id)
         .order_by(Canvas.updated_at.desc())
     )
     return list(result.scalars().all())
@@ -30,9 +32,21 @@ async def list_canvases(
 async def create_canvas(
     body: CanvasCreate,
     db: DbDep,
+    current_user: CurrentUserDep,
 ) -> Canvas:
+    existing_count = await db.scalar(
+        select(func.count())
+        .select_from(Canvas)
+        .where(Canvas.owner_id == current_user.id)
+    )
+    if existing_count is not None and existing_count >= settings.max_canvases_per_user:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Project limit reached ({settings.max_canvases_per_user} max)",
+        )
+
     canvas = Canvas(
-        owner_id=SINGLE_USER_ID,
+        owner_id=current_user.id,
         title=body.title,
         content=body.content,
         settings=body.settings,
@@ -48,9 +62,10 @@ async def create_canvas(
 async def get_canvas(
     canvas_id: uuid.UUID,
     db: DbDep,
+    current_user: CurrentUserDep,
 ) -> Canvas:
     canvas = await db.get(Canvas, canvas_id)
-    if not canvas or canvas.owner_id != SINGLE_USER_ID:
+    if not canvas or canvas.owner_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Canvas not found")
     return canvas
 
@@ -60,9 +75,10 @@ async def update_canvas(
     canvas_id: uuid.UUID,
     body: CanvasUpdate,
     db: DbDep,
+    current_user: CurrentUserDep,
 ) -> Canvas:
     canvas = await db.get(Canvas, canvas_id)
-    if not canvas or canvas.owner_id != SINGLE_USER_ID:
+    if not canvas or canvas.owner_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Canvas not found")
 
     if body.title is not None:
@@ -82,8 +98,9 @@ async def update_canvas(
 async def delete_canvas(
     canvas_id: uuid.UUID,
     db: DbDep,
+    current_user: CurrentUserDep,
 ) -> None:
     canvas = await db.get(Canvas, canvas_id)
-    if not canvas or canvas.owner_id != SINGLE_USER_ID:
+    if not canvas or canvas.owner_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Canvas not found")
     await db.delete(canvas)

@@ -17,6 +17,11 @@ class Settings(BaseSettings):
     api_port: int = 8000
     api_cors_origins: str = "http://localhost:5173"
 
+    jwt_secret: str = "dev-local-jwt-secret-change-me-in-production-32b"
+    jwt_algorithm: str = "HS256"
+    access_token_ttl_min: int = 1440
+    max_canvases_per_user: int = 30
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.api_cors_origins.split(",") if origin.strip()]

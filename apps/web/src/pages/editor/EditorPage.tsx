@@ -2,9 +2,15 @@ import { useEffect, useState } from "react";
 
 import { useEditorStore } from "@entities/ui-project/model/store";
 import { cn } from "@shared/lib/cn";
+import type { AutosaveStatus } from "@shared/lib/sync-status";
 import { findNode } from "@entities/ui-project/model/tree-ops";
+import type { AuthMode } from "@pages/auth/AuthPage";
 import logoUrl from "@shared/assets/logo.svg";
+import { Button } from "@shared/ui/Button";
+import { Modal } from "@shared/ui/Modal";
+import { SignInButton } from "@shared/ui/SignInButton";
 import { TopBar } from "@shared/ui/TopBar";
+import { UserAccountMenu } from "@shared/ui/UserAccountMenu";
 import { CanvasWorkspace } from "@widgets/canvas-workspace/CanvasWorkspace";
 import { EditorMenu } from "@widgets/editor-menu/EditorMenu";
 import { EditorStatusBar } from "@widgets/editor-status-bar/EditorStatusBar";
@@ -14,14 +20,20 @@ import { LeftPanelLayout } from "@widgets/left-panel/LeftPanelLayout";
 import styles from "./EditorPage.module.css";
 
 interface EditorPageProps {
-  autosaveStatus?: "local" | "saved" | "saving" | "unsynced" | "error";
+  autosaveStatus?: AutosaveStatus;
   autosaveError?: string | null;
+  userEmail?: string | null;
+  onOpenAuth?: (mode: AuthMode) => void;
+  onLogout?: () => void;
   onBackToLibrary: () => void;
 }
 
 export function EditorPage({
   autosaveStatus = "local",
   autosaveError = null,
+  userEmail = null,
+  onOpenAuth,
+  onLogout,
   onBackToLibrary,
 }: EditorPageProps) {
   const lastError = useEditorStore((s) => s.lastError);
@@ -36,6 +48,7 @@ export function EditorPage({
   const [showGrid, setShowGrid] = useState(true);
   const [showRulers, setShowRulers] = useState(true);
   const [showGuides, setShowGuides] = useState(true);
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -126,6 +139,16 @@ export function EditorPage({
             }}
           />
         </div>
+        <TopBar.Controls>
+          {onLogout && userEmail ? (
+            <UserAccountMenu
+              userEmail={userEmail}
+              onSignOut={() => setIsLogoutConfirmOpen(true)}
+            />
+          ) : onOpenAuth ? (
+            <SignInButton onClick={() => onOpenAuth("login")} />
+          ) : null}
+        </TopBar.Controls>
       </TopBar>
       <aside
         className={cn(styles.leftPanel, !leftPanelOpen && styles.panelCollapsed)}
@@ -152,8 +175,38 @@ export function EditorPage({
         {rightPanelOpen ? <PropertiesPanel /> : null}
       </aside>
       <div className={styles.statusBarSlot}>
-        <EditorStatusBar autosaveStatus={autosaveStatus} autosaveError={autosaveError} />
+        <EditorStatusBar
+          autosaveStatus={autosaveStatus}
+          autosaveError={autosaveError}
+          userEmail={userEmail}
+        />
       </div>
+      <Modal
+        open={isLogoutConfirmOpen}
+        onClose={() => setIsLogoutConfirmOpen(false)}
+        size="sm"
+        className={styles.logoutDialog}
+        closeOnBackdrop={false}
+      >
+        <h2>Sign out?</h2>
+        <p>You will leave this account. Local drafts will stay in this browser.</p>
+        <div className={styles.logoutActions}>
+          <Button type="button" size="sm" onClick={() => setIsLogoutConfirmOpen(false)}>
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="danger"
+            onClick={() => {
+              setIsLogoutConfirmOpen(false);
+              onLogout?.();
+            }}
+          >
+            Sign out
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

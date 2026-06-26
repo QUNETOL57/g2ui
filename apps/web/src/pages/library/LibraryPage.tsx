@@ -210,6 +210,31 @@ export function LibraryPage({
       <section className={styles.libraryContent}>
         <div className={styles.gridSection}>
           <div className={styles.cardGrid}>
+            {showCreateCard ? (
+              <article className={`${styles.card} ${styles.createCard}`}>
+                {canCreateProject ? (
+                  <button
+                    className={styles.createCardButton}
+                    type="button"
+                    onClick={() => setIsCreateModalOpen(true)}
+                  >
+                    <span className={styles.createCardIcon} aria-hidden="true">
+                      <AddRoundedIcon />
+                    </span>
+                    <strong>New project</strong>
+                    <small>Create display project</small>
+                  </button>
+                ) : (
+                  <div className={styles.createCardLimit} aria-live="polite">
+                    <span className={styles.createCardIcon} aria-hidden="true">
+                      <AddRoundedIcon />
+                    </span>
+                    <strong>Project limit reached</strong>
+                    <small>Maximum {MAX_PROJECTS_PER_USER} projects per account</small>
+                  </div>
+                )}
+              </article>
+            ) : null}
             {projects.map((item) => (
               <article className={styles.card} key={item.id}>
                 {!singleProjectMode && !projectLimitReached ? (
@@ -265,31 +290,6 @@ export function LibraryPage({
                 </button>
               </article>
             ))}
-            {showCreateCard ? (
-              <article className={`${styles.card} ${styles.createCard}`}>
-                {canCreateProject ? (
-                  <button
-                    className={styles.createCardButton}
-                    type="button"
-                    onClick={() => setIsCreateModalOpen(true)}
-                  >
-                    <span className={styles.createCardIcon} aria-hidden="true">
-                      <AddRoundedIcon />
-                    </span>
-                    <strong>New project</strong>
-                    <small>Create display project</small>
-                  </button>
-                ) : (
-                  <div className={styles.createCardLimit} aria-live="polite">
-                    <span className={styles.createCardIcon} aria-hidden="true">
-                      <AddRoundedIcon />
-                    </span>
-                    <strong>Project limit reached</strong>
-                    <small>Maximum {MAX_PROJECTS_PER_USER} projects per account</small>
-                  </div>
-                )}
-              </article>
-            ) : null}
           </div>
         </div>
 

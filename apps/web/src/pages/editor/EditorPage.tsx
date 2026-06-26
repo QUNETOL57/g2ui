@@ -4,6 +4,7 @@ import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
 
 import { useEditorStore } from "@entities/ui-project/model/store";
 import { cn } from "@shared/lib/cn";
+import type { AutosaveStatus } from "@shared/lib/sync-status";
 import { findNode } from "@entities/ui-project/model/tree-ops";
 import type { AuthMode } from "@pages/auth/AuthPage";
 import logoUrl from "@shared/assets/logo.svg";
@@ -20,7 +21,7 @@ import { LeftPanelLayout } from "@widgets/left-panel/LeftPanelLayout";
 import styles from "./EditorPage.module.css";
 
 interface EditorPageProps {
-  autosaveStatus?: "local" | "saved" | "saving" | "unsynced" | "error";
+  autosaveStatus?: AutosaveStatus;
   autosaveError?: string | null;
   userEmail?: string | null;
   onOpenAuth?: (mode: AuthMode) => void;
@@ -140,7 +141,6 @@ export function EditorPage({
           />
         </div>
         <TopBar.Controls>
-          {userEmail ? <span className={styles.userEmail}>{userEmail}</span> : null}
           {onLogout ? (
             <IconButton
               title="Sign out"
@@ -181,7 +181,11 @@ export function EditorPage({
         {rightPanelOpen ? <PropertiesPanel /> : null}
       </aside>
       <div className={styles.statusBarSlot}>
-        <EditorStatusBar autosaveStatus={autosaveStatus} autosaveError={autosaveError} />
+        <EditorStatusBar
+          autosaveStatus={autosaveStatus}
+          autosaveError={autosaveError}
+          userEmail={userEmail}
+        />
       </div>
       <Modal
         open={isLogoutConfirmOpen}

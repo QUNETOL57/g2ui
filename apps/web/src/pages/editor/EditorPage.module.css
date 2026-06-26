@@ -52,15 +52,6 @@
   min-width: 0;
 }
 
-.userEmail {
-  color: var(--color-text-soft);
-  font-size: var(--font-size-sm);
-  max-width: 220px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .brand {
   display: flex;
   align-items: center;

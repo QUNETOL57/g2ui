@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
+import AccountCircleOutlinedIcon from "@mui/icons-material/AccountCircleOutlined";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import CloudDoneOutlinedIcon from "@mui/icons-material/CloudDoneOutlined";
 import CloudOffOutlinedIcon from "@mui/icons-material/CloudOffOutlined";
-import CloudSyncOutlinedIcon from "@mui/icons-material/CloudSyncOutlined";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import ControlPointDuplicateOutlinedIcon from "@mui/icons-material/ControlPointDuplicateOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
@@ -19,12 +19,19 @@ import {
   resizeProject,
 } from "@entities/ui-project/lib/projectTemplates";
 import { DEFAULT_PRESET_ID, DISPLAY_PRESETS } from "@shared/config/displayPresets";
+import { MAX_PROJECTS_PER_USER } from "@shared/config/project-limits";
+import {
+  formatLibraryStatusLabel,
+  libraryStatusToDataStatus,
+  type LibraryStatus,
+} from "@shared/lib/sync-status";
 import { BrandLogo } from "@shared/ui/BrandLogo";
 import { Button } from "@shared/ui/Button";
 import { IconButton } from "@shared/ui/IconButton";
 import { Modal } from "@shared/ui/Modal";
 import { TopBar } from "@shared/ui/TopBar";
 import type { AuthMode } from "@pages/auth/AuthPage";
+import statusBarStyles from "@widgets/editor-status-bar/EditorStatusBar.module.css";
 
 import { CreateProjectPanel } from "./CreateProjectPanel";
 import styles from "./LibraryPage.module.css";
@@ -41,7 +48,7 @@ import {
 
 interface LibraryPageProps {
   projects: ProjectCard[];
-  status?: "local" | "loading" | "synced" | "saving" | "error";
+  status?: LibraryStatus;
   error?: string | null;
   userEmail?: string | null;
   onOpenProject: (project: ProjectCard) => void;
@@ -50,6 +57,7 @@ interface LibraryPageProps {
   onDeleteProject: (projectId: string) => void;
   onUpdateProject: (card: ProjectCard) => void;
   singleProjectMode?: boolean;
+  projectLimitReached?: boolean;
   onOpenAuth?: (mode: AuthMode) => void;
   onLogout?: () => void;
 }
@@ -65,6 +73,7 @@ export function LibraryPage({
   onDeleteProject,
   onUpdateProject,
   singleProjectMode = false,
+  projectLimitReached = false,
   onOpenAuth,
   onLogout,
 }: LibraryPageProps) {
@@ -174,15 +183,14 @@ export function LibraryPage({
     setIsLogoutConfirmOpen(false);
     onLogout?.();
   };
-  const canCreateProject = !singleProjectMode || projects.length === 0;
+  const canCreateProject = (!singleProjectMode && !projectLimitReached) || (singleProjectMode && projects.length === 0);
+  const showCreateCard = canCreateProject || projectLimitReached;
 
   return (
     <main className={styles.libraryPage}>
-      <TopBar>
+      <TopBar className={styles.libraryTopBar}>
         <BrandLogo />
         <TopBar.Controls>
-          <SyncStatusIcon status={status} error={error} />
-          {userEmail ? <span className={styles.userEmail}>{userEmail}</span> : null}
           {onLogout ? (
             <IconButton
               title="Sign out"
@@ -204,7 +212,7 @@ export function LibraryPage({
           <div className={styles.cardGrid}>
             {projects.map((item) => (
               <article className={styles.card} key={item.id}>
-                {!singleProjectMode ? (
+                {!singleProjectMode && !projectLimitReached ? (
                   <IconButton
                     className={styles.copyButton}
                     title={`Copy ${item.name}`}
@@ -257,19 +265,29 @@ export function LibraryPage({
                 </button>
               </article>
             ))}
-            {canCreateProject ? (
+            {showCreateCard ? (
               <article className={`${styles.card} ${styles.createCard}`}>
-                <button
-                  className={styles.createCardButton}
-                  type="button"
-                  onClick={() => setIsCreateModalOpen(true)}
-                >
-                  <span className={styles.createCardIcon} aria-hidden="true">
-                    <AddRoundedIcon />
-                  </span>
-                  <strong>New project</strong>
-                  <small>Create display project</small>
-                </button>
+                {canCreateProject ? (
+                  <button
+                    className={styles.createCardButton}
+                    type="button"
+                    onClick={() => setIsCreateModalOpen(true)}
+                  >
+                    <span className={styles.createCardIcon} aria-hidden="true">
+                      <AddRoundedIcon />
+                    </span>
+                    <strong>New project</strong>
+                    <small>Create display project</small>
+                  </button>
+                ) : (
+                  <div className={styles.createCardLimit} aria-live="polite">
+                    <span className={styles.createCardIcon} aria-hidden="true">
+                      <AddRoundedIcon />
+                    </span>
+                    <strong>Project limit reached</strong>
+                    <small>Maximum {MAX_PROJECTS_PER_USER} projects per account</small>
+                  </div>
+                )}
               </article>
             ) : null}
           </div>
@@ -389,38 +407,50 @@ export function LibraryPage({
           </div>
         </Modal>
       </section>
+      <LibraryStatusBar status={status} error={error} userEmail={userEmail} />
     </main>
   );
 }
 
-function SyncStatusIcon({
+function LibraryStatusBar({
   status,
   error,
+  userEmail,
 }: {
   status: NonNullable<LibraryPageProps["status"]>;
   error: string | null;
+  userEmail: string | null;
 }) {
-  const label = statusLabel(status, error);
-  const Icon = statusIcon(status);
+  const label = formatLibraryStatusLabel(status, error);
+  const Icon = LIBRARY_STATUS_ICONS[status];
   return (
-    <span className={styles.syncStatus} title={label} aria-label={label} role="img">
-      <Icon fontSize="inherit" />
-    </span>
+    <footer className={`${statusBarStyles.statusBar} ${styles.libraryStatusBar}`}>
+      <div
+        className={statusBarStyles.statusItem}
+        data-status={libraryStatusToDataStatus(status)}
+        title={label}
+        aria-live="polite"
+      >
+        <Icon fontSize="small" aria-hidden />
+        <span>{label}</span>
+      </div>
+      <div className={statusBarStyles.statusActions}>
+        <div className={statusBarStyles.statusUser} title={userEmail ?? "Guest"}>
+          <AccountCircleOutlinedIcon fontSize="small" aria-hidden />
+          <span>{userEmail ?? "Guest"}</span>
+        </div>
+      </div>
+    </footer>
   );
 }
 
-function statusIcon(status: NonNullable<LibraryPageProps["status"]>) {
-  if (status === "loading" || status === "saving") return SyncOutlinedIcon;
-  if (status === "synced") return CloudDoneOutlinedIcon;
-  if (status === "error") return ErrorOutlineOutlinedIcon;
-  if (status === "local") return CloudOffOutlinedIcon;
-  return CloudSyncOutlinedIcon;
-}
-
-function statusLabel(status: NonNullable<LibraryPageProps["status"]>, error: string | null): string {
-  if (status === "loading") return "Loading canvases...";
-  if (status === "saving") return "Saving...";
-  if (status === "synced") return "Synced with API";
-  if (status === "error") return error ? `API error: ${error}` : "API error";
-  return "Local mode";
-}
+const LIBRARY_STATUS_ICONS = {
+  local: CloudOffOutlinedIcon,
+  loading: SyncOutlinedIcon,
+  saving: SyncOutlinedIcon,
+  synced: CloudDoneOutlinedIcon,
+  error: ErrorOutlineOutlinedIcon,
+} as const satisfies Record<
+  LibraryStatus,
+  typeof CloudOffOutlinedIcon
+>;

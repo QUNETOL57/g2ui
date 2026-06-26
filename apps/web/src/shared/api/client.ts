@@ -16,10 +16,22 @@ export class ApiError extends Error {
   readonly status: number;
 
   constructor(message: string, status: number) {
-    super(message);
+    super(parseApiErrorDetail(message));
     this.name = "ApiError";
     this.status = status;
   }
+}
+
+export function parseApiErrorDetail(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed.startsWith("{")) return trimmed;
+  try {
+    const parsed = JSON.parse(trimmed) as { detail?: unknown };
+    if (typeof parsed.detail === "string") return parsed.detail;
+  } catch {
+    return trimmed;
+  }
+  return trimmed;
 }
 
 export async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {

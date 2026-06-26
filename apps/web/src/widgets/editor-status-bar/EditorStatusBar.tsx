@@ -1,4 +1,5 @@
 import { memo, useState } from "react";
+import AccountCircleOutlinedIcon from "@mui/icons-material/AccountCircleOutlined";
 import FileDownloadOutlinedIcon from "@mui/icons-material/FileDownloadOutlined";
 import FileUploadOutlinedIcon from "@mui/icons-material/FileUploadOutlined";
 import PaletteOutlinedIcon from "@mui/icons-material/PaletteOutlined";
@@ -16,11 +17,13 @@ import styles from "./EditorStatusBar.module.css";
 interface EditorStatusBarProps {
   autosaveStatus?: AutosaveStatus;
   autosaveError?: string | null;
+  userEmail?: string | null;
 }
 
 export const EditorStatusBar = memo(function EditorStatusBar({
   autosaveStatus = "local",
   autosaveError = null,
+  userEmail = null,
 }: EditorStatusBarProps) {
   const [exportOpen, setExportOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -64,6 +67,10 @@ export const EditorStatusBar = memo(function EditorStatusBar({
             <FileUploadOutlinedIcon fontSize="small" aria-hidden />
             Import
           </button>
+          <div className={styles.statusUser} title={userEmail ?? "Guest"}>
+            <AccountCircleOutlinedIcon fontSize="small" aria-hidden />
+            <span>{userEmail ?? "Guest"}</span>
+          </div>
         </div>
       </footer>
 

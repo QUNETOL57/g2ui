@@ -2,13 +2,14 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import CurrentUserDep
 from ..db import get_db
 from ..models import Canvas
 from ..schemas import CanvasCreate, CanvasRead, CanvasUpdate
+from ..settings import settings
 
 router = APIRouter(prefix="/canvases", tags=["canvases"])
 DbDep = Annotated[AsyncSession, Depends(get_db)]
@@ -33,6 +34,17 @@ async def create_canvas(
     db: DbDep,
     current_user: CurrentUserDep,
 ) -> Canvas:
+    existing_count = await db.scalar(
+        select(func.count())
+        .select_from(Canvas)
+        .where(Canvas.owner_id == current_user.id)
+    )
+    if existing_count is not None and existing_count >= settings.max_canvases_per_user:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Project limit reached ({settings.max_canvases_per_user} max)",
+        )
+
     canvas = Canvas(
         owner_id=current_user.id,
         title=body.title,

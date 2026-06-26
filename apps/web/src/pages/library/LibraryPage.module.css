@@ -1,47 +1,39 @@
 .libraryPage {
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 48px minmax(0, 1fr) 22px;
   padding: 0;
+  overflow: hidden;
   background:
     linear-gradient(90deg, rgba(247, 79, 158, 0.06), transparent 38%),
     var(--color-bg-deep);
   color: var(--color-text);
 }
 
+.libraryTopBar {
+  grid-column: 1;
+  grid-row: 1;
+}
+
 .libraryContent {
+  grid-column: 1;
+  grid-row: 2;
   display: block;
-  min-height: calc(100vh - 48px);
+  min-height: 0;
+  overflow-y: auto;
   background: var(--color-border);
 }
 
-.syncStatus {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 24px;
-  width: 24px;
-  height: 24px;
-  color: var(--color-text-muted);
-  font-size: 16px;
-  line-height: 0;
-}
-
-.syncStatus svg {
-  width: 16px;
-  height: 16px;
-  fill: currentColor;
-}
-
-.userEmail {
-  color: var(--color-text-soft);
-  font-size: var(--font-size-sm);
-  max-width: 220px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.libraryStatusBar {
+  grid-column: 1;
+  grid-row: 3;
+  flex-shrink: 0;
 }
 
 .gridSection {
-  min-height: calc(100vh - 48px);
+  min-height: 100%;
   background: #121212;
 }
 
@@ -154,6 +146,29 @@
 
 .createCardButton:hover .createCardIcon {
   border-color: var(--color-accent);
+}
+
+.createCardLimit {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  min-height: 298px;
+  padding: var(--space-7);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.createCardLimit strong {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-base);
+}
+
+.createCardLimit small {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
 }
 
 .createCardIcon {

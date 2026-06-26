@@ -19,10 +19,11 @@ import { EditorPage } from "@pages/editor/EditorPage";
 import { LibraryPage } from "@pages/library/LibraryPage";
 import type { ProjectCard } from "@pages/library/lib/library-helpers";
 import type { TemplateId } from "@entities/ui-project/lib/projectTemplates";
+import type { AutosaveStatus, LibraryStatus } from "@shared/lib/sync-status";
+import { isProjectLimitReached } from "@shared/config/project-limits";
+import { ApiError } from "@shared/api/client";
 
 type AppView = "library" | "editor";
-type LibraryStatus = "local" | "loading" | "synced" | "saving" | "error";
-type AutosaveStatus = "local" | "saved" | "saving" | "unsynced" | "error";
 
 const AUTOSAVE_DELAY_MS = 1000;
 const LOCAL_DRAFT_PREFIX = "g2ui:project-draft:";
@@ -56,6 +57,7 @@ export function App() {
   const canSyncRemote = isCanvasApiConfigured() && sessionStatus === "authenticated";
   const isSignedIn = sessionStatus === "authenticated";
   const isHostedGuest = isApiConfigured() && sessionStatus !== "authenticated";
+  const projectLimitReached = isProjectLimitReached(projects, canSyncRemote);
   const persistCallbacks: PersistCallbacks = {
     onSaving: () => setLibraryStatus("saving"),
     onSynced: () => {
@@ -146,23 +148,34 @@ export function App() {
   };
 
   const createProject = async (card: ProjectCard) => {
-    const saved = await persistNewCanvas(card, persistCallbacks, canSyncRemote);
-    const isSavedRemotely = canSyncRemote && isPersistedCanvasId(saved.id);
-    setProjects((items) =>
-      isHostedGuest ? [saved] : [saved, ...items.filter((item) => item.id !== saved.id)],
-    );
-    setActiveProjectMeta({ id: saved.id, template: saved.template });
-    lastAutosavedSnapshotRef.current = isSavedRemotely ? JSON.stringify(saved.project) : null;
-    suppressNextAutosaveRef.current = isSavedRemotely;
-    setAutosaveStatus(isSavedRemotely ? "saved" : "unsynced");
-    setAutosaveError(null);
-    setProject(cloneProject(saved.project));
-    setView("editor");
+    try {
+      const saved = await persistNewCanvas(card, persistCallbacks, canSyncRemote);
+      const isSavedRemotely = canSyncRemote && isPersistedCanvasId(saved.id);
+      if (canSyncRemote && !isSavedRemotely) return;
+
+      setProjects((items) =>
+        isHostedGuest ? [saved] : [saved, ...items.filter((item) => item.id !== saved.id)],
+      );
+      setActiveProjectMeta({ id: saved.id, template: saved.template });
+      lastAutosavedSnapshotRef.current = isSavedRemotely ? JSON.stringify(saved.project) : null;
+      suppressNextAutosaveRef.current = isSavedRemotely;
+      setAutosaveStatus(isSavedRemotely ? "saved" : "unsynced");
+      setAutosaveError(null);
+      setProject(cloneProject(saved.project));
+      setView("editor");
+    } catch {
+      // Error message is surfaced through library status callbacks.
+    }
   };
 
   const copyProject = async (card: ProjectCard) => {
-    const saved = await persistNewCanvas(card, persistCallbacks, canSyncRemote);
-    setProjects((items) => [saved, ...items.filter((item) => item.id !== saved.id)]);
+    try {
+      const saved = await persistNewCanvas(card, persistCallbacks, canSyncRemote);
+      if (canSyncRemote && !isPersistedCanvasId(saved.id)) return;
+      setProjects((items) => [saved, ...items.filter((item) => item.id !== saved.id)]);
+    } catch {
+      // Error message is surfaced through library status callbacks.
+    }
   };
 
   const deleteProject = (projectId: string) => {
@@ -267,8 +280,13 @@ export function App() {
   };
 
   const handleAuthenticated = async () => {
-    const saved = await persistCurrentProjectToAccount();
-    await loadRemoteProjects(saved);
+    try {
+      const saved = await persistCurrentProjectToAccount();
+      await loadRemoteProjects(saved);
+    } catch (error: unknown) {
+      setLibraryStatus("error");
+      setLibraryError(errorMessage(error));
+    }
     skipNextRemoteLoadRef.current = true;
     setAuthModalMode(null);
   };
@@ -355,6 +373,7 @@ export function App() {
           error={libraryError}
           userEmail={sessionUser?.email ?? null}
           singleProjectMode={isHostedGuest}
+          projectLimitReached={projectLimitReached}
           onOpenProject={openProject}
           onCreateProject={createProject}
           onCopyProject={copyProject}
@@ -540,6 +559,9 @@ async function persistNewCanvas(
     return saved;
   } catch (error) {
     callbacks.onError(error);
+    if (error instanceof ApiError && error.status === 409) {
+      throw error;
+    }
     return card;
   }
 }

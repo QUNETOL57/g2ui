@@ -101,6 +101,71 @@ async function openGuestEditorAndChangeProject(page: Page) {
 }
 
 test.describe("guest project auth modal flow", () => {
+  test("library status footer stays at the bottom", async ({ page }) => {
+    await mockApi(page);
+    await page.goto("/");
+
+    const footer = page.locator("footer").filter({ hasText: "Guest" });
+    await expect(footer).toBeVisible();
+    const box = await footer.boundingBox();
+    const viewport = page.viewportSize();
+    expect(box).not.toBeNull();
+    expect(viewport).not.toBeNull();
+    expect(box!.height).toBe(22);
+    expect(Math.abs(box!.y + box!.height - viewport!.height)).toBeLessThanOrEqual(2);
+  });
+
+  test("library footer stays pinned while content scrolls", async ({ page }) => {
+    await mockApi(page);
+    await page.goto("/");
+
+    const footer = page.locator("footer").filter({ hasText: "Guest" });
+    const content = page.locator("main section").first();
+    await expect(footer).toBeVisible();
+
+    await content.evaluate((element) => {
+      element.style.minHeight = "2000px";
+      element.scrollTop = 600;
+    });
+
+    const box = await footer.boundingBox();
+    const viewport = page.viewportSize();
+    expect(box).not.toBeNull();
+    expect(viewport).not.toBeNull();
+    expect(box!.height).toBe(22);
+    expect(Math.abs(box!.y + box!.height - viewport!.height)).toBeLessThanOrEqual(2);
+  });
+
+  test("footer geometry stays stable when opening a project", async ({ page }) => {
+    await mockApi(page);
+    await page.goto("/");
+
+    const libraryFooter = page.locator("footer").filter({ hasText: "Guest" });
+    const libraryGuest = libraryFooter.locator('[class*="statusUser"]').filter({ hasText: "Guest" });
+    await expect(libraryFooter).toBeVisible();
+    const libraryFooterBox = await libraryFooter.boundingBox();
+    const libraryGuestBox = await libraryGuest.boundingBox();
+
+    await page.getByRole("button", { name: "New project" }).click();
+    await page.getByRole("button", { name: "Create project", exact: true }).click();
+    await expect(page.getByText("Widget tree")).toBeVisible();
+
+    const editorFooter = page.locator("footer").filter({ hasText: "Guest" });
+    const editorGuest = editorFooter.locator('[class*="statusUser"]').filter({ hasText: "Guest" });
+    await expect(editorFooter).toBeVisible();
+    const editorFooterBox = await editorFooter.boundingBox();
+    const editorGuestBox = await editorGuest.boundingBox();
+
+    expect(libraryFooterBox).not.toBeNull();
+    expect(editorFooterBox).not.toBeNull();
+    expect(libraryGuestBox).not.toBeNull();
+    expect(editorGuestBox).not.toBeNull();
+    expect(editorFooterBox!.height).toBe(libraryFooterBox!.height);
+    expect(editorFooterBox!.y).toBe(libraryFooterBox!.y);
+    expect(editorGuestBox!.height).toBe(libraryGuestBox!.height);
+    expect(editorGuestBox!.y).toBe(libraryGuestBox!.y);
+  });
+
   test("guest can work on one local project without saving to API", async ({ page }) => {
     const api = await mockApi(page);
 
@@ -108,6 +173,7 @@ test.describe("guest project auth modal flow", () => {
 
     await expect.poll(() => api.canvasRequests.length).toBe(0);
     await expect(page.getByText("Local draft")).toBeVisible();
+    await expect(page.locator("footer").filter({ hasText: "Guest" })).toBeVisible();
   });
 
   test("guest can delete the local project and return to only create action", async ({ page }) => {
@@ -146,6 +212,7 @@ test.describe("guest project auth modal flow", () => {
     expect(JSON.stringify(api.canvasRequests[0].content)).toContain("lab_1");
     await expect(page.getByText(USER.email)).toBeVisible();
     await expect(page.getByText("Saved")).toBeVisible();
+    await expect(page.locator("footer").filter({ hasText: USER.email })).toBeVisible();
   });
 
   test("login from the editor saves current guest project to the account", async ({ page }) => {

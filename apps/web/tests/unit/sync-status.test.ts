@@ -9,20 +9,20 @@ import {
 } from "@shared/lib/sync-status";
 
 describe("sync-status labels", () => {
-  it("uses the same local draft label in library and editor", () => {
-    expect(LIBRARY_STATUS_LABELS.local).toBe(SYNC_STATUS_LABELS.localDraft);
-    expect(AUTOSAVE_STATUS_LABELS.local).toBe(SYNC_STATUS_LABELS.localDraft);
+  it("uses the same synced label in library and editor", () => {
+    expect(LIBRARY_STATUS_LABELS.synced).toBe(SYNC_STATUS_LABELS.synced);
+    expect(AUTOSAVE_STATUS_LABELS.saved).toBe(SYNC_STATUS_LABELS.synced);
   });
 
   it("formats autosave error labels", () => {
-    expect(formatAutosaveStatusLabel("error", null)).toBe(SYNC_STATUS_LABELS.saveError);
-    expect(formatAutosaveStatusLabel("error", "network")).toBe("Save error: network");
+    expect(formatAutosaveStatusLabel("error", null)).toBe(SYNC_STATUS_LABELS.syncError);
+    expect(formatAutosaveStatusLabel("error", "network")).toBe("Sync failed: network");
     expect(formatAutosaveStatusLabel("local", null)).toBe(SYNC_STATUS_LABELS.localDraft);
   });
 
   it("formats library error labels", () => {
-    expect(formatLibraryStatusLabel("error", null)).toBe(SYNC_STATUS_LABELS.apiError);
-    expect(formatLibraryStatusLabel("error", "timeout")).toBe("API error: timeout");
-    expect(formatLibraryStatusLabel("synced", null)).toBe(SYNC_STATUS_LABELS.syncedWithApi);
+    expect(formatLibraryStatusLabel("error", null)).toBe(SYNC_STATUS_LABELS.syncError);
+    expect(formatLibraryStatusLabel("error", "timeout")).toBe("Sync failed: timeout");
+    expect(formatLibraryStatusLabel("synced", null)).toBe(SYNC_STATUS_LABELS.synced);
   });
 });

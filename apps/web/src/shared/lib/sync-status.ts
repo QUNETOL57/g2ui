@@ -6,41 +6,39 @@ export type LibraryStatus = (typeof LIBRARY_STATUSES)[number];
 
 export const SYNC_STATUS_LABELS = {
   localDraft: "Local draft",
-  saved: "Saved",
   saving: "Saving…",
   unsynced: "Unsynced",
-  saveError: "Save error",
-  loadingCanvases: "Loading canvases...",
-  syncedWithApi: "Synced with API",
-  apiError: "API error",
+  loadingProjects: "Loading projects…",
+  synced: "Synced",
+  syncError: "Sync failed",
 } as const;
 
 export const AUTOSAVE_STATUS_LABELS = {
   local: SYNC_STATUS_LABELS.localDraft,
-  saved: SYNC_STATUS_LABELS.saved,
+  saved: SYNC_STATUS_LABELS.synced,
   saving: SYNC_STATUS_LABELS.saving,
   unsynced: SYNC_STATUS_LABELS.unsynced,
-  error: SYNC_STATUS_LABELS.saveError,
+  error: SYNC_STATUS_LABELS.syncError,
 } as const satisfies Record<AutosaveStatus, string>;
 
 export const LIBRARY_STATUS_LABELS = {
   local: SYNC_STATUS_LABELS.localDraft,
-  loading: SYNC_STATUS_LABELS.loadingCanvases,
+  loading: SYNC_STATUS_LABELS.loadingProjects,
   saving: SYNC_STATUS_LABELS.saving,
-  synced: SYNC_STATUS_LABELS.syncedWithApi,
-  error: SYNC_STATUS_LABELS.apiError,
+  synced: SYNC_STATUS_LABELS.synced,
+  error: SYNC_STATUS_LABELS.syncError,
 } as const satisfies Record<LibraryStatus, string>;
 
 export function formatAutosaveStatusLabel(status: AutosaveStatus, error: string | null): string {
   if (status === "error" && error) {
-    return `${SYNC_STATUS_LABELS.saveError}: ${error}`;
+    return `${SYNC_STATUS_LABELS.syncError}: ${error}`;
   }
   return AUTOSAVE_STATUS_LABELS[status];
 }
 
 export function formatLibraryStatusLabel(status: LibraryStatus, error: string | null): string {
   if (status === "error" && error) {
-    return `${SYNC_STATUS_LABELS.apiError}: ${error}`;
+    return `${SYNC_STATUS_LABELS.syncError}: ${error}`;
   }
   return LIBRARY_STATUS_LABELS[status];
 }

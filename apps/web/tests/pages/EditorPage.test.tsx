@@ -38,7 +38,7 @@ describe("EditorPage", () => {
     expect(screen.getByText("Widget tree")).toBeInTheDocument();
     expect(screen.getByText("Screens")).toBeInTheDocument();
     expect(screen.getByText(/Properties/)).toBeInTheDocument();
-    expect(screen.getByText("Saved")).toBeInTheDocument();
+    expect(screen.getByText("Synced")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^Export$/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^Import$/ })).toBeInTheDocument();
   });

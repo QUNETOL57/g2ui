@@ -211,7 +211,7 @@ test.describe("guest project auth modal flow", () => {
     expect(api.canvasRequests[0].title).toBe("Untitled");
     expect(JSON.stringify(api.canvasRequests[0].content)).toContain("lab_1");
     await expect(page.getByText(USER.email)).toBeVisible();
-    await expect(page.getByText("Saved")).toBeVisible();
+    await expect(page.getByText("Synced")).toBeVisible();
     await expect(page.locator("footer").filter({ hasText: USER.email })).toBeVisible();
   });
 
@@ -231,7 +231,7 @@ test.describe("guest project auth modal flow", () => {
     expect(api.canvasRequests[0].title).toBe("Untitled");
     expect(JSON.stringify(api.canvasRequests[0].content)).toContain("lab_1");
     await expect(page.getByText(USER.email)).toBeVisible();
-    await expect(page.getByText("Saved")).toBeVisible();
+    await expect(page.getByText("Synced")).toBeVisible();
   });
 
   test("logout requires confirmation", async ({ page }) => {

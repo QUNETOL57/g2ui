@@ -29,10 +29,6 @@
   fill: currentColor;
 }
 
-.statusItem[data-status="saved"] {
-  color: var(--color-text);
-}
-
 .statusItem[data-status="saving"] svg {
   animation: statusSpin 1s linear infinite;
 }

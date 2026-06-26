@@ -11,6 +11,13 @@ interface CanvasPayload {
 
 interface MockApiState {
   canvasRequests: CanvasPayload[];
+  changePasswordRequests: ChangePasswordPayload[];
+}
+
+interface ChangePasswordPayload {
+  current_password: string;
+  new_password: string;
+  new_password_confirm: string;
 }
 
 const USER = {
@@ -22,8 +29,10 @@ const USER = {
 async function mockApi(page: Page): Promise<MockApiState> {
   const state: MockApiState = {
     canvasRequests: [],
+    changePasswordRequests: [],
   };
   let tokenIssued = false;
+  let currentPassword = "password123";
   let savedCanvas: ReturnType<typeof canvasRecord> | null = null;
 
   await page.route("**/api/v1/**", async (route) => {
@@ -32,11 +41,55 @@ async function mockApi(page: Page): Promise<MockApiState> {
     const path = url.pathname;
 
     if (path === "/api/v1/auth/register" || path === "/api/v1/auth/login") {
+      if (path.endsWith("/login")) {
+        const payload = request.postDataJSON() as { email: string; password: string };
+        if (payload.password !== currentPassword) {
+          await route.fulfill({
+            status: 401,
+            json: { detail: "Invalid email or password" },
+          });
+          return;
+        }
+      } else {
+        const payload = request.postDataJSON() as { password: string };
+        currentPassword = payload.password;
+      }
+
       tokenIssued = true;
       await route.fulfill({
         status: path.endsWith("/register") ? 201 : 200,
         json: { access_token: "test-token", token_type: "bearer" },
       });
+      return;
+    }
+
+    if (path === "/api/v1/auth/change-password" && request.method() === "POST") {
+      if (!tokenIssued) {
+        await route.fulfill({ status: 401, json: { detail: "Not authenticated" } });
+        return;
+      }
+
+      const payload = request.postDataJSON() as ChangePasswordPayload;
+      state.changePasswordRequests.push(payload);
+
+      if (payload.current_password !== currentPassword) {
+        await route.fulfill({
+          status: 400,
+          json: { detail: "Current password is incorrect" },
+        });
+        return;
+      }
+
+      if (payload.new_password !== payload.new_password_confirm) {
+        await route.fulfill({
+          status: 422,
+          json: { detail: [{ type: "value_error", msg: "Passwords do not match" }] },
+        });
+        return;
+      }
+
+      currentPassword = payload.new_password;
+      await route.fulfill({ status: 204, body: "" });
       return;
     }
 
@@ -98,6 +151,33 @@ async function openGuestEditorAndChangeProject(page: Page) {
   await expect(page.getByText("Widget tree")).toBeVisible();
   await addLabelWidget(page);
   await expect(canvasWidget(page, "lab_1")).toBeVisible();
+}
+
+async function signInFromTopBar(page: Page, password = "password123") {
+  await page.getByRole("button", { name: "Sign in" }).click();
+  const form = page.locator("form");
+  await page.getByPlaceholder("you@example.com").fill(USER.email);
+  await form.locator('input[autocomplete="current-password"]').fill(password);
+  await form.getByRole("button", { name: "Sign in" }).click();
+  await expect(page.getByText(USER.email)).toBeVisible();
+}
+
+async function openChangePasswordModal(page: Page) {
+  await page.getByRole("button", { name: "Account" }).click();
+  await page.getByRole("menuitem", { name: "Change password" }).click();
+  await expect(page.getByText("Enter your current password and choose a new one.")).toBeVisible();
+}
+
+async function fillChangePasswordForm(
+  page: Page,
+  currentPassword: string,
+  newPassword: string,
+  newPasswordConfirm: string,
+) {
+  await page.locator('input[autocomplete="current-password"]').fill(currentPassword);
+  const newPasswordInputs = page.locator('input[autocomplete="new-password"]');
+  await newPasswordInputs.nth(0).fill(newPassword);
+  await newPasswordInputs.nth(1).fill(newPasswordConfirm);
 }
 
 test.describe("guest project auth modal flow", () => {
@@ -244,14 +324,85 @@ test.describe("guest project auth modal flow", () => {
     await page.locator("form").getByRole("button", { name: "Sign in" }).click();
     await expect(page.getByText(USER.email)).toBeVisible();
 
-    await page.getByRole("button", { name: "Sign out" }).click();
+    await page.getByRole("button", { name: "Account" }).click();
+    await page.getByRole("menuitem", { name: "Sign out" }).click();
     await expect(page.getByRole("heading", { name: "Sign out?" })).toBeVisible();
     await page.getByRole("button", { name: "Cancel" }).click();
     await expect(page.getByText(USER.email)).toBeVisible();
 
+    await page.getByRole("button", { name: "Account" }).click();
+    await page.getByRole("menuitem", { name: "Sign out" }).click();
     await page.getByRole("button", { name: "Sign out" }).click();
-    await page.getByRole("button", { name: "Sign out" }).nth(1).click();
     await expect(page.getByText(USER.email)).toBeHidden();
     await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
+  });
+});
+
+test.describe("change password flow", () => {
+  test("signed-in user can open change password modal from library", async ({ page }) => {
+    await mockApi(page);
+    await page.goto("/");
+    await signInFromTopBar(page);
+
+    await openChangePasswordModal(page);
+    await expect(page.getByRole("button", { name: "Update password" })).toBeVisible();
+  });
+
+  test("change password succeeds from account menu on library", async ({ page }) => {
+    const api = await mockApi(page);
+    await page.goto("/");
+    await signInFromTopBar(page);
+
+    await openChangePasswordModal(page);
+    await fillChangePasswordForm(page, "password123", "newpassword123", "newpassword123");
+    await page.getByRole("button", { name: "Update password" }).click();
+
+    await expect(page.getByText("Password updated")).toBeVisible();
+    await expect.poll(() => api.changePasswordRequests.length).toBe(1);
+    expect(api.changePasswordRequests[0]).toEqual({
+      current_password: "password123",
+      new_password: "newpassword123",
+      new_password_confirm: "newpassword123",
+    });
+  });
+
+  test("change password shows API error for incorrect current password", async ({ page }) => {
+    await mockApi(page);
+    await page.goto("/");
+    await signInFromTopBar(page);
+
+    await openChangePasswordModal(page);
+    await fillChangePasswordForm(page, "wrong-password", "newpassword123", "newpassword123");
+    await page.getByRole("button", { name: "Update password" }).click();
+
+    await expect(page.getByText("Current password is incorrect")).toBeVisible();
+  });
+
+  test("change password validates mismatched confirmation client-side", async ({ page }) => {
+    const api = await mockApi(page);
+    await page.goto("/");
+    await signInFromTopBar(page);
+
+    await openChangePasswordModal(page);
+    await fillChangePasswordForm(page, "password123", "newpassword123", "different123");
+    await page.getByRole("button", { name: "Update password" }).click();
+
+    await expect(page.getByText("Passwords do not match")).toBeVisible();
+    expect(api.changePasswordRequests.length).toBe(0);
+  });
+
+  test("change password is available from editor account menu", async ({ page }) => {
+    const api = await mockApi(page);
+
+    await openGuestEditorAndChangeProject(page);
+    await signInFromTopBar(page);
+
+    await openChangePasswordModal(page);
+    await fillChangePasswordForm(page, "password123", "newpassword456", "newpassword456");
+    await page.getByRole("button", { name: "Update password" }).click();
+
+    await expect(page.getByText("Password updated")).toBeVisible();
+    await expect.poll(() => api.changePasswordRequests.length).toBe(1);
+    expect(api.changePasswordRequests[0].new_password).toBe("newpassword456");
   });
 });

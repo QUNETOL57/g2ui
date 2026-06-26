@@ -71,6 +71,83 @@ def test_me_requires_auth(client) -> None:
     assert response.status_code == 401
 
 
+def test_change_password_success(client, auth_headers) -> None:
+    response = client.post(
+        "/api/v1/auth/change-password",
+        headers=auth_headers,
+        json={
+            "current_password": "password123",
+            "new_password": "newpassword123",
+            "new_password_confirm": "newpassword123",
+        },
+    )
+    assert response.status_code == 204
+
+    login_old = client.post(
+        "/api/v1/auth/login",
+        json={"email": "user@example.com", "password": "password123"},
+    )
+    assert login_old.status_code == 401
+
+    login_new = client.post(
+        "/api/v1/auth/login",
+        json={"email": "user@example.com", "password": "newpassword123"},
+    )
+    assert login_new.status_code == 200
+
+
+def test_change_password_wrong_current(client, auth_headers) -> None:
+    response = client.post(
+        "/api/v1/auth/change-password",
+        headers=auth_headers,
+        json={
+            "current_password": "wrong-password",
+            "new_password": "newpassword123",
+            "new_password_confirm": "newpassword123",
+        },
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Current password is incorrect"
+
+
+def test_change_password_requires_auth(client) -> None:
+    response = client.post(
+        "/api/v1/auth/change-password",
+        json={
+            "current_password": "password123",
+            "new_password": "newpassword123",
+            "new_password_confirm": "newpassword123",
+        },
+    )
+    assert response.status_code == 401
+
+
+def test_change_password_mismatch(client, auth_headers) -> None:
+    response = client.post(
+        "/api/v1/auth/change-password",
+        headers=auth_headers,
+        json={
+            "current_password": "password123",
+            "new_password": "newpassword123",
+            "new_password_confirm": "different123",
+        },
+    )
+    assert response.status_code == 422
+
+
+def test_change_password_too_short(client, auth_headers) -> None:
+    response = client.post(
+        "/api/v1/auth/change-password",
+        headers=auth_headers,
+        json={
+            "current_password": "password123",
+            "new_password": "short",
+            "new_password_confirm": "short",
+        },
+    )
+    assert response.status_code == 422
+
+
 def test_canvases_requires_auth(client) -> None:
     response = client.get("/api/v1/canvases")
     assert response.status_code == 401

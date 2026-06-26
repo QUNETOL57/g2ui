@@ -14,7 +14,7 @@ from ..auth import (
     verify_password,
 )
 from ..models import Canvas, User
-from ..schemas.auth import LoginRequest, RegisterRequest, TokenResponse, UserRead
+from ..schemas.auth import ChangePasswordRequest, LoginRequest, RegisterRequest, TokenResponse, UserRead
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 SINGLE_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
@@ -60,3 +60,19 @@ async def login(body: LoginRequest, db: DbDep) -> TokenResponse:
 @router.get("/me", response_model=UserRead)
 async def me(current_user: CurrentUserDep) -> User:
     return current_user
+
+
+@router.post("/change-password", status_code=status.HTTP_204_NO_CONTENT)
+async def change_password(
+    body: ChangePasswordRequest,
+    db: DbDep,
+    current_user: CurrentUserDep,
+) -> None:
+    if not verify_password(body.current_password, current_user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect",
+        )
+
+    current_user.password_hash = hash_password(body.new_password)
+    await db.flush()

@@ -1,5 +1,5 @@
 import { memo, useState } from "react";
-import AccountCircleOutlinedIcon from "@mui/icons-material/AccountCircleOutlined";
+import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
 import FileDownloadOutlinedIcon from "@mui/icons-material/FileDownloadOutlined";
 import FileUploadOutlinedIcon from "@mui/icons-material/FileUploadOutlined";
 import PaletteOutlinedIcon from "@mui/icons-material/PaletteOutlined";
@@ -68,7 +68,7 @@ export const EditorStatusBar = memo(function EditorStatusBar({
             Import
           </button>
           <div className={styles.statusUser} title={userEmail ?? "Guest"}>
-            <AccountCircleOutlinedIcon fontSize="small" aria-hidden />
+            <PersonOutlineOutlinedIcon fontSize="small" aria-hidden />
             <span>{userEmail ?? "Guest"}</span>
           </div>
         </div>

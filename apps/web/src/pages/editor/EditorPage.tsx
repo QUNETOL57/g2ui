@@ -1,6 +1,4 @@
 import { useEffect, useState } from "react";
-import LoginOutlinedIcon from "@mui/icons-material/LoginOutlined";
-import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
 
 import { useEditorStore } from "@entities/ui-project/model/store";
 import { cn } from "@shared/lib/cn";
@@ -9,9 +7,10 @@ import { findNode } from "@entities/ui-project/model/tree-ops";
 import type { AuthMode } from "@pages/auth/AuthPage";
 import logoUrl from "@shared/assets/logo.svg";
 import { Button } from "@shared/ui/Button";
-import { IconButton } from "@shared/ui/IconButton";
 import { Modal } from "@shared/ui/Modal";
+import { SignInButton } from "@shared/ui/SignInButton";
 import { TopBar } from "@shared/ui/TopBar";
+import { UserAccountMenu } from "@shared/ui/UserAccountMenu";
 import { CanvasWorkspace } from "@widgets/canvas-workspace/CanvasWorkspace";
 import { EditorMenu } from "@widgets/editor-menu/EditorMenu";
 import { EditorStatusBar } from "@widgets/editor-status-bar/EditorStatusBar";
@@ -141,18 +140,13 @@ export function EditorPage({
           />
         </div>
         <TopBar.Controls>
-          {onLogout ? (
-            <IconButton
-              title="Sign out"
-              aria-label="Sign out"
-              onClick={() => setIsLogoutConfirmOpen(true)}
-            >
-              <LogoutOutlinedIcon fontSize="inherit" />
-            </IconButton>
+          {onLogout && userEmail ? (
+            <UserAccountMenu
+              userEmail={userEmail}
+              onSignOut={() => setIsLogoutConfirmOpen(true)}
+            />
           ) : onOpenAuth ? (
-            <IconButton title="Sign in" aria-label="Sign in" onClick={() => onOpenAuth("login")}>
-              <LoginOutlinedIcon fontSize="inherit" />
-            </IconButton>
+            <SignInButton onClick={() => onOpenAuth("login")} />
           ) : null}
         </TopBar.Controls>
       </TopBar>

@@ -23,6 +23,12 @@ export interface LoginPayload {
   password: string;
 }
 
+export interface ChangePasswordPayload {
+  current_password: string;
+  new_password: string;
+  new_password_confirm: string;
+}
+
 export async function register(payload: RegisterPayload): Promise<AuthUser> {
   const tokenResponse = await fetchJson<TokenResponse>("/api/v1/auth/register", {
     method: "POST",
@@ -43,4 +49,11 @@ export async function login(payload: LoginPayload): Promise<AuthUser> {
 
 export async function getMe(): Promise<AuthUser> {
   return fetchJson<AuthUser>("/api/v1/auth/me");
+}
+
+export async function changePassword(payload: ChangePasswordPayload): Promise<void> {
+  await fetchJson<void>("/api/v1/auth/change-password", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }

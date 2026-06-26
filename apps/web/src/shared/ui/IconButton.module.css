@@ -42,6 +42,26 @@
   stroke: none;
 }
 
+.iconButtonGhost {
+  border-color: transparent;
+  background: transparent;
+}
+
+.iconButtonGhost:hover:not(:disabled) {
+  border-color: transparent;
+  background: transparent;
+  color: var(--hover-text);
+}
+
+.iconButtonGhost:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.iconButtonGhost:focus-visible {
+  outline: 1px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
 .tooltipPortal {
   position: fixed;
   z-index: 1200;

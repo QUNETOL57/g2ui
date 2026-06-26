@@ -16,6 +16,7 @@ import styles from "./IconButton.module.css";
 interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
   tooltip?: string;
+  variant?: "default" | "ghost";
 }
 
 export function IconButton({
@@ -24,6 +25,7 @@ export function IconButton({
   title,
   tooltip,
   type = "button",
+  variant = "default",
   onMouseEnter,
   onMouseLeave,
   onFocus,
@@ -73,7 +75,7 @@ export function IconButton({
     <>
       <button
         ref={buttonRef}
-        className={cn(styles.iconButton, className)}
+        className={cn(styles.iconButton, variant === "ghost" && styles.iconButtonGhost, className)}
         title={tooltip ? undefined : title}
         type={type}
         onMouseEnter={handleMouseEnter}

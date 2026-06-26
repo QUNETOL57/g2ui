@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import AccountCircleOutlinedIcon from "@mui/icons-material/AccountCircleOutlined";
+import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import CloudDoneOutlinedIcon from "@mui/icons-material/CloudDoneOutlined";
 import CloudOffOutlinedIcon from "@mui/icons-material/CloudOffOutlined";
@@ -8,8 +8,6 @@ import ControlPointDuplicateOutlinedIcon from "@mui/icons-material/ControlPointD
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import ErrorOutlineOutlinedIcon from "@mui/icons-material/ErrorOutlineOutlined";
-import LoginOutlinedIcon from "@mui/icons-material/LoginOutlined";
-import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
 import SyncOutlinedIcon from "@mui/icons-material/SyncOutlined";
 
 import { cloneProject } from "@entities/ui-project/model/tree-ops";
@@ -30,6 +28,8 @@ import { Button } from "@shared/ui/Button";
 import { IconButton } from "@shared/ui/IconButton";
 import { Modal } from "@shared/ui/Modal";
 import { TopBar } from "@shared/ui/TopBar";
+import { SignInButton } from "@shared/ui/SignInButton";
+import { UserAccountMenu } from "@shared/ui/UserAccountMenu";
 import type { AuthMode } from "@pages/auth/AuthPage";
 import statusBarStyles from "@widgets/editor-status-bar/EditorStatusBar.module.css";
 
@@ -125,6 +125,13 @@ export function LibraryPage({
     return nextProject;
   }, [draftProject, editProjectName, editSize.height, editSize.width, projectEditing]);
 
+  const closeCreateModal = () => {
+    setIsCreateModalOpen(false);
+    requestAnimationFrame(() => {
+      (document.activeElement as HTMLElement | null)?.blur();
+    });
+  };
+
   const handleCreate = () => {
     const createdAt = new Date();
     const nextName = projectName.trim() || "Untitled";
@@ -145,7 +152,7 @@ export function LibraryPage({
       project: cloneProject(newProject),
     };
     onCreateProject(card);
-    setIsCreateModalOpen(false);
+    closeCreateModal();
   };
 
   const openEditModal = (card: ProjectCard) => {
@@ -191,18 +198,13 @@ export function LibraryPage({
       <TopBar className={styles.libraryTopBar}>
         <BrandLogo />
         <TopBar.Controls>
-          {onLogout ? (
-            <IconButton
-              title="Sign out"
-              aria-label="Sign out"
-              onClick={() => setIsLogoutConfirmOpen(true)}
-            >
-              <LogoutOutlinedIcon fontSize="inherit" />
-            </IconButton>
+          {onLogout && userEmail ? (
+            <UserAccountMenu
+              userEmail={userEmail}
+              onSignOut={() => setIsLogoutConfirmOpen(true)}
+            />
           ) : onOpenAuth ? (
-            <IconButton title="Sign in" aria-label="Sign in" onClick={() => onOpenAuth("login")}>
-              <LoginOutlinedIcon fontSize="inherit" />
-            </IconButton>
+            <SignInButton onClick={() => onOpenAuth("login")} />
           ) : null}
         </TopBar.Controls>
       </TopBar>
@@ -295,7 +297,7 @@ export function LibraryPage({
 
         <Modal
           open={isCreateModalOpen}
-          onClose={() => setIsCreateModalOpen(false)}
+          onClose={closeCreateModal}
           size="md"
           closeOnBackdrop={false}
         >
@@ -303,7 +305,7 @@ export function LibraryPage({
             className={styles.modalClose}
             aria-label="Close create project"
             title="Close"
-            onClick={() => setIsCreateModalOpen(false)}
+            onClick={closeCreateModal}
           >
             ×
           </IconButton>
@@ -436,7 +438,7 @@ function LibraryStatusBar({
       </div>
       <div className={statusBarStyles.statusActions}>
         <div className={statusBarStyles.statusUser} title={userEmail ?? "Guest"}>
-          <AccountCircleOutlinedIcon fontSize="small" aria-hidden />
+          <PersonOutlineOutlinedIcon fontSize="small" aria-hidden />
           <span>{userEmail ?? "Guest"}</span>
         </div>
       </div>

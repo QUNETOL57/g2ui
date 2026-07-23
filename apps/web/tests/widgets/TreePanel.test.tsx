@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+import type { WidgetNode } from "@entities/ui-project";
+import { IR_WIDGET_TYPES } from "@entities/ui-project/schema";
 import { useEditorStore } from "@entities/ui-project/model/store";
 import { TreePanel } from "@widgets/tree-panel/TreePanel";
 
@@ -23,7 +25,22 @@ describe("TreePanel: rendering", () => {
   it("renders the screen as root node", () => {
     render(<TreePanel />);
     expect(screen.getByText("Widget tree")).toBeInTheDocument();
-    expect(screen.getByText("screen")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "screen node" })).toHaveAttribute("title", "screen");
+    expect(screen.queryByText("screen")).not.toBeInTheDocument();
+  });
+
+  it("renders toolbar icons for every node type", () => {
+    const children = IR_WIDGET_TYPES.filter((type) => type !== "screen").map(
+      (type) => ({ id: `${type}_1`, type }) as WidgetNode,
+    );
+    get().setProject(withChildren(makeFixtureProject(), children));
+
+    render(<TreePanel />);
+
+    for (const type of IR_WIDGET_TYPES) {
+      expect(screen.getByRole("img", { name: `${type} node` })).toBeInTheDocument();
+      expect(screen.queryByText(type)).not.toBeInTheDocument();
+    }
   });
 
   it("renders nested children", () => {

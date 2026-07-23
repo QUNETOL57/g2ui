@@ -11,17 +11,12 @@ import styles from "./CanvasToolbar.module.css";
 import {
   ArrowDownIcon,
   ArrowUpIcon,
-  ButtonIcon,
   ChevronIcon,
-  CircleIcon,
   FrameIcon,
-  IconGlyphIcon,
-  LineIcon,
   MarkerIcon,
   RectIcon,
   SelectToolIcon,
-  TextIcon,
-  TriangleIcon,
+  WidgetTypeIcon,
 } from "./toolbarIcons";
 
 interface ToolItem {
@@ -43,33 +38,33 @@ const TOOL_GROUPS: ToolGroup[] = [
     id: "layout",
     label: "Layout",
     icon: <FrameIcon />,
-    items: [{ type: "panel", label: "Panel", icon: <FrameIcon /> }],
+    items: [{ type: "panel", label: "Panel", icon: <WidgetTypeIcon type="panel" /> }],
   },
   {
     id: "shape",
     label: "Shapes",
     icon: <RectIcon />,
     items: [
-      { type: "rect", label: "Rectangle", icon: <RectIcon /> },
-      { type: "circle", label: "Circle", icon: <CircleIcon /> },
-      { type: "triangle", label: "Triangle", icon: <TriangleIcon /> },
-      { type: "line", label: "Line", icon: <LineIcon /> },
+      { type: "rect", label: "Rectangle", icon: <WidgetTypeIcon type="rect" /> },
+      { type: "circle", label: "Circle", icon: <WidgetTypeIcon type="circle" /> },
+      { type: "triangle", label: "Triangle", icon: <WidgetTypeIcon type="triangle" /> },
+      { type: "line", label: "Line", icon: <WidgetTypeIcon type="line" /> },
     ],
   },
   {
     id: "text",
     label: "Text",
-    icon: <TextIcon />,
+    icon: <WidgetTypeIcon type="label" />,
     items: [
-      { type: "label", label: "Label", icon: <TextIcon /> },
-      { type: "button", label: "Button", icon: <ButtonIcon /> },
+      { type: "label", label: "Label", icon: <WidgetTypeIcon type="label" /> },
+      { type: "button", label: "Button", icon: <WidgetTypeIcon type="button" /> },
     ],
   },
   {
     id: "media",
     label: "Media",
-    icon: <IconGlyphIcon />,
-    items: [{ type: "icon", label: "Icon", icon: <IconGlyphIcon /> }],
+    icon: <WidgetTypeIcon type="icon" />,
+    items: [{ type: "icon", label: "Icon", icon: <WidgetTypeIcon type="icon" /> }],
   },
 ];
 

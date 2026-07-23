@@ -9,6 +9,7 @@ import {
   makeButton,
   makeFixtureProject,
   makeLabel,
+  makePanel,
   withChildren,
 } from "../fixtures/projects";
 import { resetEditorStore } from "../fixtures/store";
@@ -344,5 +345,55 @@ describe("CanvasWorkspace: selection", () => {
     fireEvent.doubleClick(screen.getByLabelText("Hi"));
 
     expect(screen.getByLabelText("edit label text")).toBeInTheDocument();
+  });
+});
+
+describe("CanvasWorkspace: move without jump", () => {
+  it("keeps a nested widget from jumping upward while dragging and on mouseup", async () => {
+    const label = makeLabel("lab_1", "Nested");
+    label.frame = { x: 8, y: 12, width: 48, height: 7 };
+    const panel = makePanel("pan_1", [label]);
+    panel.layout = { mode: "absolute", padding: 0, gap: 0, align: "start", justify: "start" };
+    panel.frame = { x: 0, y: 40, width: 160, height: 80 };
+    panel.style = { drawBackground: true, background: { kind: "hex", value: "#222222" } };
+    get().setProject(withChildren(makeFixtureProject(), [panel]));
+    render(<CanvasWorkspace />);
+
+    const widget = screen.getByLabelText("Nested");
+    fireEvent.mouseDown(widget, { button: 0, clientX: 100, clientY: 100 });
+
+    const tops: number[] = [];
+    const readTop = () => {
+      const el = document.querySelector(
+        '[data-testid="canvas-device-frame"] [data-testid="canvas-widget"][data-widget-id="lab_1"]',
+      ) as HTMLElement | null;
+      tops.push(Number.parseFloat(el?.style.top ?? "NaN"));
+    };
+
+    readTop();
+    for (const clientY of [108, 116, 124, 132, 140]) {
+      fireEvent.mouseMove(window, { clientX: 100, clientY });
+      await act(async () => {
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+      });
+      readTop();
+    }
+
+    fireEvent.mouseUp(window);
+    await act(async () => {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    });
+    readTop();
+
+    const numericTops = tops.filter((value) => Number.isFinite(value));
+    expect(numericTops.length).toBeGreaterThan(3);
+
+    // Dragging downward must never paint a higher (smaller) top than the previous sample.
+    for (let i = 1; i < numericTops.length; i += 1) {
+      expect(numericTops[i]).toBeGreaterThanOrEqual(numericTops[i - 1]);
+    }
+
+    expect(get().project.screens[0].children?.[0].children?.[0].frame?.y).toBeGreaterThan(12);
+    expect(get().draftFrame).toBeNull();
   });
 });

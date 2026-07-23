@@ -33,6 +33,7 @@ function makePreviewCtx(
     selectedId: null,
     movableId: null,
     dragPreview: null,
+    draftFrame: null,
     onSelect: vi.fn(),
     ...overrides,
   };
@@ -1077,5 +1078,50 @@ describe("PreviewNode: z-index stacking", () => {
     await userEvent.pointer({ keys: "[MouseLeft]", target: screen.getByLabelText("TopIn") });
     expect(onSelect).toHaveBeenCalledWith("lbl_top");
     expect(onSelect).not.toHaveBeenCalledWith("pan_bottom");
+  });
+});
+
+describe("PreviewNode: draftFrame coordinates", () => {
+  it("treats draftFrame as absolute canvas coordinates (avoids nested upward jump)", () => {
+    const label = makeLabel("lab_1", "Nested");
+    label.frame = { x: 8, y: 12, width: 40, height: 7 };
+    const panel = makePanel("pan_1", [label]);
+    panel.layout = { mode: "absolute", padding: 0, gap: 0, align: "start", justify: "start" };
+    panel.frame = { x: 0, y: 40, width: 160, height: 80 };
+    const project = withChildren(makeFixtureProject(), [panel]);
+    const layout = layoutTree(project.screens[0], project.display.width, project.display.height);
+
+    const { container, rerender } = render(
+      <PreviewNode layoutNode={layout} ctx={makePreviewCtx(project, layout)} />,
+    );
+
+    const widget = () =>
+      container.querySelector(
+        '[data-testid="canvas-widget"][data-widget-id="lab_1"]',
+      ) as HTMLElement;
+
+    expect(widget().style.top).toBe("52px"); // 40 + 12
+
+    // Parent-local draft (the old move-path bug) would place the widget at y=20.
+    rerender(
+      <PreviewNode
+        layoutNode={layout}
+        ctx={makePreviewCtx(project, layout, {
+          draftFrame: { nodeId: "lab_1", frame: { x: 8, y: 20, width: 40, height: 7 } },
+        })}
+      />,
+    );
+    expect(widget().style.top).toBe("20px");
+
+    // Absolute draftFrame (correct contract) keeps the nested widget at canvas y=60.
+    rerender(
+      <PreviewNode
+        layoutNode={layout}
+        ctx={makePreviewCtx(project, layout, {
+          draftFrame: { nodeId: "lab_1", frame: { x: 8, y: 60, width: 40, height: 7 } },
+        })}
+      />,
+    );
+    expect(widget().style.top).toBe("60px");
   });
 });

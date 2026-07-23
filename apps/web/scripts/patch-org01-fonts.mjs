@@ -10,7 +10,7 @@ const repoRoot = join(__dirname, "../../..");
 const outputPath = join(__dirname, "../src/entities/font/generated/fontAssets.ts");
 
 /** Integer pixel scaling: each source pixel becomes N×N block (7px step per +1). */
-const ORG_SCALE_FACTORS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+const ORG_MAX_SCALE_FACTOR = 20;
 
 function glyphPixelOn(face, glyph, x, y) {
   if (x < 0 || y < 0 || x >= glyph.width || y >= glyph.height) return false;
@@ -121,6 +121,7 @@ function loadOriginalOrg01() {
 }
 
 const source = loadOriginalOrg01();
+const ORG_SCALE_FACTORS = Array.from({ length: ORG_MAX_SCALE_FACTOR }, (_, index) => index + 1);
 
 const orgFaces = ORG_SCALE_FACTORS.map((scaleFactor) =>
   scaleFontFaceByIntegerFactor(source, scaleFactor, orgFaceId(scaleFactor)),

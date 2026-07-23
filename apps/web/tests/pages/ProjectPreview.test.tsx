@@ -52,4 +52,55 @@ describe("ProjectPreview", () => {
     const { container } = render(<ProjectPreview project={project} compact />);
     expect((container.firstChild as HTMLElement).className).toMatch(/previewCompact/);
   });
+
+  it("applies resolved screen fill from style.background", () => {
+    const project = makeFixtureProject();
+    project.screens[0].style = {
+      drawBackground: true,
+      background: { kind: "hex", value: "#c0ffee" },
+    };
+
+    render(<ProjectPreview project={project} />);
+    expect(screen.getByTestId("project-preview-surface")).toHaveStyle({
+      background: "#c0ffee",
+    });
+  });
+
+  it("resolves screen fill token through palette", () => {
+    const project = makeFixtureProject({
+      palette: [{ token: "bg", hex: "#305070" }],
+    });
+    project.screens[0].style = {
+      background: { kind: "token", token: "bg" },
+    };
+
+    render(<ProjectPreview project={project} />);
+    expect(screen.getByTestId("project-preview-surface")).toHaveStyle({
+      background: "#305070",
+    });
+  });
+
+  it("uses black fill when drawBackground is false", () => {
+    const project = makeFixtureProject();
+    project.screens[0].style = {
+      drawBackground: false,
+      background: { kind: "hex", value: "#c0ffee" },
+    };
+
+    render(<ProjectPreview project={project} />);
+    expect(screen.getByTestId("project-preview-surface")).toHaveStyle({
+      background: "#000000",
+    });
+  });
+
+  it("falls back to props.background when style.background is missing", () => {
+    const project = makeFixtureProject();
+    project.screens[0].style = {};
+    project.screens[0].props = { background: { kind: "hex", value: "#445566" } };
+
+    render(<ProjectPreview project={project} />);
+    expect(screen.getByTestId("project-preview-surface")).toHaveStyle({
+      background: "#445566",
+    });
+  });
 });

@@ -1,6 +1,7 @@
 import type { WidgetNode } from "@entities/ui-project";
 import { cn } from "@shared/lib/cn";
 import { VisibilityToggleButton } from "@shared/ui/VisibilityToggleButton";
+import { WidgetTypeIcon } from "@widgets/canvas-workspace/toolbarIcons";
 
 import styles from "../PropertiesPanel.module.css";
 
@@ -15,7 +16,14 @@ export function SelectedGroup({
 
   return (
     <div className={cn(styles.group, styles.summary)}>
-      <span className={styles.typePill}>{node.type}</span>
+      <span
+        className={styles.typeIcon}
+        role="img"
+        aria-label={`${node.type} node`}
+        title={node.type}
+      >
+        <WidgetTypeIcon type={node.type} size={16} />
+      </span>
       <span className={styles.summaryId} title={node.id}>
         {node.id}
       </span>

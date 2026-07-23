@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 
 import type { UiProject } from "@entities/ui-project";
+import { resolveScreenBackground } from "@entities/ui-project/lib/color";
 import { layoutTree } from "@entities/ui-project/lib/layoutEngine";
 import { cn } from "@shared/lib/cn";
 import { PreviewNode } from "@widgets/canvas-workspace/renderNode";
@@ -44,6 +45,7 @@ export function ProjectPreview({
   const sizeLabelGap = bounds.labelGap;
   const canvasWidth = previewSize === "sidebar" ? previewWidth : maxWidth;
   const canvasHeight = previewSize === "sidebar" ? previewHeight : maxHeight;
+  const background = resolveScreenBackground(screen, project.palette);
 
   return (
     <div
@@ -76,7 +78,8 @@ export function ProjectPreview({
         ) : null}
         <div
           className={styles.screen}
-          style={{ width: previewWidth, height: previewHeight }}
+          data-testid="project-preview-surface"
+          style={{ width: previewWidth, height: previewHeight, background }}
         >
           {layout ? (
             <div

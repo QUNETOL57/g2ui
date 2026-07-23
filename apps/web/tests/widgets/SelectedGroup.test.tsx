@@ -7,10 +7,11 @@ import { SelectedGroup } from "@widgets/properties-panel/groups/SelectedGroup";
 import { makeFixtureProject, makeLabel } from "../fixtures/projects";
 
 describe("SelectedGroup", () => {
-  it("shows type pill and node id", () => {
+  it("shows an accessible type icon and node id", () => {
     const node = makeLabel("lbl_1", "Hello");
     render(<SelectedGroup node={node} updateNode={() => undefined} />);
-    expect(screen.getByText("label")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "label node" })).toHaveAttribute("title", "label");
+    expect(screen.queryByText("label")).not.toBeInTheDocument();
     expect(screen.getByText("lbl_1")).toBeInTheDocument();
   });
 
@@ -56,6 +57,8 @@ describe("SelectedGroup", () => {
   it("hides visibility toggle for screen nodes", () => {
     const screenNode = makeFixtureProject().screens[0];
     render(<SelectedGroup node={screenNode} updateNode={() => undefined} />);
+    expect(screen.getByRole("img", { name: "screen node" })).toHaveAttribute("title", "screen");
+    expect(screen.queryByText("screen")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Hide/i })).not.toBeInTheDocument();
   });
 });

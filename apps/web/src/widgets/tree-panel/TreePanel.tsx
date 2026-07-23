@@ -6,6 +6,7 @@ import { findNode, findParent } from "@entities/ui-project/model/tree-ops";
 import { cn } from "@shared/lib/cn";
 import { SectionTitle } from "@shared/ui/SectionTitle";
 import { VisibilityToggleButton } from "@shared/ui/VisibilityToggleButton";
+import { WidgetTypeIcon } from "@widgets/canvas-workspace/toolbarIcons";
 
 import styles from "./TreePanel.module.css";
 
@@ -246,7 +247,14 @@ function TreeNode({
           onDrop(node.id, dropTarget.position);
         }}
       >
-        <span className={styles.typeBadge}>{node.type}</span>
+        <span
+          className={styles.typeIcon}
+          role="img"
+          aria-label={`${node.type} node`}
+          title={node.type}
+        >
+          <WidgetTypeIcon type={node.type} size={16} />
+        </span>
         <span className={styles.rowName}>{node.name ?? node.id}</span>
         <div className={styles.rowMeta}>
           <span className={styles.rowId}>{node.id}</span>

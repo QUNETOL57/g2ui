@@ -1,4 +1,5 @@
 import type { UiProject } from "@entities/ui-project";
+import { resolveScreenBackground } from "@entities/ui-project/lib/color";
 import { layoutTree } from "@entities/ui-project/lib/layoutEngine";
 import { PreviewNode } from "@widgets/canvas-workspace/renderNode";
 import { computeWidgetStackIndices } from "@widgets/canvas-workspace/lib/widgetStackIndices";
@@ -27,6 +28,7 @@ export function ScreenThumbnail({
   const scale = Math.min(innerWidth / displayWidth, innerHeight / displayHeight);
   const previewWidth = Math.max(1, Math.round(displayWidth * scale));
   const previewHeight = Math.max(1, Math.round(displayHeight * scale));
+  const background = resolveScreenBackground(screen, project.palette);
 
   return (
     <div
@@ -40,9 +42,11 @@ export function ScreenThumbnail({
       {layout ? (
         <div
           className={styles.screen}
+          data-testid="screen-thumbnail-surface"
           style={{
             width: previewWidth,
             height: previewHeight,
+            background,
           }}
         >
           <div

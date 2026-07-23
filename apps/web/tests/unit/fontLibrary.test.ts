@@ -111,4 +111,28 @@ describe("measureTextWidth & glyph lookups", () => {
       expect(glyphPixelOn(face, a, a.width + 5, a.height + 5)).toBe(false);
     }
   });
+
+  it("Org_01 digits share a common tabular advance with right-aligned 1", () => {
+    const face = findFontFace({ fontFamily: "Org_01", fontSize: 7 });
+    const digits = [..."0123456789"].map((ch) => findGlyph(face, ch.codePointAt(0)!)!);
+    const advances = new Set(digits.map((glyph) => glyph.advance));
+    expect(advances.size).toBe(1);
+
+    const one = digits[1]!;
+    const zero = digits[0]!;
+    expect(one.advance).toBe(zero.advance);
+    expect(one.xOffset).toBe(zero.width - one.width);
+    expect(measureTextWidth(face, "00011")).toBe(measureTextWidth(face, "00000"));
+  });
+
+  it("Org_01 keeps tabular digits at a scaled size", () => {
+    const sizes = getFontSizes("Org_01", "regular");
+    expect(sizes).toContain(7);
+    expect(Math.max(...sizes)).toBeGreaterThanOrEqual(20);
+
+    const face = findFontFace({ fontFamily: "Org_01", fontSize: Math.max(...sizes) });
+    const digits = [..."0123456789"].map((ch) => findGlyph(face, ch.codePointAt(0)!)!);
+    expect(new Set(digits.map((glyph) => glyph.advance)).size).toBe(1);
+    expect(measureTextWidth(face, "00011")).toBe(measureTextWidth(face, "00000"));
+  });
 });

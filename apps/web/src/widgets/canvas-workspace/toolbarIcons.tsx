@@ -1,3 +1,5 @@
+import type { WidgetType } from "@entities/ui-project";
+
 interface ToolbarIconProps {
   size?: number;
 }
@@ -140,4 +142,34 @@ export function TrashIcon({ size = 16 }: ToolbarIconProps) {
       <path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13M10 11v6M14 11v6" />
     </svg>
   );
+}
+
+export function WidgetTypeIcon({
+  type,
+  size = 18,
+}: ToolbarIconProps & { type: WidgetType }) {
+  switch (type) {
+    case "screen":
+      return <RectIcon size={size} />;
+    case "panel":
+      return <FrameIcon size={size} />;
+    case "label":
+      return <TextIcon size={size} />;
+    case "button":
+      return <ButtonIcon size={size} />;
+    case "icon":
+      return <IconGlyphIcon size={size} />;
+    case "image":
+      return <ImageIcon size={size} />;
+    case "line":
+      return <LineIcon size={size} />;
+    case "rect":
+      return <RectIcon size={size} />;
+    case "circle":
+      return <CircleIcon size={size} />;
+    case "triangle":
+      return <TriangleIcon size={size} />;
+    case "freehand":
+      return <MarkerIcon size={size} />;
+  }
 }

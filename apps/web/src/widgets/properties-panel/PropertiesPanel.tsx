@@ -1,9 +1,11 @@
 import { useMemo } from "react";
 
+import { layoutTree } from "@entities/ui-project/lib/layoutEngine";
 import { useEditorStore } from "@entities/ui-project/model/store";
 import { findNode } from "@entities/ui-project/model/tree-ops";
 import { EmptyState } from "@shared/ui/EmptyState";
 import { SectionTitle } from "@shared/ui/SectionTitle";
+import { findParentLayoutNode } from "@widgets/canvas-workspace/lib/layoutNodeOps";
 
 import { ButtonGroup } from "./groups/ButtonGroup";
 import { FrameGroup } from "./groups/FrameGroup";
@@ -17,6 +19,7 @@ import { EditorShortcutsList } from "./ui/EditorShortcutsList";
 
 export function PropertiesPanel() {
   const project = useEditorStore((s) => s.project);
+  const activeScreenId = useEditorStore((s) => s.activeScreenId);
   const activeTool = useEditorStore((s) => s.activeTool);
   const markerStyle = useEditorStore((s) => s.markerStyle);
   const selectedNodeId = useEditorStore((s) => s.selectedNodeId);
@@ -32,6 +35,21 @@ export function PropertiesPanel() {
     () => (selectedNodeId ? findNode(project, selectedNodeId) : null),
     [project, selectedNodeId],
   );
+
+  /** draftFrame is stored in absolute canvas space; Transform fields need parent-local. */
+  const localDraftFrame = useMemo(() => {
+    if (!node || !draftFrame || draftFrame.nodeId !== node.id) return null;
+    const screen = project.screens.find((entry) => entry.id === activeScreenId) ?? project.screens[0];
+    if (!screen) return draftFrame.frame;
+    const layout = layoutTree(screen, project.display.width, project.display.height);
+    const parentLayout = findParentLayoutNode(layout, node.id);
+    if (!parentLayout) return draftFrame.frame;
+    return {
+      ...draftFrame.frame,
+      x: draftFrame.frame.x - parentLayout.rect.x,
+      y: draftFrame.frame.y - parentLayout.rect.y,
+    };
+  }, [activeScreenId, draftFrame, node, project.display.height, project.display.width, project.screens]);
 
   if (!selectedNodeId) {
     if (activeTool === "marker") {
@@ -68,7 +86,7 @@ export function PropertiesPanel() {
         <FrameGroup
           node={node}
           project={project}
-          draftFrame={draftFrame?.nodeId === node.id ? draftFrame.frame : null}
+          draftFrame={localDraftFrame}
           updateFrame={updateFrame}
           updateNode={updateNode}
         />

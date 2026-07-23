@@ -5,7 +5,7 @@ import { useEditorStore } from "@entities/ui-project/model/store";
 import { findNode, findParent } from "@entities/ui-project/model/tree-ops";
 import { layoutTree } from "@entities/ui-project/lib/layoutEngine";
 import type { LayoutNode } from "@entities/ui-project/lib/layoutEngine";
-import { resolveColor } from "@entities/ui-project/lib/color";
+import { resolveColor, resolveScreenBackground } from "@entities/ui-project/lib/color";
 import { normalizeIconFrame } from "@entities/icon/iconSizing";
 import { IconButton } from "@shared/ui/IconButton";
 import { SidebarPanelIcon } from "@shared/ui/SidebarPanelIcon";
@@ -183,10 +183,7 @@ export function CanvasWorkspace({
     );
   }
 
-  const bg =
-    screen.style?.drawBackground === false
-      ? "#000000"
-      : resolveColor(screen.style?.background, project.palette, "#121212");
+  const bg = resolveScreenBackground(screen, project.palette);
   const markerDraftColor = resolveColor(markerStyle.color, project.palette, "#FFFFFF");
   const markerDraftWidth = Math.max(1, Math.round(markerStyle.width));
   const scaledW = Math.round(w * renderZoom);
@@ -416,15 +413,18 @@ export function CanvasWorkspace({
           };
           if (sameFrame(active.latestFrame ?? active.startFrame, nextFrame)) return;
           active.latestFrame = nextFrame;
-          scheduleDraftFrame({ nodeId: active.nodeId, frame: nextFrame });
+          const absoluteRect = {
+            x: active.parentRect.x + nextFrame.x,
+            y: active.parentRect.y + nextFrame.y,
+            width: nextFrame.width,
+            height: nextFrame.height,
+          };
+          // draftFrame is absolute canvas space (same as dragPreview / label-edit drafts)
+          // so PreviewNode never treats parent-local y as a screen y (upward jump).
+          scheduleDraftFrame({ nodeId: active.nodeId, frame: absoluteRect });
           scheduleDragPreview({
             nodeId: active.nodeId,
-            rect: {
-              x: active.parentRect.x + nextFrame.x,
-              y: active.parentRect.y + nextFrame.y,
-              width: nextFrame.width,
-              height: nextFrame.height,
-            },
+            rect: absoluteRect,
           });
           return;
         }
@@ -465,15 +465,16 @@ export function CanvasWorkspace({
         if (sameFrame(active.latestFrame ?? active.startFrame, nextFrame)) return;
         active.latestFrame = nextFrame;
         active.latestLineProps = nextLineProps;
-        scheduleDraftFrame({ nodeId: active.nodeId, frame: nextFrame });
+        const absoluteRect = {
+          x: active.parentRect.x + nextFrame.x,
+          y: active.parentRect.y + nextFrame.y,
+          width: nextFrame.width,
+          height: nextFrame.height,
+        };
+        scheduleDraftFrame({ nodeId: active.nodeId, frame: absoluteRect });
         scheduleDragPreview({
           nodeId: active.nodeId,
-          rect: {
-            x: active.parentRect.x + nextFrame.x,
-            y: active.parentRect.y + nextFrame.y,
-            width: nextFrame.width,
-            height: nextFrame.height,
-          },
+          rect: absoluteRect,
           lineProps: nextLineProps,
         });
         return;
@@ -576,16 +577,18 @@ export function CanvasWorkspace({
         window.cancelAnimationFrame(draftFrameRafRef.current);
         draftFrameRafRef.current = null;
       }
-      setDragPreview(null);
       document.body.style.userSelect = previousUserSelect;
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
+      // Commit the final frame before clearing the preview so the widget never
+      // paints for a frame at the pre-drag layout position (visible upward jump).
       if (active?.latestFrame) {
         updateFrame(active.nodeId, active.latestFrame);
       }
       if (active?.latestLineProps) {
         updateProps(active.nodeId, active.latestLineProps);
       }
+      setDragPreview(null);
       setDraftFrame(null);
     };
 

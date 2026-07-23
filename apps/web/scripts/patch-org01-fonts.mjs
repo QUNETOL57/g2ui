@@ -10,7 +10,7 @@ const repoRoot = join(__dirname, "../../..");
 const outputPath = join(__dirname, "../src/entities/font/generated/fontAssets.ts");
 
 /** Integer pixel scaling: each source pixel becomes N×N block (7px step per +1). */
-const ORG_SCALE_FACTORS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+const ORG_MAX_SCALE_FACTOR = 20;
 
 function glyphPixelOn(face, glyph, x, y) {
   if (x < 0 || y < 0 || x >= glyph.width || y >= glyph.height) return false;
@@ -102,6 +102,30 @@ function orgFaceId(scaleFactor) {
   return `org_01_x${scaleFactor}`;
 }
 
+/** Make digits 0–9 share one advance (tabular/monospace), right-aligning narrow glyphs like "1". */
+function normalizeTabularDigits(face) {
+  const digitCodepoints = new Set(
+    Array.from({ length: 10 }, (_, index) => "0".codePointAt(0) + index),
+  );
+  const digitGlyphs = face.glyphs.filter((glyph) => digitCodepoints.has(glyph.codepoint));
+  if (digitGlyphs.length === 0) return face;
+
+  const targetAdvance = Math.max(...digitGlyphs.map((glyph) => glyph.advance));
+  const contentWidth = Math.max(...digitGlyphs.map((glyph) => glyph.width));
+
+  return {
+    ...face,
+    glyphs: face.glyphs.map((glyph) => {
+      if (!digitCodepoints.has(glyph.codepoint)) return glyph;
+      return {
+        ...glyph,
+        advance: targetAdvance,
+        xOffset: Math.max(0, contentWidth - glyph.width),
+      };
+    }),
+  };
+}
+
 function loadOriginalOrg01() {
   const gitAssets = execSync("git show HEAD:apps/web/src/entities/font/generated/fontAssets.ts", {
     cwd: repoRoot,
@@ -120,7 +144,8 @@ function loadOriginalOrg01() {
   return original;
 }
 
-const source = loadOriginalOrg01();
+const source = normalizeTabularDigits(loadOriginalOrg01());
+const ORG_SCALE_FACTORS = Array.from({ length: ORG_MAX_SCALE_FACTOR }, (_, index) => index + 1);
 
 const orgFaces = ORG_SCALE_FACTORS.map((scaleFactor) =>
   scaleFontFaceByIntegerFactor(source, scaleFactor, orgFaceId(scaleFactor)),

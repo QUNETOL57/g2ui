@@ -348,6 +348,48 @@ describe("CanvasWorkspace: selection", () => {
   });
 });
 
+describe("CanvasWorkspace: screen background", () => {
+  it("applies resolved screen fill from style.background", () => {
+    const project = makeFixtureProject();
+    project.screens[0].style = {
+      drawBackground: true,
+      background: { kind: "hex", value: "#abcdef" },
+    };
+    get().setProject(project);
+
+    render(<CanvasWorkspace />);
+    expect(screen.getByTestId("canvas-device-frame")).toHaveStyle({
+      background: "#abcdef",
+    });
+  });
+
+  it("uses black fill when drawBackground is false", () => {
+    const project = makeFixtureProject();
+    project.screens[0].style = {
+      drawBackground: false,
+      background: { kind: "hex", value: "#abcdef" },
+    };
+    get().setProject(project);
+
+    render(<CanvasWorkspace />);
+    expect(screen.getByTestId("canvas-device-frame")).toHaveStyle({
+      background: "#000000",
+    });
+  });
+
+  it("falls back to props.background when style.background is missing", () => {
+    const project = makeFixtureProject();
+    project.screens[0].style = {};
+    project.screens[0].props = { background: { kind: "hex", value: "#556677" } };
+    get().setProject(project);
+
+    render(<CanvasWorkspace />);
+    expect(screen.getByTestId("canvas-device-frame")).toHaveStyle({
+      background: "#556677",
+    });
+  });
+});
+
 describe("CanvasWorkspace: move without jump", () => {
   it("keeps a nested widget from jumping upward while dragging and on mouseup", async () => {
     const label = makeLabel("lab_1", "Nested");
@@ -363,11 +405,14 @@ describe("CanvasWorkspace: move without jump", () => {
     fireEvent.mouseDown(widget, { button: 0, clientX: 100, clientY: 100 });
 
     const tops: number[] = [];
+    const draftYs: number[] = [];
     const readTop = () => {
       const el = document.querySelector(
         '[data-testid="canvas-device-frame"] [data-testid="canvas-widget"][data-widget-id="lab_1"]',
       ) as HTMLElement | null;
       tops.push(Number.parseFloat(el?.style.top ?? "NaN"));
+      const draftY = get().draftFrame?.frame.y;
+      if (typeof draftY === "number") draftYs.push(draftY);
     };
 
     readTop();
@@ -377,6 +422,12 @@ describe("CanvasWorkspace: move without jump", () => {
         await new Promise((resolve) => requestAnimationFrame(resolve));
       });
       readTop();
+    }
+
+    // Store drafts are absolute canvas coords (parent.y 40 + local >= 12), not parent-local.
+    expect(draftYs.length).toBeGreaterThan(0);
+    for (const draftY of draftYs) {
+      expect(draftY).toBeGreaterThanOrEqual(52);
     }
 
     fireEvent.mouseUp(window);

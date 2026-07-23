@@ -143,6 +143,30 @@ describe("PropertiesPanel: per-type groups", () => {
   });
 });
 
+describe("PropertiesPanel: absolute draftFrame conversion", () => {
+  it("shows Transform X/Y in parent-local space when store draftFrame is absolute", () => {
+    const label = makeLabel("lab_1", "Nested");
+    label.frame = { x: 8, y: 12, width: 48, height: 7 };
+    const panel = makePanel("pan_1", [label]);
+    panel.layout = { mode: "absolute", padding: 0, gap: 0, align: "start", justify: "start" };
+    panel.frame = { x: 0, y: 40, width: 160, height: 80 };
+    get().setProject(withChildren(makeFixtureProject(), [panel]));
+    get().selectNode("lab_1");
+    // Absolute canvas draft (parent.y 40 + local 20) — Transform must show local 20, not 60.
+    get().setDraftFrame({
+      nodeId: "lab_1",
+      frame: { x: 8, y: 60, width: 48, height: 7 },
+    });
+
+    render(<PropertiesPanel />);
+
+    const inputs = screen.getAllByRole("spinbutton") as HTMLInputElement[];
+    expect(inputs[0]).toHaveValue(8);
+    expect(inputs[1]).toHaveValue(20);
+    expect(inputs[1]).not.toHaveValue(60);
+  });
+});
+
 describe("PropertiesPanel: writes to store via shared inputs", () => {
   it("rename via SelectedGroup persists to store", async () => {
     const project = withChildren(makeFixtureProject(), [makeLabel("lbl_1")]);

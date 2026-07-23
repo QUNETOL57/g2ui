@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveColor } from "@entities/ui-project/lib/color";
+import {
+  resolveColor,
+  resolveScreenBackground,
+  SCREEN_BACKGROUND_FALLBACK,
+} from "@entities/ui-project/lib/color";
 
 describe("resolveColor", () => {
   it("returns fallback when color is undefined", () => {
@@ -32,5 +36,71 @@ describe("resolveColor", () => {
     expect(
       resolveColor({ kind: "token", token: "bg" }, [{ token: "bg", hex: "#222" }]),
     ).toBe("#222");
+  });
+});
+
+describe("resolveScreenBackground", () => {
+  const palette = [{ token: "bg", hex: "#102030" }];
+
+  it("resolves style.background hex", () => {
+    expect(
+      resolveScreenBackground(
+        { style: { background: { kind: "hex", value: "#abcdef" } } },
+        palette,
+      ),
+    ).toBe("#abcdef");
+  });
+
+  it("resolves style.background token via palette", () => {
+    expect(
+      resolveScreenBackground(
+        { style: { background: { kind: "token", token: "bg" } } },
+        palette,
+      ),
+    ).toBe("#102030");
+  });
+
+  it("falls back to props.background when style.background is missing", () => {
+    expect(
+      resolveScreenBackground(
+        { style: {}, props: { background: { kind: "hex", value: "#112233" } } },
+        palette,
+      ),
+    ).toBe("#112233");
+  });
+
+  it("prefers style.background over props.background", () => {
+    expect(
+      resolveScreenBackground(
+        {
+          style: { background: { kind: "hex", value: "#aaaaaa" } },
+          props: { background: { kind: "hex", value: "#bbbbbb" } },
+        },
+        palette,
+      ),
+    ).toBe("#aaaaaa");
+  });
+
+  it("returns black when drawBackground is false", () => {
+    expect(
+      resolveScreenBackground(
+        {
+          style: {
+            drawBackground: false,
+            background: { kind: "hex", value: "#abcdef" },
+          },
+        },
+        palette,
+      ),
+    ).toBe("#000000");
+  });
+
+  it("returns black for null or undefined screen", () => {
+    expect(resolveScreenBackground(null, palette)).toBe("#000000");
+    expect(resolveScreenBackground(undefined, palette)).toBe("#000000");
+  });
+
+  it("returns canvas fallback when no background is set", () => {
+    expect(resolveScreenBackground({ style: {} }, palette)).toBe(SCREEN_BACKGROUND_FALLBACK);
   });
 });

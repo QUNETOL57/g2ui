@@ -5,7 +5,7 @@ import { useEditorStore } from "@entities/ui-project/model/store";
 import { findNode, findParent } from "@entities/ui-project/model/tree-ops";
 import { layoutTree } from "@entities/ui-project/lib/layoutEngine";
 import type { LayoutNode } from "@entities/ui-project/lib/layoutEngine";
-import { resolveColor } from "@entities/ui-project/lib/color";
+import { resolveColor, resolveScreenBackground } from "@entities/ui-project/lib/color";
 import { normalizeIconFrame } from "@entities/icon/iconSizing";
 import { IconButton } from "@shared/ui/IconButton";
 import { SidebarPanelIcon } from "@shared/ui/SidebarPanelIcon";
@@ -183,10 +183,7 @@ export function CanvasWorkspace({
     );
   }
 
-  const bg =
-    screen.style?.drawBackground === false
-      ? "#000000"
-      : resolveColor(screen.style?.background, project.palette, "#121212");
+  const bg = resolveScreenBackground(screen, project.palette);
   const markerDraftColor = resolveColor(markerStyle.color, project.palette, "#FFFFFF");
   const markerDraftWidth = Math.max(1, Math.round(markerStyle.width));
   const scaledW = Math.round(w * renderZoom);

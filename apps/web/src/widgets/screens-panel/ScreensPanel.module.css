@@ -33,8 +33,8 @@
   position: relative;
 }
 
-.card:hover {
-  border-color: var(--hover-border);
+.card:hover:not(.cardActive) {
+  border: 1px dashed var(--hover-border);
 }
 
 .cardActive {

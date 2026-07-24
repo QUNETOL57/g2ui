@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { DragEvent } from "react";
 import type { WidgetNode } from "@entities/ui-project";
 import { useEditorStore } from "@entities/ui-project/model/store";
@@ -7,13 +7,17 @@ import { cn } from "@shared/lib/cn";
 import { SectionTitle } from "@shared/ui/SectionTitle";
 import { LockToggleButton } from "@shared/ui/LockToggleButton";
 import { VisibilityToggleButton } from "@shared/ui/VisibilityToggleButton";
-import { WidgetTypeIcon } from "@widgets/canvas-workspace/toolbarIcons";
+import { ChevronIcon, WidgetTypeIcon } from "@widgets/canvas-workspace/toolbarIcons";
 
 import styles from "./TreePanel.module.css";
 
 type DropPosition = "before" | "inside" | "after";
 type TreeDropTarget = { nodeId: string; position: DropPosition } | null;
 type SelectMods = { toggle?: boolean; range?: boolean };
+
+function isCollapsiblePanel(node: WidgetNode) {
+  return node.type === "panel" && (node.children?.length ?? 0) > 0;
+}
 
 export function TreePanel() {
   const project = useEditorStore((s) => s.project);
@@ -29,6 +33,7 @@ export function TreePanel() {
   const updateNode = useEditorStore((s) => s.updateNode);
   const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<TreeDropTarget>(null);
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(() => new Set());
 
   const screen = project.screens.find((s) => s.id === activeScreenId);
 
@@ -38,11 +43,41 @@ export function TreePanel() {
     const acc: string[] = [];
     const walk = (node: WidgetNode) => {
       acc.push(node.id);
+      if (node.type === "panel" && collapsedIds.has(node.id)) return;
       (node.children ?? []).forEach(walk);
     };
     if (screen) walk(screen);
     return acc;
-  }, [screen]);
+  }, [collapsedIds, screen]);
+
+  useEffect(() => {
+    if (!selectedNodeId || !screen) return;
+    setCollapsedIds((prev) => {
+      let next: Set<string> | null = null;
+      let currentId: string | null = selectedNodeId;
+      while (currentId) {
+        const parent = findParent(project, currentId);
+        if (!parent) break;
+        if (prev.has(parent.id)) {
+          if (!next) next = new Set(prev);
+          next.delete(parent.id);
+        }
+        currentId = parent.id;
+      }
+      return next ?? prev;
+    });
+  }, [project, screen, selectedNodeId]);
+
+  const toggleCollapsed = (nodeId: string) => {
+    const node = findNode(project, nodeId);
+    if (!node || node.type !== "panel") return;
+    setCollapsedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(nodeId)) next.delete(nodeId);
+      else next.add(nodeId);
+      return next;
+    });
+  };
 
   const handleSelect = (id: string, mods?: SelectMods) => {
     if (mods?.range) {
@@ -91,6 +126,14 @@ export function TreePanel() {
     const movingIds = resolveMovingIds(sourceId);
     if (!movingIds.every((id) => canDrop(id, targetId, position))) return;
 
+    if (position === "inside" && collapsedIds.has(targetId)) {
+      setCollapsedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(targetId);
+        return next;
+      });
+    }
+
     if (movingIds.length > 1) {
       moveNodesToTarget(movingIds, targetId, position);
       return;
@@ -118,9 +161,10 @@ export function TreePanel() {
         {screen ? (
           <TreeNode
             node={screen}
-            depth={0}
             selectedSet={selectedSet}
             primaryId={selectedNodeId}
+            collapsedIds={collapsedIds}
+            onToggleCollapse={toggleCollapsed}
             onSelect={handleSelect}
             onLabelEdit={beginLabelTextEdit}
             onUpdateNode={updateNode}
@@ -155,9 +199,10 @@ export function TreePanel() {
 
 function TreeNode({
   node,
-  depth,
   selectedSet,
   primaryId,
+  collapsedIds,
+  onToggleCollapse,
   onSelect,
   onLabelEdit,
   onUpdateNode,
@@ -170,9 +215,10 @@ function TreeNode({
   onDrop,
 }: {
   node: WidgetNode;
-  depth: number;
   selectedSet: Set<string>;
   primaryId: string | null;
+  collapsedIds: Set<string>;
+  onToggleCollapse: (nodeId: string) => void;
   onSelect: (id: string, mods?: SelectMods) => void;
   onLabelEdit: (id: string) => void;
   onUpdateNode: (id: string, patch: Partial<WidgetNode>) => void;
@@ -186,8 +232,14 @@ function TreeNode({
 }) {
   const isSelected = selectedSet.has(node.id);
   const isPrimary = primaryId === node.id;
+  const isScreen = node.type === "screen";
   const isWidgetRow = node.id !== activeScreenId;
   const isDraggable = isWidgetRow && node.locked !== true;
+  const children = node.children ?? [];
+  const isCollapsible = isCollapsiblePanel(node);
+  const expanded = isCollapsible && !collapsedIds.has(node.id);
+  const showChildren = children.length > 0 && (node.type !== "panel" || !collapsedIds.has(node.id));
+  const label = node.name ?? node.id;
   const dragOverClass =
     dropTarget?.nodeId === node.id
       ? dropTarget.position === "before"
@@ -196,8 +248,9 @@ function TreeNode({
           ? styles.rowDragOverInside
           : styles.rowDragOverAfter
       : undefined;
+
   return (
-    <div>
+    <div className={styles.treeItem}>
       <div
         className={cn(
           styles.row,
@@ -209,8 +262,8 @@ function TreeNode({
         data-testid="tree-node-row"
         data-tree-node-id={node.id}
         data-tree-node-type={node.type}
+        data-tree-expanded={isCollapsible ? String(expanded) : undefined}
         aria-selected={isSelected}
-        style={{ paddingLeft: 4 + depth * 12 }}
         draggable={isDraggable}
         onClick={(event) =>
           onSelect(node.id, {
@@ -220,6 +273,10 @@ function TreeNode({
         }
         onDoubleClick={(event) => {
           event.stopPropagation();
+          if (isCollapsible) {
+            onToggleCollapse(node.id);
+            return;
+          }
           if (node.locked === true) return;
           if (node.type === "label" || node.type === "button") onLabelEdit(node.id);
         }}
@@ -250,6 +307,22 @@ function TreeNode({
           onDrop(node.id, dropTarget.position);
         }}
       >
+        {isCollapsible ? (
+          <button
+            type="button"
+            className={cn(styles.twistie, expanded && styles.twistieExpanded)}
+            aria-label={expanded ? `Collapse ${label}` : `Expand ${label}`}
+            aria-expanded={expanded}
+            data-testid="tree-node-twistie"
+            onMouseDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
+              onToggleCollapse(node.id);
+            }}
+          >
+            <ChevronIcon size={12} />
+          </button>
+        ) : null}
         <span
           className={styles.typeIcon}
           role="img"
@@ -258,21 +331,21 @@ function TreeNode({
         >
           <WidgetTypeIcon type={node.type} size={16} />
         </span>
-        <span className={styles.rowName}>{node.name ?? node.id}</span>
+        <span className={styles.rowName}>{label}</span>
         <div className={styles.rowMeta}>
           <span className={styles.rowId}>{node.id}</span>
           {isWidgetRow ? (
             <div className={styles.rowVisibilitySlot}>
               <VisibilityToggleButton
                 visible={node.visible !== false}
-                label={node.name ?? node.id}
+                label={label}
                 onToggle={() =>
                   onUpdateNode(node.id, { visible: node.visible === false })
                 }
               />
               <LockToggleButton
                 locked={node.locked === true}
-                label={node.name ?? node.id}
+                label={label}
                 onToggle={() =>
                   onUpdateNode(node.id, { locked: node.locked !== true })
                 }
@@ -281,25 +354,33 @@ function TreeNode({
           ) : null}
         </div>
       </div>
-      {(node.children ?? []).map((child) => (
-        <TreeNode
-          key={child.id}
-          node={child}
-          depth={depth + 1}
-          selectedSet={selectedSet}
-          primaryId={primaryId}
-          onSelect={onSelect}
-          onLabelEdit={onLabelEdit}
-          onUpdateNode={onUpdateNode}
-          activeScreenId={activeScreenId}
-          draggedNodeId={draggedNodeId}
-          dropTarget={dropTarget}
-          onDragStart={onDragStart}
-          onDragEnd={onDragEnd}
-          onDragOver={onDragOver}
-          onDrop={onDrop}
-        />
-      ))}
+      {showChildren ? (
+        <div
+          className={cn(styles.children, isScreen && styles.childrenRoot)}
+          data-testid="tree-node-children"
+        >
+          {children.map((child) => (
+            <TreeNode
+              key={child.id}
+              node={child}
+              selectedSet={selectedSet}
+              primaryId={primaryId}
+              collapsedIds={collapsedIds}
+              onToggleCollapse={onToggleCollapse}
+              onSelect={onSelect}
+              onLabelEdit={onLabelEdit}
+              onUpdateNode={onUpdateNode}
+              activeScreenId={activeScreenId}
+              draggedNodeId={draggedNodeId}
+              dropTarget={dropTarget}
+              onDragStart={onDragStart}
+              onDragEnd={onDragEnd}
+              onDragOver={onDragOver}
+              onDrop={onDrop}
+            />
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

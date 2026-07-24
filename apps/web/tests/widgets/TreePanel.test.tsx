@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
@@ -60,6 +60,102 @@ describe("TreePanel: rendering", () => {
     useEditorStore.setState({ activeScreenId: "no_such_screen" });
     render(<TreePanel />);
     expect(screen.getByText("No active screen")).toBeInTheDocument();
+  });
+});
+
+describe("TreePanel: collapse", () => {
+  it("collapses and expands a panel with the twistie button", async () => {
+    const panel = makePanel("pan_1", [makeLabel("lbl_1")]);
+    panel.name = "Group";
+    get().setProject(withChildren(makeFixtureProject(), [panel]));
+    render(<TreePanel />);
+
+    expect(
+      screen.getAllByTestId("tree-node-row").some((row) => row.dataset.treeNodeId === "lbl_1"),
+    ).toBe(true);
+    const panelRow = screen
+      .getAllByTestId("tree-node-row")
+      .find((row) => row.dataset.treeNodeId === "pan_1");
+    expect(panelRow).toHaveAttribute("data-tree-expanded", "true");
+
+    await userEvent.click(screen.getByRole("button", { name: "Collapse Group" }));
+
+    expect(
+      screen.getAllByTestId("tree-node-row").some((row) => row.dataset.treeNodeId === "lbl_1"),
+    ).toBe(false);
+    expect(panelRow).toHaveAttribute("data-tree-expanded", "false");
+    expect(screen.getByRole("button", { name: "Expand Group" })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Expand Group" }));
+    expect(
+      screen.getAllByTestId("tree-node-row").some((row) => row.dataset.treeNodeId === "lbl_1"),
+    ).toBe(true);
+  });
+
+  it("collapses a panel on double-click of the row", async () => {
+    const panel = makePanel("pan_1", [makeLabel("lbl_1")]);
+    panel.name = "Group";
+    get().setProject(withChildren(makeFixtureProject(), [panel]));
+    render(<TreePanel />);
+
+    const panelRow = screen
+      .getAllByTestId("tree-node-row")
+      .find((row) => row.dataset.treeNodeId === "pan_1")!;
+    await userEvent.dblClick(panelRow);
+
+    expect(
+      screen.getAllByTestId("tree-node-row").some((row) => row.dataset.treeNodeId === "lbl_1"),
+    ).toBe(false);
+    expect(panelRow).toHaveAttribute("data-tree-expanded", "false");
+  });
+
+  it("auto-expands collapsed ancestors when a nested node is selected", async () => {
+    const panel = makePanel("pan_1", [makeLabel("lbl_1")]);
+    panel.name = "Group";
+    get().setProject(withChildren(makeFixtureProject(), [panel]));
+    render(<TreePanel />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Collapse Group" }));
+    expect(
+      screen.getAllByTestId("tree-node-row").some((row) => row.dataset.treeNodeId === "lbl_1"),
+    ).toBe(false);
+
+    get().selectNode("lbl_1");
+
+    await vi.waitFor(() => {
+      expect(
+        screen.getAllByTestId("tree-node-row").some((row) => row.dataset.treeNodeId === "lbl_1"),
+      ).toBe(true);
+    });
+    const panelRow = screen
+      .getAllByTestId("tree-node-row")
+      .find((row) => row.dataset.treeNodeId === "pan_1");
+    expect(panelRow).toHaveAttribute("data-tree-expanded", "true");
+  });
+
+  it("does not show a twistie or spacer for leaf widgets", () => {
+    get().setProject(withChildren(makeFixtureProject(), [makeLabel("lbl_1")]));
+    render(<TreePanel />);
+
+    const labelRow = screen
+      .getAllByTestId("tree-node-row")
+      .find((row) => row.dataset.treeNodeId === "lbl_1")!;
+    expect(within(labelRow).queryByTestId("tree-node-twistie")).not.toBeInTheDocument();
+    expect(within(labelRow).queryByTestId("tree-node-twistie-spacer")).not.toBeInTheDocument();
+  });
+
+  it("does not allow collapsing the screen root", () => {
+    get().setProject(withChildren(makeFixtureProject(), [makeLabel("lbl_1")]));
+    render(<TreePanel />);
+
+    const screenRow = screen
+      .getAllByTestId("tree-node-row")
+      .find((row) => row.dataset.treeNodeId === "screen_main")!;
+    expect(within(screenRow).queryByTestId("tree-node-twistie")).not.toBeInTheDocument();
+    expect(screenRow).not.toHaveAttribute("data-tree-expanded");
+    expect(
+      screen.getAllByTestId("tree-node-row").some((row) => row.dataset.treeNodeId === "lbl_1"),
+    ).toBe(true);
   });
 });
 

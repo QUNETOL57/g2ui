@@ -875,7 +875,7 @@ function labelTextOrigin(
   align: BitmapTextAlign,
   boxWidth: number,
   boxHeight: number,
-  verticalAlign: "top" | "center" | "bottom" = "center",
+  verticalAlign: "top" | "center" | "bottom" = "top",
 ) {
   const textWidth = measureTextWidth(face, text);
   const textHeight = face.lineHeight;
@@ -885,9 +885,9 @@ function labelTextOrigin(
   } else if (align === "right") {
     originX = boxWidth - textWidth;
   }
-  let originY = Math.floor((boxHeight - textHeight) / 2);
-  if (verticalAlign === "top") {
-    originY = 0;
+  let originY = 0;
+  if (verticalAlign === "center") {
+    originY = Math.floor((boxHeight - textHeight) / 2);
   } else if (verticalAlign === "bottom") {
     originY = boxHeight - textHeight;
   }
@@ -941,7 +941,7 @@ function LabelInlineEditor({
   color,
   bg,
   align,
-  verticalAlign = "center",
+  verticalAlign = "top",
   rect,
   nodeFrame,
   onCommit,
@@ -1137,6 +1137,7 @@ function LabelVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; re
     : "transparent";
   const face = findFontFace(props);
   const align = props.align ?? "left";
+  const verticalAlign = props.verticalAlign ?? "top";
   const isEditing = ctx.editingLabelId === node.id;
 
   if (isEditing && ctx.onLabelTextCommit) {
@@ -1148,6 +1149,7 @@ function LabelVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; re
         color={color}
         bg={bg}
         align={align}
+        verticalAlign={verticalAlign}
         rect={rect}
         nodeFrame={node.frame ?? { x: 0, y: 0, width: rect.width, height: rect.height }}
         onCommit={ctx.onLabelTextCommit}
@@ -1171,6 +1173,7 @@ function LabelVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; re
         text={props.text ?? ""}
         color={color}
         align={align}
+        verticalAlign={verticalAlign}
         boxWidth={rect.width}
         boxHeight={rect.height}
       />

@@ -34,6 +34,8 @@ interface TypographyCardProps {
   onStyleChange: (patch: Partial<NonNullable<WidgetNode["style"]>>) => void;
   align?: NonNullable<LabelProps["align"]>;
   onAlignChange?: (align: NonNullable<LabelProps["align"]>) => void;
+  verticalAlign?: NonNullable<LabelProps["verticalAlign"]>;
+  onVerticalAlignChange?: (align: NonNullable<LabelProps["verticalAlign"]>) => void;
   paddingControls?: {
     horizontalAlign: NonNullable<ButtonProps["horizontalAlign"]>;
     verticalAlign: NonNullable<ButtonProps["verticalAlign"]>;
@@ -55,6 +57,8 @@ export function TypographyCard({
   onStyleChange,
   align,
   onAlignChange,
+  verticalAlign,
+  onVerticalAlignChange,
   paddingControls,
 }: TypographyCardProps) {
   const s = style ?? {};
@@ -67,6 +71,9 @@ export function TypographyCard({
       <FontFields props={props} onChange={onPropsChange} compact />
       {align && onAlignChange ? (
         <AlignIconGroup value={align} onChange={onAlignChange} wide />
+      ) : null}
+      {verticalAlign && onVerticalAlignChange ? (
+        <VerticalAlignIconGroup value={verticalAlign} onChange={onVerticalAlignChange} />
       ) : null}
       {paddingControls ? (
         <InspectorCard title="Padding">
@@ -341,13 +348,13 @@ function VerticalAlignIconGroup({
   value,
   onChange,
 }: {
-  value: NonNullable<ButtonProps["verticalAlign"]>;
-  onChange: (align: NonNullable<ButtonProps["verticalAlign"]>) => void;
+  value: NonNullable<LabelProps["verticalAlign"] | ButtonProps["verticalAlign"]>;
+  onChange: (align: NonNullable<LabelProps["verticalAlign"]>) => void;
 }) {
   return (
     <div className={cn(styles.row, styles.alignRowWide)}>
       <label>vertical</label>
-      <IconButtonGroup ariaLabel="button vertical align">
+      <IconButtonGroup ariaLabel="vertical align">
         <IconToggleButton label="Align top" active={value === "top"} onClick={() => onChange("top")}>
           <VerticalAlignTopIcon fontSize="inherit" />
         </IconToggleButton>

@@ -53,7 +53,14 @@ export function makeLabel(id: string, text = "Hello"): WidgetNode {
     enabled: true,
     layout: { mode: "absolute" },
     style: { textColor: { kind: "hex", value: "#FFFFFF" }, drawBackground: false },
-    props: { text, align: "left", fontFamily: "BDF", fontSize: 7, fontStyle: "regular" },
+    props: {
+      text,
+      align: "left",
+      verticalAlign: "top",
+      fontFamily: "BDF",
+      fontSize: 7,
+      fontStyle: "regular",
+    },
     frame: { x: 8, y: 8, width: 80, height: 7 },
   };
 }

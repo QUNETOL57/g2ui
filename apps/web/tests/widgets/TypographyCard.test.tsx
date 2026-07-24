@@ -80,6 +80,28 @@ describe("TypographyCard: label mode (with align)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Align right" }));
     expect(handler).toHaveBeenCalledWith("right");
   });
+
+  it("emits vertical align change for labels", async () => {
+    const handler = vi.fn();
+    render(
+      <TypographyCard
+        props={defaultProps}
+        style={{}}
+        palette={palette}
+        backgroundDefaultEnabled={false}
+        showBackground
+        onPropsChange={() => undefined}
+        onStyleChange={() => undefined}
+        align="left"
+        onAlignChange={() => undefined}
+        verticalAlign="top"
+        onVerticalAlignChange={handler}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Align bottom" }));
+    expect(handler).toHaveBeenCalledWith("bottom");
+  });
 });
 
 describe("TypographyCard: padding controls (button mode)", () => {

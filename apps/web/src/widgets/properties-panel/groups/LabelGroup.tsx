@@ -29,6 +29,8 @@ export function LabelGroup({
         onStyleChange={onStyleChange}
         align={p.align ?? "left"}
         onAlignChange={(align) => onChange({ align })}
+        verticalAlign={p.verticalAlign ?? "top"}
+        onVerticalAlignChange={(verticalAlign) => onChange({ verticalAlign })}
       />
     </div>
   );

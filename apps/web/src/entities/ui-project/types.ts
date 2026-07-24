@@ -82,6 +82,7 @@ export interface WidgetNode {
 export interface LabelProps {
   text: string;
   align?: LabelAlign;
+  verticalAlign?: "top" | "center" | "bottom";
   font?: string;
   fontFamily?: string;
   fontSize?: number;

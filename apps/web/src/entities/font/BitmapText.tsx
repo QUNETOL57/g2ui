@@ -26,7 +26,7 @@ export function BitmapText({
   text,
   color,
   align = "left",
-  verticalAlign = "center",
+  verticalAlign = "top",
   boxWidth,
   boxHeight,
 }: BitmapTextProps) {

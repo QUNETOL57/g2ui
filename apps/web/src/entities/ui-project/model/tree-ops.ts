@@ -137,6 +137,14 @@ export function offsetWidgetFrame(node: WidgetNode, dx: number, dy: number): voi
   };
 }
 
+/** Set `locked: true` on `node` and every descendant. */
+export function lockWidgetSubtree(node: WidgetNode): void {
+  node.locked = true;
+  for (const child of node.children ?? []) {
+    lockWidgetSubtree(child);
+  }
+}
+
 /**
  * If the paste target would be a panel that is itself in the clipboard
  * (or a descendant of such a panel), lift the target to that panel's parent

@@ -5,9 +5,11 @@ import userEvent from "@testing-library/user-event";
 import type { WidgetNode } from "@entities/ui-project";
 import { IR_WIDGET_TYPES } from "@entities/ui-project/schema";
 import { useEditorStore } from "@entities/ui-project/model/store";
+import { findNode } from "@entities/ui-project/model/tree-ops";
 import { TreePanel } from "@widgets/tree-panel/TreePanel";
 
 import {
+  makeButton,
   makeFixtureProject,
   makeLabel,
   makePanel,
@@ -135,5 +137,32 @@ describe("TreePanel: lock", () => {
     expect(get().selectedNodeId).toBe("lbl_1");
     expect(get().project.screens[0].children?.[0].locked).toBe(true);
     expect(screen.getByRole("button", { name: "Unlock lbl_1" })).toBeInTheDocument();
+  });
+
+  it("locks nested children when locking a panel from the tree", async () => {
+    const panel = makePanel("pan_1", [makeLabel("lbl_1"), makeButton("btn_1")]);
+    panel.name = "Group";
+    get().setProject(withChildren(makeFixtureProject(), [panel]));
+    render(<TreePanel />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Lock Group" }));
+
+    expect(findNode(get().project, "pan_1")?.locked).toBe(true);
+    expect(findNode(get().project, "lbl_1")?.locked).toBe(true);
+    expect(findNode(get().project, "btn_1")?.locked).toBe(true);
+    expect(screen.getByRole("button", { name: "Unlock lbl_1" })).toBeInTheDocument();
+  });
+
+  it("can unlock a child after its parent panel was locked", async () => {
+    const panel = makePanel("pan_1", [makeLabel("lbl_1")]);
+    panel.name = "Group";
+    get().setProject(withChildren(makeFixtureProject(), [panel]));
+    render(<TreePanel />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Lock Group" }));
+    await userEvent.click(screen.getByRole("button", { name: "Unlock lbl_1" }));
+
+    expect(findNode(get().project, "pan_1")?.locked).toBe(true);
+    expect(findNode(get().project, "lbl_1")?.locked).toBe(false);
   });
 });

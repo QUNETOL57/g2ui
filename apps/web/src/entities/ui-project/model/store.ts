@@ -40,6 +40,7 @@ import {
   pruneCopySelection,
   removeNode,
   resolvePasteParentOutsideClipboard,
+  lockWidgetSubtree,
 } from "./tree-ops";
 import {
   MAX_HISTORY,
@@ -770,6 +771,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const node = findNode(next, id);
       if (!node) return state;
       Object.assign(node, patch);
+      if (patch.locked === true && node.type === "panel") {
+        lockWidgetSubtree(node);
+      }
       return { ...recordHistory(state), project: next, draftFrame: null };
     }),
 

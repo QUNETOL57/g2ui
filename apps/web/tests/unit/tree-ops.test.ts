@@ -15,6 +15,7 @@ import {
   insertChild,
   insertChildAfter,
   isAncestor,
+  lockWidgetSubtree,
   normalizeProjectTextFrames,
   normalizeTextNodeFrame,
   offsetWidgetFrame,
@@ -430,5 +431,17 @@ describe("resolvePasteParentOutsideClipboard", () => {
     expect(
       resolvePasteParentOutsideClipboard(project, "pan_1", [label], "screen_main"),
     ).toBe("pan_1");
+  });
+});
+
+describe("lockWidgetSubtree", () => {
+  it("locks the node and every nested descendant", () => {
+    const nested = makePanel("pan_inner", [makeLabel("lbl_deep")]);
+    const panel = makePanel("pan_1", [makeButton("btn_1"), nested]);
+    lockWidgetSubtree(panel);
+    expect(panel.locked).toBe(true);
+    expect(panel.children?.[0].locked).toBe(true);
+    expect(panel.children?.[1].locked).toBe(true);
+    expect(panel.children?.[1].children?.[0].locked).toBe(true);
   });
 });

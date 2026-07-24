@@ -121,12 +121,6 @@
   flex: 0 0 auto;
 }
 
-.rowVisibilitySpacer {
-  display: block;
-  width: 42px;
-  height: 20px;
-}
-
 .rowId {
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);

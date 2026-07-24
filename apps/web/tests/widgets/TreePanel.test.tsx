@@ -22,9 +22,10 @@ beforeEach(() => {
 });
 
 describe("TreePanel: rendering", () => {
-  it("renders the screen as root node", () => {
+  it("renders the screen as root node with a distinct type icon", () => {
     render(<TreePanel />);
     expect(screen.getByText("Widget tree")).toBeInTheDocument();
+    expect(screen.getByText("Main")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "screen node" })).toHaveAttribute("title", "screen");
     expect(screen.queryByText("screen")).not.toBeInTheDocument();
   });
@@ -83,6 +84,7 @@ describe("TreePanel: visibility", () => {
     expect(screenRow).toBeTruthy();
     expect(screenRow).toHaveAttribute("data-tree-node-type", "screen");
     expect(within(screenRow!).queryByRole("button", { name: /Hide|Show/ })).not.toBeInTheDocument();
+    expect(screenRow!.querySelector("[class*='rowVisibilitySlot']")).toBeNull();
 
     const labelRow = screen
       .getAllByTestId("tree-node-row")

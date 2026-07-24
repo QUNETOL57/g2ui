@@ -261,28 +261,24 @@ function TreeNode({
         <span className={styles.rowName}>{node.name ?? node.id}</span>
         <div className={styles.rowMeta}>
           <span className={styles.rowId}>{node.id}</span>
-          <div className={styles.rowVisibilitySlot}>
-            {isWidgetRow ? (
-              <>
-                <VisibilityToggleButton
-                  visible={node.visible !== false}
-                  label={node.name ?? node.id}
-                  onToggle={() =>
-                    onUpdateNode(node.id, { visible: node.visible === false })
-                  }
-                />
-                <LockToggleButton
-                  locked={node.locked === true}
-                  label={node.name ?? node.id}
-                  onToggle={() =>
-                    onUpdateNode(node.id, { locked: node.locked !== true })
-                  }
-                />
-              </>
-            ) : (
-              <span className={styles.rowVisibilitySpacer} aria-hidden="true" />
-            )}
-          </div>
+          {isWidgetRow ? (
+            <div className={styles.rowVisibilitySlot}>
+              <VisibilityToggleButton
+                visible={node.visible !== false}
+                label={node.name ?? node.id}
+                onToggle={() =>
+                  onUpdateNode(node.id, { visible: node.visible === false })
+                }
+              />
+              <LockToggleButton
+                locked={node.locked === true}
+                label={node.name ?? node.id}
+                onToggle={() =>
+                  onUpdateNode(node.id, { locked: node.locked !== true })
+                }
+              />
+            </div>
+          ) : null}
         </div>
       </div>
       {(node.children ?? []).map((child) => (

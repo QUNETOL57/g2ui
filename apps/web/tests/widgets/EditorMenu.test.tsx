@@ -194,6 +194,46 @@ describe("EditorMenu", () => {
     expect(useEditorStore.getState().project.screens[0].children?.[0]?.id).toBe(id);
   });
 
+  it("copies and pastes from the Edit menu", async () => {
+    const id = useEditorStore.getState().addWidget("screen_main", "label")!;
+    useEditorStore.getState().selectNode(id);
+
+    render(<EditorMenu onBackToLibrary={() => undefined} />);
+    await userEvent.click(screen.getByRole("menuitem", { name: "Edit" }));
+    expect(screen.getByRole("menuitem", { name: /Paste/ })).toBeDisabled();
+    expect(screen.getByRole("menuitem", { name: /Copy/ })).toBeEnabled();
+    expect(screen.getByRole("menuitem", { name: /Duplicate/ })).toBeEnabled();
+
+    await userEvent.click(screen.getByRole("menuitem", { name: /Copy/ }));
+    expect(useEditorStore.getState().hasClipboard).toBe(true);
+
+    await userEvent.click(screen.getByRole("menuitem", { name: "Edit" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: /Paste/ }));
+    expect(useEditorStore.getState().project.screens[0].children).toHaveLength(2);
+  });
+
+  it("disables copy and duplicate when only the screen is selected", async () => {
+    useEditorStore.getState().selectNode("screen_main");
+    render(<EditorMenu onBackToLibrary={() => undefined} />);
+
+    await userEvent.click(screen.getByRole("menuitem", { name: "Edit" }));
+    expect(screen.getByRole("menuitem", { name: /Copy/ })).toBeDisabled();
+    expect(screen.getByRole("menuitem", { name: /Duplicate/ })).toBeDisabled();
+    expect(screen.getByRole("menuitem", { name: /Paste/ })).toBeDisabled();
+  });
+
+  it("duplicates from the Edit menu", async () => {
+    const id = useEditorStore.getState().addWidget("screen_main", "label")!;
+    useEditorStore.getState().selectNode(id);
+
+    render(<EditorMenu onBackToLibrary={() => undefined} />);
+    await userEvent.click(screen.getByRole("menuitem", { name: "Edit" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: /Duplicate/ }));
+
+    expect(useEditorStore.getState().project.screens[0].children).toHaveLength(2);
+    expect(useEditorStore.getState().selectedNodeId).not.toBe(id);
+  });
+
   it("closes an open menu on Escape", async () => {
     render(<EditorMenu onBackToLibrary={() => undefined} />);
 

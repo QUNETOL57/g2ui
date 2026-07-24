@@ -28,6 +28,9 @@ export function EditorPage({
   const selectedNodeId = useEditorStore((s) => s.selectedNodeId);
   const selectedNodeIds = useEditorStore((s) => s.selectedNodeIds);
   const deleteNodes = useEditorStore((s) => s.deleteNodes);
+  const copySelectedNodes = useEditorStore((s) => s.copySelectedNodes);
+  const pasteClipboard = useEditorStore((s) => s.pasteClipboard);
+  const duplicateSelectedNodes = useEditorStore((s) => s.duplicateSelectedNodes);
   const beginLabelTextEdit = useEditorStore((s) => s.beginLabelTextEdit);
   const undo = useEditorStore((s) => s.undo);
   const redo = useEditorStore((s) => s.redo);
@@ -49,11 +52,29 @@ export function EditorPage({
       const key = event.key.toLowerCase();
       const isUndoKey = isModifier && key === "z" && !event.shiftKey;
       const isRedoKey = isModifier && ((key === "z" && event.shiftKey) || key === "y");
+      const isCopyKey = isModifier && key === "c" && !event.shiftKey && !event.altKey;
+      const isPasteKey = isModifier && key === "v" && !event.shiftKey && !event.altKey;
+      const isDuplicateKey = isModifier && key === "d" && !event.shiftKey && !event.altKey;
 
       if ((isUndoKey || isRedoKey) && !isEditingText) {
         event.preventDefault();
         if (isUndoKey) undo();
         else redo();
+        return;
+      }
+
+      if (isCopyKey && !isEditingText) {
+        if (copySelectedNodes()) event.preventDefault();
+        return;
+      }
+
+      if (isPasteKey && !isEditingText) {
+        if (pasteClipboard()) event.preventDefault();
+        return;
+      }
+
+      if (isDuplicateKey && !isEditingText) {
+        if (duplicateSelectedNodes()) event.preventDefault();
         return;
       }
 
@@ -86,7 +107,17 @@ export function EditorPage({
 
     window.addEventListener("keydown", handleKeyDown, { capture: true });
     return () => window.removeEventListener("keydown", handleKeyDown, { capture: true });
-  }, [beginLabelTextEdit, deleteNodes, redo, selectedNodeId, selectedNodeIds, undo]);
+  }, [
+    beginLabelTextEdit,
+    copySelectedNodes,
+    deleteNodes,
+    duplicateSelectedNodes,
+    pasteClipboard,
+    redo,
+    selectedNodeId,
+    selectedNodeIds,
+    undo,
+  ]);
 
   return (
     <div

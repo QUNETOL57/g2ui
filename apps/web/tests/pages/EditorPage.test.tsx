@@ -169,4 +169,77 @@ describe("EditorPage keyboard shortcuts", () => {
     await userEvent.keyboard("{Control>}y{/Control}");
     expect(findNode(get().project, id)).toBeTruthy();
   });
+
+  it("Ctrl+C / Ctrl+V copies and pastes the selected node", async () => {
+    const project = withChildren(makeFixtureProject(), [makeLabel("lbl_1", "Hi")]);
+    get().setProject(project);
+    get().selectNode("lbl_1");
+    render(<EditorPage onBackToLibrary={() => undefined} />);
+
+    await userEvent.keyboard("{Control>}c{/Control}");
+    expect(get().hasClipboard).toBe(true);
+
+    await userEvent.keyboard("{Control>}v{/Control}");
+    expect(get().project.screens[0].children).toHaveLength(2);
+    expect(get().selectedNodeId).not.toBe("lbl_1");
+    expect(findNode(get().project, get().selectedNodeId!)?.type).toBe("label");
+  });
+
+  it("Ctrl+D duplicates the selected node", async () => {
+    const project = withChildren(makeFixtureProject(), [makeLabel("lbl_1")]);
+    get().setProject(project);
+    get().selectNode("lbl_1");
+    render(<EditorPage onBackToLibrary={() => undefined} />);
+
+    await userEvent.keyboard("{Control>}d{/Control}");
+    expect(get().project.screens[0].children).toHaveLength(2);
+    expect(get().selectedNodeId).not.toBe("lbl_1");
+  });
+
+  it("does not paste when focus is in a text input", async () => {
+    const project = withChildren(makeFixtureProject(), [makeLabel("lbl_1")]);
+    get().setProject(project);
+    get().selectNode("lbl_1");
+    get().copySelectedNodes();
+    render(<EditorPage onBackToLibrary={() => undefined} />);
+
+    const input = screen.getAllByRole("textbox")[0] as HTMLInputElement;
+    input.focus();
+    await userEvent.keyboard("{Control>}v{/Control}");
+    expect(get().project.screens[0].children).toHaveLength(1);
+  });
+
+  it("does not copy or duplicate when focus is in a text input", async () => {
+    const project = withChildren(makeFixtureProject(), [makeLabel("lbl_1")]);
+    get().setProject(project);
+    get().selectNode("lbl_1");
+    render(<EditorPage onBackToLibrary={() => undefined} />);
+
+    const input = screen.getAllByRole("textbox")[0] as HTMLInputElement;
+    input.focus();
+    await userEvent.keyboard("{Control>}c{/Control}");
+    expect(get().hasClipboard).toBe(false);
+
+    await userEvent.keyboard("{Control>}d{/Control}");
+    expect(get().project.screens[0].children).toHaveLength(1);
+  });
+
+  it("does nothing for Ctrl+C when only the screen is selected", async () => {
+    get().setProject(makeFixtureProject());
+    get().selectNode("screen_main");
+    render(<EditorPage onBackToLibrary={() => undefined} />);
+
+    await userEvent.keyboard("{Control>}c{/Control}");
+    expect(get().hasClipboard).toBe(false);
+  });
+
+  it("does nothing for Ctrl+V when clipboard is empty", async () => {
+    const project = withChildren(makeFixtureProject(), [makeLabel("lbl_1")]);
+    get().setProject(project);
+    get().selectNode("lbl_1");
+    render(<EditorPage onBackToLibrary={() => undefined} />);
+
+    await userEvent.keyboard("{Control>}v{/Control}");
+    expect(get().project.screens[0].children).toHaveLength(1);
+  });
 });

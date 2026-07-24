@@ -1,12 +1,24 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi, afterEach } from "vitest";
 
-import { getEditorShortcuts } from "@shared/config/editorShortcuts";
+import {
+  getCopyShortcut,
+  getDuplicateShortcut,
+  getEditorShortcuts,
+  getPasteShortcut,
+} from "@shared/config/editorShortcuts";
 
 describe("editorShortcuts", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("includes core editor shortcuts", () => {
     const labels = getEditorShortcuts().map((shortcut) => shortcut.label);
     expect(labels).toContain("Undo");
     expect(labels).toContain("Redo");
+    expect(labels).toContain("Copy selection");
+    expect(labels).toContain("Paste");
+    expect(labels).toContain("Duplicate selection");
     expect(labels).toContain("Delete selection");
     expect(labels).toContain("Zoom canvas");
     expect(labels).toContain("Close menu, dialog, or dropdown");
@@ -20,5 +32,19 @@ describe("editorShortcuts", () => {
     expect(
       getEditorShortcuts().filter((shortcut) => shortcut.label === "Edit label or button"),
     ).toHaveLength(1);
+  });
+
+  it("formats copy/paste/duplicate shortcuts for non-mac platforms", () => {
+    vi.stubGlobal("navigator", { platform: "Win32" });
+    expect(getCopyShortcut()).toBe("Ctrl+C");
+    expect(getPasteShortcut()).toBe("Ctrl+V");
+    expect(getDuplicateShortcut()).toBe("Ctrl+D");
+  });
+
+  it("formats copy/paste/duplicate shortcuts for mac platforms", () => {
+    vi.stubGlobal("navigator", { platform: "MacIntel" });
+    expect(getCopyShortcut()).toBe("⌘C");
+    expect(getPasteShortcut()).toBe("⌘V");
+    expect(getDuplicateShortcut()).toBe("⌘D");
   });
 });

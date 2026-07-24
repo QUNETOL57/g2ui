@@ -82,8 +82,8 @@
   border: 1px dashed var(--color-accent);
 }
 
-.row:hover {
-  border-color: var(--hover-border);
+.row:hover:not(.rowSelected) {
+  border: 1px dashed var(--hover-border);
 }
 
 .rowPrimary {

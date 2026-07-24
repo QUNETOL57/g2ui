@@ -21,12 +21,14 @@ export function FrameGroup({
   draftFrame,
   updateFrame,
   updateNode,
+  disabled = false,
 }: {
   node: WidgetNode;
   project: UiProject;
   draftFrame: Frame | null;
   updateFrame: (id: string, patch: Partial<NonNullable<WidgetNode["frame"]>>) => void;
   updateNode?: (id: string, patch: Partial<WidgetNode>) => void;
+  disabled?: boolean;
 }) {
   const f = draftFrame ?? node.frame ?? { x: 0, y: 0, width: 0, height: 0 };
   const canRotate = ["rect", "circle", "triangle", "line", "freehand"].includes(node.type);
@@ -42,45 +44,59 @@ export function FrameGroup({
   );
 
   const applyHorizontalAlign = (horizontal: ParentAlignHorizontal) => {
-    if (!parentBounds) return;
+    if (disabled || !parentBounds) return;
     const { x } = alignFrameInParent(f, parentBounds, horizontal, "top");
     updateFrame(node.id, { x });
   };
 
   const applyVerticalAlign = (vertical: ParentAlignVertical) => {
-    if (!parentBounds) return;
+    if (disabled || !parentBounds) return;
     const { y } = alignFrameInParent(f, parentBounds, "left", vertical);
     updateFrame(node.id, { y });
   };
 
   return (
-    <div className={styles.group}>
+    <div className={styles.group} aria-disabled={disabled || undefined}>
       <h4>Transform</h4>
       <div className={styles.transformGrid}>
-        <TransformField label="X" value={f.x} onChange={(v) => updateFrame(node.id, { x: v })} />
-        <TransformField label="Y" value={f.y} onChange={(v) => updateFrame(node.id, { y: v })} />
+        <TransformField
+          label="X"
+          value={f.x}
+          disabled={disabled}
+          onChange={(v) => updateFrame(node.id, { x: v })}
+        />
+        <TransformField
+          label="Y"
+          value={f.y}
+          disabled={disabled}
+          onChange={(v) => updateFrame(node.id, { y: v })}
+        />
         <TransformField
           label="W"
           value={f.width}
           min={icon?.width}
+          disabled={disabled}
           onChange={(v) => updateFrame(node.id, { width: v })}
         />
         <TransformField
           label="H"
           value={f.height}
           min={icon?.height}
+          disabled={disabled}
           onChange={(v) => updateFrame(node.id, { height: v })}
         />
         {canRotate && updateNode ? (
           <TransformField
             label="R"
             value={node.rotation ?? 0}
+            disabled={disabled}
             onChange={(v) => updateNode(node.id, { rotation: normalizeRotation(v) })}
           />
         ) : null}
       </div>
       {canAlignInParent && parentBounds ? (
         <ParentAlignControls
+          disabled={disabled}
           onHorizontalChange={applyHorizontalAlign}
           onVerticalChange={applyVerticalAlign}
         />
@@ -99,16 +115,24 @@ function TransformField({
   value,
   onChange,
   min,
+  disabled = false,
 }: {
   label: string;
   value: number;
   onChange: (v: number) => void;
   min?: number;
+  disabled?: boolean;
 }) {
   return (
     <label className={styles.transformField}>
       <span>{label}</span>
-      <DraftNumberInput value={value} min={min} onChange={onChange} variant="bare" />
+      <DraftNumberInput
+        value={value}
+        min={min}
+        disabled={disabled}
+        onChange={onChange}
+        variant="bare"
+      />
     </label>
   );
 }

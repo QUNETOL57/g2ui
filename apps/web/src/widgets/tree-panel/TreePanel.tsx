@@ -5,6 +5,7 @@ import { useEditorStore } from "@entities/ui-project/model/store";
 import { findNode, findParent } from "@entities/ui-project/model/tree-ops";
 import { cn } from "@shared/lib/cn";
 import { SectionTitle } from "@shared/ui/SectionTitle";
+import { LockToggleButton } from "@shared/ui/LockToggleButton";
 import { VisibilityToggleButton } from "@shared/ui/VisibilityToggleButton";
 import { WidgetTypeIcon } from "@widgets/canvas-workspace/toolbarIcons";
 
@@ -185,7 +186,8 @@ function TreeNode({
 }) {
   const isSelected = selectedSet.has(node.id);
   const isPrimary = primaryId === node.id;
-  const isDraggable = node.id !== activeScreenId;
+  const isWidgetRow = node.id !== activeScreenId;
+  const isDraggable = isWidgetRow && node.locked !== true;
   const dragOverClass =
     dropTarget?.nodeId === node.id
       ? dropTarget.position === "before"
@@ -218,6 +220,7 @@ function TreeNode({
         }
         onDoubleClick={(event) => {
           event.stopPropagation();
+          if (node.locked === true) return;
           if (node.type === "label" || node.type === "button") onLabelEdit(node.id);
         }}
         onDragStart={(event) => {
@@ -241,7 +244,7 @@ function TreeNode({
           onDragOver(event, node.id, position);
         }}
         onDrop={(event) => {
-          if (!isDraggable || !dropTarget || dropTarget.nodeId !== node.id) return;
+          if (!isWidgetRow || !dropTarget || dropTarget.nodeId !== node.id) return;
           event.preventDefault();
           event.stopPropagation();
           onDrop(node.id, dropTarget.position);
@@ -259,14 +262,23 @@ function TreeNode({
         <div className={styles.rowMeta}>
           <span className={styles.rowId}>{node.id}</span>
           <div className={styles.rowVisibilitySlot}>
-            {isDraggable ? (
-              <VisibilityToggleButton
-                visible={node.visible !== false}
-                label={node.name ?? node.id}
-                onToggle={() =>
-                  onUpdateNode(node.id, { visible: node.visible === false })
-                }
-              />
+            {isWidgetRow ? (
+              <>
+                <VisibilityToggleButton
+                  visible={node.visible !== false}
+                  label={node.name ?? node.id}
+                  onToggle={() =>
+                    onUpdateNode(node.id, { visible: node.visible === false })
+                  }
+                />
+                <LockToggleButton
+                  locked={node.locked === true}
+                  label={node.name ?? node.id}
+                  onToggle={() =>
+                    onUpdateNode(node.id, { locked: node.locked !== true })
+                  }
+                />
+              </>
             ) : (
               <span className={styles.rowVisibilitySpacer} aria-hidden="true" />
             )}

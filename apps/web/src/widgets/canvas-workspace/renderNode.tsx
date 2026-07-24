@@ -29,6 +29,7 @@ interface RenderCtx {
   stackIndices: ReadonlyMap<string, number>;
   selectedId: string | null;
   movableId: string | null;
+  lockedId: string | null;
   dragPreview: { nodeId: string; rect: Frame; lineProps?: Partial<LineProps> } | null;
   draftFrame?: { nodeId: string; frame: Frame } | null;
   onSelect: (id: string) => void;
@@ -74,7 +75,12 @@ function PreviewNodeImpl({
     height: visualHeight,
     transform: rotation ? `rotate(${rotation}deg)` : undefined,
     transformOrigin: rotation ? "center center" : undefined,
-    cursor: node.id === ctx.movableId ? "move" : undefined,
+    cursor:
+      node.id === ctx.movableId
+        ? "move"
+        : node.id === ctx.lockedId
+          ? "not-allowed"
+          : undefined,
     zIndex: layerZIndex,
   };
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -84,6 +90,7 @@ function PreviewNodeImpl({
   };
   const handleDoubleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     e.stopPropagation();
+    if (node.locked === true) return;
     if (node.type === "label" || node.type === "button") {
       ctx.onLabelEditStart?.(node.id);
     }
@@ -149,6 +156,7 @@ const PreviewNode = memo(PreviewNodeImpl, (prev, next) => {
   if (pc.palette !== nc.palette) return false;
   if ((pc.selectedId === nid) !== (nc.selectedId === nid)) return false;
   if ((pc.movableId === nid) !== (nc.movableId === nid)) return false;
+  if ((pc.lockedId === nid) !== (nc.lockedId === nid)) return false;
 
   const prevDragged = pc.dragPreview?.nodeId === nid;
   const nextDragged = nc.dragPreview?.nodeId === nid;

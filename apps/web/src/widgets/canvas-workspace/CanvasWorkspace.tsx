@@ -212,13 +212,14 @@ export function CanvasWorkspace({
       : null;
   const selectedParentMode: LayoutMode = selectedParentNode?.layout?.mode ?? "absolute";
   const selectionHasFrame = !!selectedNode?.frame && !!selectedParentLayoutNode;
-  const canMoveSelection =
+  const isSelectionLocked = selectedNode?.locked === true;
+  const selectionHasTransform =
     !!selectedNode && selectedNode.id !== screen.id && selectionHasFrame;
+  const canMoveSelection = selectionHasTransform && !isSelectionLocked;
   const canResizeSelection =
-    !!selectedNode &&
-    selectedNode.id !== screen.id &&
-    selectionHasFrame &&
-    selectedNode?.type !== "line";
+    selectionHasTransform && !isSelectionLocked && selectedNode?.type !== "line";
+  const showSelectionTransformChrome =
+    selectionHasTransform && selectedNode?.type !== "line";
   const stageInsetX = Math.max(24, Math.round(stageViewport.width / 2));
   const stageInsetY = Math.max(24, Math.round(stageViewport.height / 2));
   const artboardWidth = scaledW + RULER_SIZE * 2;
@@ -614,6 +615,7 @@ export function CanvasWorkspace({
     const nodeLayout = layout ? findLayoutNode(layout, nodeId) : null;
     const parentLayout = layout ? findParentLayoutNode(layout, nodeId) : null;
     if (!node || !node.frame || !nodeLayout || !parentLayout || node.id === screen.id) return;
+    if (node.locked === true) return;
     if (event.button !== 0) return;
     event.preventDefault();
     const parentMode: LayoutMode = parentNode?.layout?.mode ?? "absolute";
@@ -657,6 +659,7 @@ export function CanvasWorkspace({
   const handleResizeMouseDown =
     (handle: ResizeHandle) => (event: React.MouseEvent<HTMLDivElement>) => {
       if (!canResizeSelection || !selectedNodeId || !selectedNode?.frame || !selectedParentLayoutNode) return;
+      if (isSelectionLocked) return;
       if (event.button !== 0) return;
       event.preventDefault();
       event.stopPropagation();
@@ -705,6 +708,7 @@ export function CanvasWorkspace({
     (event: React.MouseEvent<HTMLDivElement>) => {
       if (!selectedNodeId || event.button !== 0) return;
       const node = findNode(project, selectedNodeId);
+      if (node?.locked === true) return;
       if (node?.type === "label" || node?.type === "icon") {
         fitNodeFrameToContent(selectedNodeId);
       }
@@ -718,11 +722,12 @@ export function CanvasWorkspace({
     selectedNode?.type === "label" || selectedNode?.type === "icon";
 
   const showSelectionMoveMask =
-    canMoveSelection && editingLabelId !== selectedNodeId;
+    selectionHasTransform && editingLabelId !== selectedNodeId;
 
   const handleLineEndpointMouseDown =
     (lineHandle: LineHandle) => (event: React.MouseEvent<HTMLDivElement>) => {
       if (!selectedNodeId || selectedNode?.type !== "line" || !selectedRect || !selectedParentLayoutNode) return;
+      if (isSelectionLocked) return;
       if (event.button !== 0) return;
       event.preventDefault();
       event.stopPropagation();
@@ -821,6 +826,7 @@ export function CanvasWorkspace({
       stackIndices,
       selectedId: selectedNodeId,
       movableId: canMoveSelection ? selectedNodeId : null,
+      lockedId: isSelectionLocked ? selectedNodeId : null,
       dragPreview,
       draftFrame,
       onSelect: selectNode,
@@ -850,6 +856,7 @@ export function CanvasWorkspace({
       stackIndices,
       selectedNodeId,
       canMoveSelection,
+      isSelectionLocked,
       dragPreview,
       draftFrame,
       selectNode,
@@ -1003,7 +1010,8 @@ export function CanvasWorkspace({
                     scaledH={scaledH}
                     showGuides={showGuides}
                     showMoveMask={showSelectionMoveMask}
-                    showResizeHandles={canResizeSelection}
+                    showResizeHandles={showSelectionTransformChrome}
+                    transformsLocked={isSelectionLocked}
                     lineEndpoints={displayedLineEndpoints}
                     onMoveMouseDown={handleSelectionMoveMouseDown}
                     onFrameDoubleClick={

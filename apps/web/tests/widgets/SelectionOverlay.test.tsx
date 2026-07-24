@@ -182,6 +182,36 @@ describe("SelectionOverlay", () => {
     expect(onMove).toHaveBeenCalled();
   });
 
+  it("keeps transform chrome visible but blocks interactions when locked", () => {
+    const onMove = vi.fn();
+    const onResize = vi.fn();
+    const { getByTestId } = render(
+      <SelectionOverlay
+        rect={rect}
+        renderZoom={2}
+        scaledW={200}
+        scaledH={200}
+        showMoveMask
+        showResizeHandles
+        transformsLocked
+        lineEndpoints={null}
+        onMoveMouseDown={onMove}
+        onResizeHandleMouseDown={() => onResize}
+        onLineEndpointMouseDown={() => () => undefined}
+      />,
+    );
+
+    const mask = getByTestId("selection-mask");
+    const handle = getByTestId("resize-handle-se");
+    expect(mask.className).toMatch(/cursorLocked/);
+    expect(handle.className).toMatch(/cursorLocked/);
+
+    fireEvent.mouseDown(mask);
+    fireEvent.mouseDown(handle);
+    expect(onMove).not.toHaveBeenCalled();
+    expect(onResize).not.toHaveBeenCalled();
+  });
+
   it("forwards frame double-click from a resize handle", () => {
     const onFrameDoubleClick = vi.fn();
     const onResize = vi.fn();

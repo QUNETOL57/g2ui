@@ -32,6 +32,7 @@ function makePreviewCtx(
     stackIndices: computeWidgetStackIndices(layout),
     selectedId: null,
     movableId: null,
+    lockedId: null,
     dragPreview: null,
     draftFrame: null,
     onSelect: vi.fn(),

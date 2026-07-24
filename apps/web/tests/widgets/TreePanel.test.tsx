@@ -104,3 +104,34 @@ describe("TreePanel: visibility", () => {
     expect(screen.getByRole("button", { name: "Show lbl_1" })).toBeInTheDocument();
   });
 });
+
+describe("TreePanel: lock", () => {
+  it("shows lock toggle for child nodes but not for the screen root", () => {
+    const project = withChildren(makeFixtureProject(), [makeLabel("lbl_1")]);
+    get().setProject(project);
+    render(<TreePanel />);
+
+    const screenRow = screen
+      .getAllByTestId("tree-node-row")
+      .find((row) => row.dataset.treeNodeId === "screen_main");
+    expect(within(screenRow!).queryByRole("button", { name: /Lock|Unlock/ })).not.toBeInTheDocument();
+
+    const labelRow = screen
+      .getAllByTestId("tree-node-row")
+      .find((row) => row.dataset.treeNodeId === "lbl_1");
+    expect(within(labelRow!).getByRole("button", { name: "Lock lbl_1" })).toBeInTheDocument();
+  });
+
+  it("toggles lock without changing the current selection", async () => {
+    const project = withChildren(makeFixtureProject(), [makeLabel("lbl_1")]);
+    get().setProject(project);
+    get().selectNode("lbl_1");
+    render(<TreePanel />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Lock lbl_1" }));
+
+    expect(get().selectedNodeId).toBe("lbl_1");
+    expect(get().project.screens[0].children?.[0].locked).toBe(true);
+    expect(screen.getByRole("button", { name: "Unlock lbl_1" })).toBeInTheDocument();
+  });
+});

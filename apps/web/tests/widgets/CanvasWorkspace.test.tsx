@@ -320,6 +320,27 @@ describe("CanvasWorkspace: selection", () => {
     expect(frame?.width).toBe(90);
   });
 
+  it("selects a locked widget but blocks resize and shows not-allowed chrome", async () => {
+    const button = makeButton("bt_1", "Save");
+    button.locked = true;
+    button.frame = { x: 8, y: 8, width: 70, height: 24 };
+    get().setProject(withChildren(makeFixtureProject(), [button]));
+    render(<CanvasWorkspace />);
+
+    await userEvent.pointer({ keys: "[MouseLeft]", target: screen.getByLabelText("Save") });
+
+    expect(get().selectedNodeId).toBe("bt_1");
+    const handle = screen.getByTestId("resize-handle-e");
+    expect(handle.className).toMatch(/cursorLocked/);
+
+    fireEvent.mouseDown(handle, { button: 0, clientX: 0, clientY: 0 });
+    fireEvent.mouseMove(window, { clientX: 20, clientY: 0 });
+    fireEvent.mouseUp(window);
+
+    const frame = get().project.screens[0].children?.[0].frame;
+    expect(frame?.width).toBe(70);
+  });
+
   it("fits label frame to text on double-click of the selection frame", async () => {
     const label = makeLabel("lbl_1", "Hi");
     label.frame = { x: 8, y: 8, width: 120, height: 40 };

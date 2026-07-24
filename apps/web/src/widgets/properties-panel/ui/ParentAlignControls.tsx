@@ -17,6 +17,7 @@ import styles from "../PropertiesPanel.module.css";
 interface ParentAlignControlsProps {
   onHorizontalChange: (value: ParentAlignHorizontal) => void;
   onVerticalChange: (value: ParentAlignVertical) => void;
+  disabled?: boolean;
 }
 
 const horizontalOptions = [
@@ -64,6 +65,7 @@ const verticalOptions = [
 export function ParentAlignControls({
   onHorizontalChange,
   onVerticalChange,
+  disabled = false,
 }: ParentAlignControlsProps) {
   return (
     <div className={styles.parentAlignButtons} role="toolbar" aria-label="Align in parent">
@@ -72,6 +74,7 @@ export function ParentAlignControls({
           key={value}
           label={label}
           tooltip={tooltip}
+          disabled={disabled}
           onClick={() => onHorizontalChange(value)}
         >
           <Icon fontSize="inherit" />
@@ -83,6 +86,7 @@ export function ParentAlignControls({
           key={value}
           label={label}
           tooltip={tooltip}
+          disabled={disabled}
           onClick={() => onVerticalChange(value)}
         >
           <Icon fontSize="inherit" />
@@ -97,17 +101,20 @@ function ParentAlignButton({
   tooltip,
   onClick,
   children,
+  disabled = false,
 }: {
   label: string;
   tooltip: string;
   onClick: () => void;
   children: ReactNode;
+  disabled?: boolean;
 }) {
   return (
     <IconButton
       className={styles.parentAlignButton}
       aria-label={label}
       tooltip={tooltip}
+      disabled={disabled}
       onClick={onClick}
       onMouseUp={(event) => {
         event.currentTarget.blur();

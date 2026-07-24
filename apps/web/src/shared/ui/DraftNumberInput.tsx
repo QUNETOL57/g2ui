@@ -12,6 +12,7 @@ interface DraftNumberInputProps {
   title?: string;
   className?: string;
   variant?: "default" | "bare";
+  disabled?: boolean;
 }
 
 export function DraftNumberInput({
@@ -22,6 +23,7 @@ export function DraftNumberInput({
   title,
   className,
   variant = "default",
+  disabled = false,
 }: DraftNumberInputProps) {
   const [draft, setDraft] = useState(String(value));
   const focusedRef = useRef(false);
@@ -65,6 +67,7 @@ export function DraftNumberInput({
       min={min}
       max={max}
       title={title}
+      disabled={disabled}
       className={cn(variant === "bare" ? styles.bare : styles.input, className)}
       onFocus={() => {
         focusedRef.current = true;

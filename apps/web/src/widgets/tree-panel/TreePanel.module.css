@@ -114,15 +114,16 @@
 .rowVisibilitySlot {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 20px;
+  justify-content: flex-end;
+  gap: 2px;
+  width: 42px;
   height: 20px;
   flex: 0 0 auto;
 }
 
 .rowVisibilitySpacer {
   display: block;
-  width: 20px;
+  width: 42px;
   height: 20px;
 }
 

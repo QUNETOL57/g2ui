@@ -97,6 +97,7 @@ export function ProjectPreview({
                   stackIndices,
                   selectedId: null,
                   movableId: null,
+                  lockedId: null,
                   dragPreview: null,
                   onSelect: () => undefined,
                 }}

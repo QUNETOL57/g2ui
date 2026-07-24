@@ -1,3 +1,7 @@
+.cursorLocked {
+  cursor: not-allowed !important;
+}
+
 .moveStrip {
   position: absolute;
   z-index: 7;

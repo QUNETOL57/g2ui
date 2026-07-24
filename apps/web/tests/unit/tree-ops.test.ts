@@ -3,18 +3,25 @@ import { describe, expect, it } from "vitest";
 import {
   clampIndex,
   cloneProject,
+  cloneWidgetSubtree,
   collectIds,
   containsId,
+  deepCloneWidget,
   defaultFrameFor,
   findNode,
   findParent,
   findScreenOf,
   fitTextNodeFrame,
   insertChild,
+  insertChildAfter,
   isAncestor,
+  lockWidgetSubtree,
   normalizeProjectTextFrames,
   normalizeTextNodeFrame,
+  offsetWidgetFrame,
+  pruneCopySelection,
   removeNode,
+  resolvePasteParentOutsideClipboard,
 } from "@entities/ui-project/model/tree-ops";
 
 import {
@@ -279,5 +286,162 @@ describe("normalizeProjectTextFrames", () => {
     const project = withChildren(makeFixtureProject(), [panel]);
     normalizeProjectTextFrames(project);
     expect(findNode(project, "deep")?.frame?.height).not.toBe(999);
+  });
+});
+
+describe("cloneWidgetSubtree", () => {
+  it("remaps nested ids and keeps structure", () => {
+    const panel = makePanel("pan_1", [makeLabel("lbl_1"), makeButton("btn_1")]);
+    const used = new Set(["screen_main", "pan_1", "lbl_1", "btn_1"]);
+    const clone = cloneWidgetSubtree(panel, used);
+    expect(clone.id).not.toBe("pan_1");
+    expect(clone.children?.map((child) => child.id)).toEqual(
+      expect.not.arrayContaining(["lbl_1", "btn_1"]),
+    );
+    expect(clone.children).toHaveLength(2);
+    expect(clone.children?.[0].type).toBe("label");
+    expect(clone.children?.[1].type).toBe("button");
+    expect(used.has(clone.id)).toBe(true);
+  });
+
+  it("rejects screen nodes", () => {
+    const screen = makeFixtureProject().screens[0];
+    expect(() => cloneWidgetSubtree(screen, new Set())).toThrow(/screen/i);
+  });
+});
+
+describe("deepCloneWidget", () => {
+  it("does not share nested references", () => {
+    const label = makeLabel("lbl_1");
+    const clone = deepCloneWidget(label);
+    clone.frame!.x = 99;
+    expect(label.frame!.x).toBe(8);
+  });
+});
+
+describe("pruneCopySelection", () => {
+  it("drops the screen root and nested descendants of selected ancestors", () => {
+    const panel = makePanel("pan_1", [makeLabel("lbl_1")]);
+    const project = withChildren(makeFixtureProject(), [panel, makeButton("btn_1")]);
+    expect(
+      pruneCopySelection(project, ["screen_main", "pan_1", "lbl_1", "btn_1"], "screen_main"),
+    ).toEqual(["pan_1", "btn_1"]);
+  });
+
+  it("returns an empty list for empty or screen-only selection", () => {
+    const project = makeFixtureProject();
+    expect(pruneCopySelection(project, [], "screen_main")).toEqual([]);
+    expect(pruneCopySelection(project, ["screen_main"], "screen_main")).toEqual([]);
+    expect(pruneCopySelection(project, ["missing"], "screen_main")).toEqual([]);
+  });
+
+  it("keeps document order for multiple roots", () => {
+    const project = withChildren(makeFixtureProject(), [
+      makeButton("btn_1"),
+      makeLabel("lbl_1"),
+      makePanel("pan_1"),
+    ]);
+    expect(pruneCopySelection(project, ["pan_1", "btn_1", "lbl_1"], "screen_main")).toEqual([
+      "btn_1",
+      "lbl_1",
+      "pan_1",
+    ]);
+  });
+});
+
+describe("insertChildAfter", () => {
+  it("inserts the child immediately after the sibling", () => {
+    const project = withChildren(makeFixtureProject(), [makeLabel("lbl_1"), makeLabel("lbl_2")]);
+    const ok = insertChildAfter(project, "lbl_1", makeButton("btn_1"));
+    expect(ok).toBe(true);
+    expect(project.screens[0].children?.map((child) => child.id)).toEqual([
+      "lbl_1",
+      "btn_1",
+      "lbl_2",
+    ]);
+  });
+
+  it("returns false when the sibling is missing", () => {
+    const project = withChildren(makeFixtureProject(), [makeLabel("lbl_1")]);
+    expect(insertChildAfter(project, "missing", makeButton("btn_1"))).toBe(false);
+    expect(project.screens[0].children).toHaveLength(1);
+  });
+});
+
+describe("offsetWidgetFrame", () => {
+  it("offsets only the root frame", () => {
+    const panel = makePanel("pan_1", [makeLabel("lbl_1")]);
+    panel.frame = { x: 4, y: 6, width: 40, height: 20 };
+    panel.children![0].frame = { x: 1, y: 2, width: 10, height: 7 };
+    offsetWidgetFrame(panel, 8, 8);
+    expect(panel.frame).toEqual({ x: 12, y: 14, width: 40, height: 20 });
+    expect(panel.children![0].frame).toEqual({ x: 1, y: 2, width: 10, height: 7 });
+  });
+
+  it("no-ops when the node has no frame", () => {
+    const node = makeLabel("lbl_1");
+    delete node.frame;
+    offsetWidgetFrame(node, 8, 8);
+    expect(node.frame).toBeUndefined();
+  });
+});
+
+describe("cloneWidgetSubtree uniqueness", () => {
+  it("avoids colliding with already used ids across multiple clones", () => {
+    const used = new Set(["lab_1", "lab_2"]);
+    const first = cloneWidgetSubtree(makeLabel("source"), used);
+    const second = cloneWidgetSubtree(makeLabel("source"), used);
+    expect(first.id).not.toBe(second.id);
+    expect(used.has(first.id)).toBe(true);
+    expect(used.has(second.id)).toBe(true);
+  });
+});
+
+describe("resolvePasteParentOutsideClipboard", () => {
+  it("lifts the target out of a clipboard panel when pasting into that panel", () => {
+    const panel = makePanel("pan_1", [makeLabel("lbl_1")]);
+    const project = withChildren(makeFixtureProject(), [panel]);
+    expect(
+      resolvePasteParentOutsideClipboard(project, "pan_1", [panel], "screen_main"),
+    ).toBe("screen_main");
+  });
+
+  it("lifts the target when the candidate parent is nested inside a clipboard panel", () => {
+    const nested = makePanel("pan_inner");
+    const outer = makePanel("pan_outer", [nested]);
+    const project = withChildren(makeFixtureProject(), [outer]);
+    expect(
+      resolvePasteParentOutsideClipboard(project, "pan_inner", [outer], "screen_main"),
+    ).toBe("screen_main");
+  });
+
+  it("keeps a paste target that is outside every clipboard panel", () => {
+    const source = makePanel("pan_src");
+    const target = makePanel("pan_dst");
+    const project = withChildren(makeFixtureProject(), [source, target]);
+    expect(
+      resolvePasteParentOutsideClipboard(project, "pan_dst", [source], "screen_main"),
+    ).toBe("pan_dst");
+  });
+
+  it("does not lift when the clipboard root is not a panel", () => {
+    const panel = makePanel("pan_1", [makeLabel("lbl_1")]);
+    const label = makeLabel("lbl_src");
+    const project = withChildren(makeFixtureProject(), [panel, label]);
+    expect(
+      resolvePasteParentOutsideClipboard(project, "pan_1", [label], "screen_main"),
+    ).toBe("pan_1");
+  });
+});
+
+describe("lockWidgetSubtree", () => {
+  it("locks the node and every nested descendant", () => {
+    const nested = makePanel("pan_inner", [makeLabel("lbl_deep")]);
+    const panel = makePanel("pan_1", [makeButton("btn_1"), nested]);
+    lockWidgetSubtree(panel);
+    expect(panel.locked).toBe(true);
+    expect(panel.children?.[0].locked).toBe(true);
+    expect(panel.children?.[1].locked).toBe(true);
+    expect(panel.children?.[1].children?.[0].locked).toBe(true);
   });
 });

@@ -67,6 +67,8 @@ export interface WidgetNode {
   name?: string;
   visible?: boolean;
   enabled?: boolean;
+  /** Editor-only: when true, transform and property edits are blocked. */
+  locked?: boolean;
   rotation?: number;
   frame?: Frame;
   layout?: LayoutSpec;

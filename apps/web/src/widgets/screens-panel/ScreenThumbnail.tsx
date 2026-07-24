@@ -64,6 +64,7 @@ export function ScreenThumbnail({
                 stackIndices,
                 selectedId: null,
                 movableId: null,
+                lockedId: null,
                 dragPreview: null,
                 onSelect: () => undefined,
               }}

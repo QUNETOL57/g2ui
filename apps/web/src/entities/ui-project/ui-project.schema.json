@@ -67,6 +67,7 @@
         "name": { "type": "string" },
         "visible": { "type": "boolean" },
         "enabled": { "type": "boolean" },
+        "locked": { "type": "boolean" },
         "frame": {
           "type": "object",
           "required": ["x", "y", "width", "height"],

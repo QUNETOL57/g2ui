@@ -24,16 +24,23 @@ import {
   clampIndex,
   cloneProject,
   cloneScreenSubtree,
+  cloneWidgetSubtree,
   collectIds,
+  deepCloneWidget,
   defaultFrameFor,
   findNode,
   findParent,
   fitTextNodeFrame,
   insertChild,
+  insertChildAfter,
   isAncestor,
   normalizeProjectTextFrames,
   normalizeTextNodeFrame,
+  offsetWidgetFrame,
+  pruneCopySelection,
   removeNode,
+  resolvePasteParentOutsideClipboard,
+  lockWidgetSubtree,
 } from "./tree-ops";
 import {
   MAX_HISTORY,
@@ -54,6 +61,11 @@ const DEFAULT_MARKER_STYLE: MarkerStyle = {
   width: 1,
 };
 
+const DUPLICATE_FRAME_OFFSET = 8;
+
+/** In-memory widget clipboard; remapped on paste/duplicate. */
+let widgetClipboard: WidgetNode[] = [];
+
 interface EditorState {
   project: UiProject;
   activeScreenId: string;
@@ -67,6 +79,7 @@ interface EditorState {
   lastError: string | null;
   historyPast: HistorySnapshot[];
   historyFuture: HistorySnapshot[];
+  hasClipboard: boolean;
 
   setProject: (project: UiProject) => void;
   setActiveTool: (tool: EditorTool) => void;
@@ -92,6 +105,10 @@ interface EditorState {
   addFreehandStroke: (parentId: string, points: PixelPoint[]) => string | null;
   deleteNode: (id: string) => void;
   deleteNodes: (ids: string[]) => void;
+  copySelectedNodes: () => boolean;
+  pasteClipboard: () => string[] | null;
+  duplicateSelectedNodes: () => string[] | null;
+  clearClipboard: () => void;
   moveNode: (id: string, direction: "up" | "down") => void;
   moveNodeToIndex: (id: string, index: number) => void;
   moveNodeToParentIndex: (id: string, parentId: string, index: number) => void;
@@ -132,6 +149,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   lastError: null,
   historyPast: [],
   historyFuture: [],
+  hasClipboard: false,
 
   setProject: (project) => {
     normalizeProjectTextFrames(project);
@@ -500,6 +518,97 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       };
     }),
 
+  copySelectedNodes: () => {
+    const state = get();
+    const roots = pruneCopySelection(state.project, state.selectedNodeIds, state.activeScreenId);
+    if (roots.length === 0) return false;
+
+    const snapshots: WidgetNode[] = [];
+    for (const id of roots) {
+      const node = findNode(state.project, id);
+      if (!node || node.type === "screen") continue;
+      snapshots.push(deepCloneWidget(node));
+    }
+    if (snapshots.length === 0) return false;
+
+    widgetClipboard = snapshots;
+    set({ hasClipboard: true });
+    return true;
+  },
+
+  pasteClipboard: () => {
+    if (widgetClipboard.length === 0) return null;
+    let pastedIds: string[] | null = null;
+    set((state) => {
+      if (widgetClipboard.length === 0) return state;
+      const parentId = resolvePasteParentId(state, widgetClipboard);
+      const parent = findNode(state.project, parentId);
+      if (!parent || (parent.type !== "screen" && parent.type !== "panel")) return state;
+
+      const next = cloneProject(state.project);
+      const usedIds = collectIds(next);
+      const created: WidgetNode[] = [];
+      for (const snapshot of widgetClipboard) {
+        created.push(cloneWidgetSubtree(snapshot, usedIds));
+      }
+      for (const node of created) {
+        insertChild(next, parentId, node);
+      }
+
+      pastedIds = created.map((node) => node.id);
+      return {
+        ...recordHistory(state),
+        project: next,
+        selectedNodeId: pastedIds.at(-1) ?? null,
+        selectedNodeIds: pastedIds,
+        editingLabelId: null,
+        draftFrame: null,
+      };
+    });
+    return pastedIds;
+  },
+
+  duplicateSelectedNodes: () => {
+    let duplicatedIds: string[] | null = null;
+    set((state) => {
+      const roots = pruneCopySelection(state.project, state.selectedNodeIds, state.activeScreenId);
+      if (roots.length === 0) return state;
+
+      const next = cloneProject(state.project);
+      const usedIds = collectIds(next);
+      const createdIds: string[] = [];
+
+      for (const rootId of roots) {
+        const source = findNode(next, rootId);
+        const parent = findParent(next, rootId);
+        if (!source || !parent || source.type === "screen") continue;
+        const clone = cloneWidgetSubtree(source, usedIds);
+        offsetWidgetFrame(clone, DUPLICATE_FRAME_OFFSET, DUPLICATE_FRAME_OFFSET);
+        if (!insertChildAfter(next, rootId, clone)) {
+          insertChild(next, parent.id, clone);
+        }
+        createdIds.push(clone.id);
+      }
+
+      if (createdIds.length === 0) return state;
+      duplicatedIds = createdIds;
+      return {
+        ...recordHistory(state),
+        project: next,
+        selectedNodeId: createdIds.at(-1) ?? null,
+        selectedNodeIds: createdIds,
+        editingLabelId: null,
+        draftFrame: null,
+      };
+    });
+    return duplicatedIds;
+  },
+
+  clearClipboard: () => {
+    widgetClipboard = [];
+    set({ hasClipboard: false });
+  },
+
   moveNode: (id, direction) =>
     set((state) => {
       const next = cloneProject(state.project);
@@ -662,6 +771,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const node = findNode(next, id);
       if (!node) return state;
       Object.assign(node, patch);
+      if (patch.locked === true && node.type === "panel") {
+        lockWidgetSubtree(node);
+      }
       return { ...recordHistory(state), project: next, draftFrame: null };
     }),
 
@@ -810,6 +922,27 @@ function makeWidgetWithFrame(id: string, type: WidgetType, parentId: string, p: 
   const node = makeWidget(id, type);
   node.frame = defaultFrameFor(type, parentId, p);
   return node;
+}
+
+function resolvePasteParentId(state: EditorState, clipboard: readonly WidgetNode[]): string {
+  const primaryId = state.selectedNodeId;
+  let parentId = state.activeScreenId;
+  if (primaryId) {
+    const selected = findNode(state.project, primaryId);
+    if (selected) {
+      if (selected.type === "screen" || selected.type === "panel") {
+        parentId = selected.id;
+      } else {
+        parentId = findParent(state.project, primaryId)?.id ?? state.activeScreenId;
+      }
+    }
+  }
+  return resolvePasteParentOutsideClipboard(
+    state.project,
+    parentId,
+    clipboard,
+    state.activeScreenId,
+  );
 }
 
 function makeFreehandStroke(

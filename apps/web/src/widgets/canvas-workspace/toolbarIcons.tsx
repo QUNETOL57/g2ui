@@ -41,6 +41,15 @@ export function RectIcon({ size = 18 }: ToolbarIconProps) {
   );
 }
 
+export function ScreenIcon({ size = 18 }: ToolbarIconProps) {
+  return (
+    <svg {...base(size)}>
+      <rect x="3" y="4.5" width="18" height="12" rx="2" />
+      <path d="M9 19.5h6M12 16.5v3" />
+    </svg>
+  );
+}
+
 export function CircleIcon({ size = 18 }: ToolbarIconProps) {
   return (
     <svg {...base(size)}>
@@ -150,7 +159,7 @@ export function WidgetTypeIcon({
 }: ToolbarIconProps & { type: WidgetType }) {
   switch (type) {
     case "screen":
-      return <RectIcon size={size} />;
+      return <ScreenIcon size={size} />;
     case "panel":
       return <FrameIcon size={size} />;
     case "label":

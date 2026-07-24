@@ -76,6 +76,8 @@ export function PropertiesPanel() {
 
   if (!node) return null;
 
+  const isLocked = node.locked === true;
+
   return (
     <>
       <SectionTitle>Properties · {node.type}</SectionTitle>
@@ -89,40 +91,46 @@ export function PropertiesPanel() {
           draftFrame={localDraftFrame}
           updateFrame={updateFrame}
           updateNode={updateNode}
+          disabled={isLocked}
         />
       ) : null}
 
-      {node.type === "icon" ? (
-        <StyleGroup node={node} palette={project.palette} updateStyle={updateStyle} />
-      ) : null}
+      <div
+        aria-disabled={isLocked || undefined}
+        style={isLocked ? { pointerEvents: "none", opacity: 0.55 } : undefined}
+      >
+        {node.type === "icon" ? (
+          <StyleGroup node={node} palette={project.palette} updateStyle={updateStyle} />
+        ) : null}
 
-      {node.type === "label" && (
-        <LabelGroup
-          node={node}
-          palette={project.palette}
-          onChange={(patch) => updateProps(node.id, patch)}
-          onStyleChange={(patch) => updateStyle(node.id, patch)}
-        />
-      )}
-      {node.type === "button" && (
-        <ButtonGroup
-          node={node}
-          palette={project.palette}
-          onChange={(patch) => updateProps(node.id, patch)}
-          onStyleChange={(patch) => updateStyle(node.id, patch)}
-        />
-      )}
-      {node.type === "icon" && (
-        <IconGroup node={node} onChange={(patch) => updateProps(node.id, patch)} />
-      )}
+        {node.type === "label" && (
+          <LabelGroup
+            node={node}
+            palette={project.palette}
+            onChange={(patch) => updateProps(node.id, patch)}
+            onStyleChange={(patch) => updateStyle(node.id, patch)}
+          />
+        )}
+        {node.type === "button" && (
+          <ButtonGroup
+            node={node}
+            palette={project.palette}
+            onChange={(patch) => updateProps(node.id, patch)}
+            onStyleChange={(patch) => updateStyle(node.id, patch)}
+          />
+        )}
+        {node.type === "icon" && (
+          <IconGroup node={node} onChange={(patch) => updateProps(node.id, patch)} />
+        )}
 
-      {(node.type === "screen" || node.type === "panel") && (
-        <LayoutGroup node={node} updateLayout={updateLayout} />
-      )}
+        {(node.type === "screen" || node.type === "panel") && (
+          <LayoutGroup node={node} updateLayout={updateLayout} />
+        )}
 
-      {node.type !== "icon" && node.type !== "label" ? (
-        <StyleGroup node={node} palette={project.palette} updateStyle={updateStyle} />
-      ) : null}
+        {node.type !== "icon" && node.type !== "label" ? (
+          <StyleGroup node={node} palette={project.palette} updateStyle={updateStyle} />
+        ) : null}
+      </div>
     </>
   );
 }

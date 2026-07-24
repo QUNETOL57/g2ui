@@ -1,5 +1,6 @@
 import type { WidgetNode } from "@entities/ui-project";
 import { cn } from "@shared/lib/cn";
+import { LockToggleButton } from "@shared/ui/LockToggleButton";
 import { VisibilityToggleButton } from "@shared/ui/VisibilityToggleButton";
 import { WidgetTypeIcon } from "@widgets/canvas-workspace/toolbarIcons";
 
@@ -13,6 +14,7 @@ export function SelectedGroup({
   updateNode: (id: string, patch: Partial<WidgetNode>) => void;
 }) {
   const nameInputId = `selected-node-name-${node.id}`;
+  const isLocked = node.locked === true;
 
   return (
     <div className={cn(styles.group, styles.summary)}>
@@ -29,11 +31,18 @@ export function SelectedGroup({
       </span>
       <div className={styles.summaryActions}>
         {node.type !== "screen" ? (
-          <VisibilityToggleButton
-            visible={node.visible !== false}
-            label={node.name ?? node.id}
-            onToggle={() => updateNode(node.id, { visible: node.visible === false })}
-          />
+          <>
+            <VisibilityToggleButton
+              visible={node.visible !== false}
+              label={node.name ?? node.id}
+              onToggle={() => updateNode(node.id, { visible: node.visible === false })}
+            />
+            <LockToggleButton
+              locked={isLocked}
+              label={node.name ?? node.id}
+              onToggle={() => updateNode(node.id, { locked: node.locked !== true })}
+            />
+          </>
         ) : (
           <span className={styles.summaryActionsSpacer} aria-hidden="true" />
         )}
@@ -46,6 +55,7 @@ export function SelectedGroup({
           className={styles.inputText}
           value={node.name ?? ""}
           placeholder={node.id}
+          disabled={isLocked}
           onChange={(e) => updateNode(node.id, { name: e.target.value || undefined })}
         />
       </div>

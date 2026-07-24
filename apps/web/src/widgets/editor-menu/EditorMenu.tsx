@@ -1,7 +1,13 @@
 import { useEffect, useId, useRef, useState } from "react";
 
 import { useEditorStore } from "@entities/ui-project/model/store";
-import { getRedoShortcut, getUndoShortcut } from "@shared/config/editorShortcuts";
+import {
+  getCopyShortcut,
+  getDuplicateShortcut,
+  getPasteShortcut,
+  getRedoShortcut,
+  getUndoShortcut,
+} from "@shared/config/editorShortcuts";
 import { cn } from "@shared/lib/cn";
 import { ExportProjectModal } from "@widgets/export-panel/ExportProjectModal";
 import { ImportProjectModal } from "@widgets/export-panel/ImportProjectModal";
@@ -48,8 +54,16 @@ const viewSettingPreviews: Record<
 export function EditorMenu({ onBackToLibrary, viewSettings }: EditorMenuProps) {
   const undo = useEditorStore((s) => s.undo);
   const redo = useEditorStore((s) => s.redo);
+  const copySelectedNodes = useEditorStore((s) => s.copySelectedNodes);
+  const pasteClipboard = useEditorStore((s) => s.pasteClipboard);
+  const duplicateSelectedNodes = useEditorStore((s) => s.duplicateSelectedNodes);
   const canUndo = useEditorStore((s) => s.historyPast.length > 0);
   const canRedo = useEditorStore((s) => s.historyFuture.length > 0);
+  const hasClipboard = useEditorStore((s) => s.hasClipboard);
+  const activeScreenId = useEditorStore((s) => s.activeScreenId);
+  const selectedNodeIds = useEditorStore((s) => s.selectedNodeIds);
+  const canCopy = selectedNodeIds.some((id) => id !== activeScreenId);
+  const canDuplicate = canCopy;
 
   const [openMenuId, setOpenMenuId] = useState<OpenMenuId>(null);
   const [exportOpen, setExportOpen] = useState(false);
@@ -304,6 +318,45 @@ export function EditorMenu({ onBackToLibrary, viewSettings }: EditorMenuProps) {
               >
                 <span className={styles.menuItemLabel}>Redo</span>
                 <span className={styles.menuItemShortcut}>{getRedoShortcut()}</span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                className={styles.menuItem}
+                disabled={!canCopy}
+                onClick={() => {
+                  closeMenu();
+                  copySelectedNodes();
+                }}
+              >
+                <span className={styles.menuItemLabel}>Copy</span>
+                <span className={styles.menuItemShortcut}>{getCopyShortcut()}</span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                className={styles.menuItem}
+                disabled={!hasClipboard}
+                onClick={() => {
+                  closeMenu();
+                  pasteClipboard();
+                }}
+              >
+                <span className={styles.menuItemLabel}>Paste</span>
+                <span className={styles.menuItemShortcut}>{getPasteShortcut()}</span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                className={styles.menuItem}
+                disabled={!canDuplicate}
+                onClick={() => {
+                  closeMenu();
+                  duplicateSelectedNodes();
+                }}
+              >
+                <span className={styles.menuItemLabel}>Duplicate</span>
+                <span className={styles.menuItemShortcut}>{getDuplicateShortcut()}</span>
               </button>
             </div>
           ) : null}

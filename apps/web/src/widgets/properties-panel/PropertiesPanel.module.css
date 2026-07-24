@@ -62,7 +62,7 @@
 
 .summary {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) 20px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   grid-template-rows: 20px 25px;
   gap: 8px;
   align-items: center;
@@ -100,14 +100,14 @@
   grid-row: 1;
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 20px;
+  justify-content: flex-end;
+  gap: 2px;
   height: 20px;
 }
 
 .summaryActionsSpacer {
   display: block;
-  width: 20px;
+  width: 42px;
   height: 20px;
   flex: 0 0 auto;
 }

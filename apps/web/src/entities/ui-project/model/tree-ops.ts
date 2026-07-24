@@ -69,6 +69,103 @@ export function insertChild(p: UiProject, parentId: string, child: WidgetNode): 
   parent.children.push(child);
 }
 
+export function insertChildAfter(p: UiProject, siblingId: string, child: WidgetNode): boolean {
+  const parent = findParent(p, siblingId);
+  if (!parent?.children) return false;
+  const index = parent.children.findIndex((entry) => entry.id === siblingId);
+  if (index < 0) return false;
+  parent.children.splice(index + 1, 0, child);
+  return true;
+}
+
+export function deepCloneWidget(node: WidgetNode): WidgetNode {
+  return JSON.parse(JSON.stringify(node)) as WidgetNode;
+}
+
+/** Deep-clone a non-screen widget and remap every id against `usedIds`. */
+export function cloneWidgetSubtree(node: WidgetNode, usedIds: Set<string>): WidgetNode {
+  if (node.type === "screen") {
+    throw new Error("cannot clone a screen as a widget subtree");
+  }
+  const cloned = deepCloneWidget(node);
+  const remap = (current: WidgetNode) => {
+    const newId = nextId(current.type.slice(0, 3), usedIds);
+    usedIds.add(newId);
+    current.id = newId;
+    (current.children ?? []).forEach(remap);
+  };
+  remap(cloned);
+  return cloned;
+}
+
+/**
+ * Selection roots suitable for copy/duplicate: skip the active screen,
+ * skip screen-typed nodes, and drop descendants when an ancestor is also selected.
+ * Result is sorted in document (DFS) order.
+ */
+export function pruneCopySelection(
+  project: UiProject,
+  ids: readonly string[],
+  activeScreenId: string,
+): string[] {
+  const candidates = ids.filter((id) => {
+    if (!id || id === activeScreenId) return false;
+    const node = findNode(project, id);
+    return !!node && node.type !== "screen";
+  });
+  const roots = candidates.filter(
+    (id) => !candidates.some((other) => other !== id && isAncestor(project, other, id)),
+  );
+
+  const order = new Map<string, number>();
+  let counter = 0;
+  const indexWalk = (node: WidgetNode) => {
+    order.set(node.id, counter++);
+    (node.children ?? []).forEach(indexWalk);
+  };
+  project.screens.forEach(indexWalk);
+
+  return [...roots].sort((a, b) => (order.get(a) ?? 0) - (order.get(b) ?? 0));
+}
+
+export function offsetWidgetFrame(node: WidgetNode, dx: number, dy: number): void {
+  if (!node.frame) return;
+  node.frame = {
+    ...node.frame,
+    x: node.frame.x + dx,
+    y: node.frame.y + dy,
+  };
+}
+
+/** Set `locked: true` on `node` and every descendant. */
+export function lockWidgetSubtree(node: WidgetNode): void {
+  node.locked = true;
+  for (const child of node.children ?? []) {
+    lockWidgetSubtree(child);
+  }
+}
+
+/**
+ * If the paste target would be a panel that is itself in the clipboard
+ * (or a descendant of such a panel), lift the target to that panel's parent
+ * so the pasted copy is created outside the source panel.
+ */
+export function resolvePasteParentOutsideClipboard(
+  project: UiProject,
+  candidateParentId: string,
+  clipboard: readonly WidgetNode[],
+  activeScreenId: string,
+): string {
+  for (const snapshot of clipboard) {
+    if (snapshot.type !== "panel") continue;
+    if (candidateParentId === snapshot.id || isAncestor(project, snapshot.id, candidateParentId)) {
+      const panelParent = findParent(project, snapshot.id);
+      return panelParent?.id ?? activeScreenId;
+    }
+  }
+  return candidateParentId;
+}
+
 export function removeNode(p: UiProject, id: string): WidgetNode | null {
   const parent = findParent(p, id);
   if (!parent || !parent.children) return null;

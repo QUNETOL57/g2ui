@@ -1,13 +1,15 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import type { WidgetNode } from "@entities/ui-project";
 import { IR_WIDGET_TYPES } from "@entities/ui-project/schema";
 import { useEditorStore } from "@entities/ui-project/model/store";
+import { findNode } from "@entities/ui-project/model/tree-ops";
 import { TreePanel } from "@widgets/tree-panel/TreePanel";
 
 import {
+  makeButton,
   makeFixtureProject,
   makeLabel,
   makePanel,
@@ -22,9 +24,10 @@ beforeEach(() => {
 });
 
 describe("TreePanel: rendering", () => {
-  it("renders the screen as root node", () => {
+  it("renders the screen as root node with a distinct type icon", () => {
     render(<TreePanel />);
     expect(screen.getByText("Widget tree")).toBeInTheDocument();
+    expect(screen.getByText("Main")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "screen node" })).toHaveAttribute("title", "screen");
     expect(screen.queryByText("screen")).not.toBeInTheDocument();
   });
@@ -60,6 +63,102 @@ describe("TreePanel: rendering", () => {
   });
 });
 
+describe("TreePanel: collapse", () => {
+  it("collapses and expands a panel with the twistie button", async () => {
+    const panel = makePanel("pan_1", [makeLabel("lbl_1")]);
+    panel.name = "Group";
+    get().setProject(withChildren(makeFixtureProject(), [panel]));
+    render(<TreePanel />);
+
+    expect(
+      screen.getAllByTestId("tree-node-row").some((row) => row.dataset.treeNodeId === "lbl_1"),
+    ).toBe(true);
+    const panelRow = screen
+      .getAllByTestId("tree-node-row")
+      .find((row) => row.dataset.treeNodeId === "pan_1");
+    expect(panelRow).toHaveAttribute("data-tree-expanded", "true");
+
+    await userEvent.click(screen.getByRole("button", { name: "Collapse Group" }));
+
+    expect(
+      screen.getAllByTestId("tree-node-row").some((row) => row.dataset.treeNodeId === "lbl_1"),
+    ).toBe(false);
+    expect(panelRow).toHaveAttribute("data-tree-expanded", "false");
+    expect(screen.getByRole("button", { name: "Expand Group" })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Expand Group" }));
+    expect(
+      screen.getAllByTestId("tree-node-row").some((row) => row.dataset.treeNodeId === "lbl_1"),
+    ).toBe(true);
+  });
+
+  it("collapses a panel on double-click of the row", async () => {
+    const panel = makePanel("pan_1", [makeLabel("lbl_1")]);
+    panel.name = "Group";
+    get().setProject(withChildren(makeFixtureProject(), [panel]));
+    render(<TreePanel />);
+
+    const panelRow = screen
+      .getAllByTestId("tree-node-row")
+      .find((row) => row.dataset.treeNodeId === "pan_1")!;
+    await userEvent.dblClick(panelRow);
+
+    expect(
+      screen.getAllByTestId("tree-node-row").some((row) => row.dataset.treeNodeId === "lbl_1"),
+    ).toBe(false);
+    expect(panelRow).toHaveAttribute("data-tree-expanded", "false");
+  });
+
+  it("auto-expands collapsed ancestors when a nested node is selected", async () => {
+    const panel = makePanel("pan_1", [makeLabel("lbl_1")]);
+    panel.name = "Group";
+    get().setProject(withChildren(makeFixtureProject(), [panel]));
+    render(<TreePanel />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Collapse Group" }));
+    expect(
+      screen.getAllByTestId("tree-node-row").some((row) => row.dataset.treeNodeId === "lbl_1"),
+    ).toBe(false);
+
+    get().selectNode("lbl_1");
+
+    await vi.waitFor(() => {
+      expect(
+        screen.getAllByTestId("tree-node-row").some((row) => row.dataset.treeNodeId === "lbl_1"),
+      ).toBe(true);
+    });
+    const panelRow = screen
+      .getAllByTestId("tree-node-row")
+      .find((row) => row.dataset.treeNodeId === "pan_1");
+    expect(panelRow).toHaveAttribute("data-tree-expanded", "true");
+  });
+
+  it("does not show a twistie or spacer for leaf widgets", () => {
+    get().setProject(withChildren(makeFixtureProject(), [makeLabel("lbl_1")]));
+    render(<TreePanel />);
+
+    const labelRow = screen
+      .getAllByTestId("tree-node-row")
+      .find((row) => row.dataset.treeNodeId === "lbl_1")!;
+    expect(within(labelRow).queryByTestId("tree-node-twistie")).not.toBeInTheDocument();
+    expect(within(labelRow).queryByTestId("tree-node-twistie-spacer")).not.toBeInTheDocument();
+  });
+
+  it("does not allow collapsing the screen root", () => {
+    get().setProject(withChildren(makeFixtureProject(), [makeLabel("lbl_1")]));
+    render(<TreePanel />);
+
+    const screenRow = screen
+      .getAllByTestId("tree-node-row")
+      .find((row) => row.dataset.treeNodeId === "screen_main")!;
+    expect(within(screenRow).queryByTestId("tree-node-twistie")).not.toBeInTheDocument();
+    expect(screenRow).not.toHaveAttribute("data-tree-expanded");
+    expect(
+      screen.getAllByTestId("tree-node-row").some((row) => row.dataset.treeNodeId === "lbl_1"),
+    ).toBe(true);
+  });
+});
+
 describe("TreePanel: selection", () => {
   it("clicking a row selects the node", async () => {
     const project = withChildren(makeFixtureProject(), [makeLabel("lbl_1")]);
@@ -83,6 +182,7 @@ describe("TreePanel: visibility", () => {
     expect(screenRow).toBeTruthy();
     expect(screenRow).toHaveAttribute("data-tree-node-type", "screen");
     expect(within(screenRow!).queryByRole("button", { name: /Hide|Show/ })).not.toBeInTheDocument();
+    expect(screenRow!.querySelector("[class*='rowVisibilitySlot']")).toBeNull();
 
     const labelRow = screen
       .getAllByTestId("tree-node-row")
@@ -102,5 +202,63 @@ describe("TreePanel: visibility", () => {
     expect(get().selectedNodeId).toBe("lbl_1");
     expect(get().project.screens[0].children?.[0].visible).toBe(false);
     expect(screen.getByRole("button", { name: "Show lbl_1" })).toBeInTheDocument();
+  });
+});
+
+describe("TreePanel: lock", () => {
+  it("shows lock toggle for child nodes but not for the screen root", () => {
+    const project = withChildren(makeFixtureProject(), [makeLabel("lbl_1")]);
+    get().setProject(project);
+    render(<TreePanel />);
+
+    const screenRow = screen
+      .getAllByTestId("tree-node-row")
+      .find((row) => row.dataset.treeNodeId === "screen_main");
+    expect(within(screenRow!).queryByRole("button", { name: /Lock|Unlock/ })).not.toBeInTheDocument();
+
+    const labelRow = screen
+      .getAllByTestId("tree-node-row")
+      .find((row) => row.dataset.treeNodeId === "lbl_1");
+    expect(within(labelRow!).getByRole("button", { name: "Lock lbl_1" })).toBeInTheDocument();
+  });
+
+  it("toggles lock without changing the current selection", async () => {
+    const project = withChildren(makeFixtureProject(), [makeLabel("lbl_1")]);
+    get().setProject(project);
+    get().selectNode("lbl_1");
+    render(<TreePanel />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Lock lbl_1" }));
+
+    expect(get().selectedNodeId).toBe("lbl_1");
+    expect(get().project.screens[0].children?.[0].locked).toBe(true);
+    expect(screen.getByRole("button", { name: "Unlock lbl_1" })).toBeInTheDocument();
+  });
+
+  it("locks nested children when locking a panel from the tree", async () => {
+    const panel = makePanel("pan_1", [makeLabel("lbl_1"), makeButton("btn_1")]);
+    panel.name = "Group";
+    get().setProject(withChildren(makeFixtureProject(), [panel]));
+    render(<TreePanel />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Lock Group" }));
+
+    expect(findNode(get().project, "pan_1")?.locked).toBe(true);
+    expect(findNode(get().project, "lbl_1")?.locked).toBe(true);
+    expect(findNode(get().project, "btn_1")?.locked).toBe(true);
+    expect(screen.getByRole("button", { name: "Unlock lbl_1" })).toBeInTheDocument();
+  });
+
+  it("can unlock a child after its parent panel was locked", async () => {
+    const panel = makePanel("pan_1", [makeLabel("lbl_1")]);
+    panel.name = "Group";
+    get().setProject(withChildren(makeFixtureProject(), [panel]));
+    render(<TreePanel />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Lock Group" }));
+    await userEvent.click(screen.getByRole("button", { name: "Unlock lbl_1" }));
+
+    expect(findNode(get().project, "pan_1")?.locked).toBe(true);
+    expect(findNode(get().project, "lbl_1")?.locked).toBe(false);
   });
 });

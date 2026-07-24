@@ -5,6 +5,7 @@ import type { UiProject } from "@entities/ui-project";
 /** Reset the global Zustand store to a known blank project state. */
 export function resetEditorStore(project?: UiProject) {
   const next = project ?? blankProject();
+  useEditorStore.getState().clearClipboard();
   useEditorStore.setState({
     project: next,
     activeScreenId: next.screens[0]?.id ?? next.initialScreenId,
@@ -18,6 +19,7 @@ export function resetEditorStore(project?: UiProject) {
     lastError: null,
     historyPast: [],
     historyFuture: [],
+    hasClipboard: false,
   });
 }
 

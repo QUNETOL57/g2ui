@@ -100,6 +100,7 @@ export function makeWidget(id: string, type: WidgetType): WidgetNode {
     type,
     visible: true,
     enabled: true,
+    locked: false,
     layout: defaultLayout(type === "panel" ? "column" : "absolute"),
     style: {
       textColor: { kind: "hex", value: "#FFFFFF" },

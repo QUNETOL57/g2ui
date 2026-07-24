@@ -20,13 +20,42 @@
   font-size: var(--font-size-xs);
 }
 
+.treeItem {
+  min-width: 0;
+}
+
+.children {
+  position: relative;
+  margin-left: 6px;
+  padding-left: 16px;
+}
+
+.children::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 8px;
+  width: 1px;
+  background: rgba(227, 232, 240, 0.18);
+}
+
+.childrenRoot {
+  margin-left: 0;
+  padding-left: 0;
+}
+
+.childrenRoot::before {
+  content: none;
+}
+
 .row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 2px;
   position: relative;
-  margin: 0 4px 3px;
-  padding: 3px 4px;
+  margin: 0 4px 1px;
+  padding: 3px 4px 3px 2px;
   box-sizing: border-box;
   min-height: 28px;
   height: 28px;
@@ -82,8 +111,8 @@
   border: 1px dashed var(--color-accent);
 }
 
-.row:hover {
-  border-color: var(--hover-border);
+.row:hover:not(.rowSelected) {
+  border: 1px dashed var(--hover-border);
 }
 
 .rowPrimary {
@@ -91,8 +120,39 @@
   box-shadow: inset 2px 0 0 var(--color-accent);
 }
 
+.twistie {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--color-text-muted);
+  line-height: 0;
+  cursor: pointer;
+  transform: rotate(90deg);
+  transition: transform 120ms ease, color 120ms ease;
+}
+
+.twistieExpanded {
+  transform: rotate(180deg);
+}
+
+.twistie:hover {
+  color: var(--hover-text);
+}
+
+.twistie svg {
+  display: block;
+}
+
 .rowName {
   min-width: 0;
+  margin-left: 4px;
   font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--color-text);
@@ -114,16 +174,11 @@
 .rowVisibilitySlot {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 20px;
+  justify-content: flex-end;
+  gap: 2px;
+  width: 42px;
   height: 20px;
   flex: 0 0 auto;
-}
-
-.rowVisibilitySpacer {
-  display: block;
-  width: 20px;
-  height: 20px;
 }
 
 .rowId {
@@ -140,10 +195,6 @@
   flex: 0 0 20px;
   color: var(--color-text-muted);
   transition: color 120ms ease;
-}
-
-.row:hover .typeIcon {
-  color: var(--hover-text);
 }
 
 .rowSelected .typeIcon {

@@ -14,6 +14,7 @@ interface SelectionOverlayProps {
   showGuides?: boolean;
   showMoveMask: boolean;
   showResizeHandles: boolean;
+  transformsLocked?: boolean;
   lineEndpoints: { start: Point; end: Point } | null;
   onMoveMouseDown?: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onFrameDoubleClick?: (event: ReactMouseEvent<HTMLDivElement>) => void;
@@ -50,6 +51,7 @@ export function SelectionOverlay({
   showGuides = true,
   showMoveMask,
   showResizeHandles,
+  transformsLocked = false,
   lineEndpoints,
   onMoveMouseDown,
   onFrameDoubleClick,
@@ -63,27 +65,38 @@ export function SelectionOverlay({
   const bottom = Math.round((rect.y + rect.height) * renderZoom);
   const maskWidth = Math.max(1, right - left);
   const maskHeight = Math.max(1, bottom - top);
+  const lockedCursorClass = transformsLocked ? styles.cursorLocked : undefined;
 
   const handleMoveMouseDown = (event: ReactMouseEvent<HTMLDivElement>) => {
     event.stopPropagation();
+    if (transformsLocked) return;
     onMoveMouseDown?.(event);
   };
 
   const handleFrameDoubleClick = (event: ReactMouseEvent<HTMLDivElement>) => {
     event.stopPropagation();
     event.preventDefault();
+    if (transformsLocked) return;
     onFrameDoubleClick?.(event);
   };
 
   const handleResizeMouseDown =
     (handle: ResizeHandle) => (event: ReactMouseEvent<HTMLDivElement>) => {
       event.stopPropagation();
+      if (transformsLocked) return;
       if (onFrameDoubleClick && event.detail >= 2) {
         event.preventDefault();
         handleFrameDoubleClick(event);
         return;
       }
       onResizeHandleMouseDown(handle)(event);
+    };
+
+  const handleLineEndpointMouseDown =
+    (handle: LineHandle) => (event: ReactMouseEvent<HTMLDivElement>) => {
+      event.stopPropagation();
+      if (transformsLocked) return;
+      onLineEndpointMouseDown(handle)(event);
     };
 
   const showBorderMove = showMoveMask && allowContentInteraction && onMoveMouseDown;
@@ -166,7 +179,7 @@ export function SelectionOverlay({
         ? frameEdges.map((edge) => (
             <div
               key={`move-${edge}`}
-              className={cn(styles.moveStrip, moveStripClass[edge])}
+              className={cn(styles.moveStrip, moveStripClass[edge], lockedCursorClass)}
               data-testid={`selection-move-${edge}`}
               style={edgeLayout[edge]}
               onMouseDown={handleMoveMouseDown}
@@ -175,7 +188,7 @@ export function SelectionOverlay({
         : null}
       {showCenterMoveMask ? (
         <div
-          className={styles.selectionMask}
+          className={cn(styles.selectionMask, lockedCursorClass)}
           data-testid="selection-mask"
           style={{ left, top, width: maskWidth, height: maskHeight }}
           onMouseDown={handleMoveMouseDown}
@@ -184,56 +197,56 @@ export function SelectionOverlay({
       {showResizeHandles ? (
         <>
           <div
-            className={cn(styles.handle, resizeHandleClass.n)}
+            className={cn(styles.handle, resizeHandleClass.n, lockedCursorClass)}
             data-testid="resize-handle-n"
             style={{ left, top, width: maskWidth }}
             onMouseDown={handleResizeMouseDown("n")}
             onDoubleClick={onFrameDoubleClick ? handleFrameDoubleClick : undefined}
           />
           <div
-            className={cn(styles.handle, resizeHandleClass.e)}
+            className={cn(styles.handle, resizeHandleClass.e, lockedCursorClass)}
             data-testid="resize-handle-e"
             style={{ left: right, top, height: maskHeight }}
             onMouseDown={handleResizeMouseDown("e")}
             onDoubleClick={onFrameDoubleClick ? handleFrameDoubleClick : undefined}
           />
           <div
-            className={cn(styles.handle, resizeHandleClass.s)}
+            className={cn(styles.handle, resizeHandleClass.s, lockedCursorClass)}
             data-testid="resize-handle-s"
             style={{ left, top: bottom, width: maskWidth }}
             onMouseDown={handleResizeMouseDown("s")}
             onDoubleClick={onFrameDoubleClick ? handleFrameDoubleClick : undefined}
           />
           <div
-            className={cn(styles.handle, resizeHandleClass.w)}
+            className={cn(styles.handle, resizeHandleClass.w, lockedCursorClass)}
             data-testid="resize-handle-w"
             style={{ left, top, height: maskHeight }}
             onMouseDown={handleResizeMouseDown("w")}
             onDoubleClick={onFrameDoubleClick ? handleFrameDoubleClick : undefined}
           />
           <div
-            className={cn(styles.handle, resizeHandleClass.nw)}
+            className={cn(styles.handle, resizeHandleClass.nw, lockedCursorClass)}
             data-testid="resize-handle-nw"
             style={{ left, top }}
             onMouseDown={handleResizeMouseDown("nw")}
             onDoubleClick={onFrameDoubleClick ? handleFrameDoubleClick : undefined}
           />
           <div
-            className={cn(styles.handle, resizeHandleClass.ne)}
+            className={cn(styles.handle, resizeHandleClass.ne, lockedCursorClass)}
             data-testid="resize-handle-ne"
             style={{ left: right, top }}
             onMouseDown={handleResizeMouseDown("ne")}
             onDoubleClick={onFrameDoubleClick ? handleFrameDoubleClick : undefined}
           />
           <div
-            className={cn(styles.handle, resizeHandleClass.sw)}
+            className={cn(styles.handle, resizeHandleClass.sw, lockedCursorClass)}
             data-testid="resize-handle-sw"
             style={{ left, top: bottom }}
             onMouseDown={handleResizeMouseDown("sw")}
             onDoubleClick={onFrameDoubleClick ? handleFrameDoubleClick : undefined}
           />
           <div
-            className={cn(styles.handle, resizeHandleClass.se)}
+            className={cn(styles.handle, resizeHandleClass.se, lockedCursorClass)}
             data-testid="resize-handle-se"
             style={{ left: right, top: bottom }}
             onMouseDown={handleResizeMouseDown("se")}
@@ -244,20 +257,20 @@ export function SelectionOverlay({
       {lineEndpoints ? (
         <>
           <div
-            className={styles.endpoint}
+            className={cn(styles.endpoint, lockedCursorClass)}
             style={{
               left: Math.round((lineEndpoints.start.x + 0.5) * renderZoom),
               top: Math.round((lineEndpoints.start.y + 0.5) * renderZoom),
             }}
-            onMouseDown={onLineEndpointMouseDown("start")}
+            onMouseDown={handleLineEndpointMouseDown("start")}
           />
           <div
-            className={styles.endpoint}
+            className={cn(styles.endpoint, lockedCursorClass)}
             style={{
               left: Math.round((lineEndpoints.end.x + 0.5) * renderZoom),
               top: Math.round((lineEndpoints.end.y + 0.5) * renderZoom),
             }}
-            onMouseDown={onLineEndpointMouseDown("end")}
+            onMouseDown={handleLineEndpointMouseDown("end")}
           />
         </>
       ) : null}

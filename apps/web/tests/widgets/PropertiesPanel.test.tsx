@@ -100,6 +100,18 @@ describe("PropertiesPanel: per-type groups", () => {
     expect(screen.getByPlaceholderText(/search or enter iconId/i)).toHaveValue("earth");
   });
 
+  it("uses the shared chevron icon for icon-library accordions", () => {
+    const project = withChildren(makeFixtureProject(), [makeIcon("ic_1", "earth")]);
+    get().setProject(project);
+    selectAndRender("ic_1");
+
+    const summary = screen.getByText("Transport & Places").closest("summary");
+    const chevron = summary?.querySelector("svg");
+    expect(chevron).toHaveAttribute("width", "12");
+    expect(chevron).toHaveAttribute("height", "12");
+    expect(chevron?.querySelector("path")).toHaveAttribute("d", "M6 15l6-6 6 6");
+  });
+
   it("for panel shows LayoutGroup with mode controls", () => {
     const project = withChildren(makeFixtureProject(), [makePanel("pn_1")]);
     get().setProject(project);

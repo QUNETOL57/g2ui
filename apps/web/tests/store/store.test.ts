@@ -126,6 +126,17 @@ describe("store: addWidget / deleteNode", () => {
     expect(get().historyPast).toHaveLength(1);
   });
 
+  it("adds a widget in front of its existing siblings", () => {
+    get().setProject(withChildren(makeFixtureProject(), [makeLabel("existing")]));
+
+    const id = get().addWidget("screen_main", "button");
+
+    expect(get().project.screens[0].children?.map((child) => child.id)).toEqual([
+      id,
+      "existing",
+    ]);
+  });
+
   it("does not delete the screen if it is the active root", () => {
     get().deleteNode("screen_main");
     expect(get().project.screens.length).toBe(1);

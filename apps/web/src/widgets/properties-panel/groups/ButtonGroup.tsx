@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { ButtonProps, WidgetNode } from "@entities/ui-project";
 import { getIconDefinition, ICON_GROUPS, IconGlyph } from "@entities/icon/iconLibrary";
 import { cn } from "@shared/lib/cn";
+import { ChevronIcon } from "@widgets/canvas-workspace/toolbarIcons";
 
 import styles from "../PropertiesPanel.module.css";
 import { TypographyCard } from "../ui/TypographyCard";
@@ -108,7 +109,12 @@ export function ButtonGroup({
               {filteredIconGroups.length > 0 ? (
                 filteredIconGroups.map(([group, icons]) => (
                   <details key={group} className={styles.iconAccordion} open={Boolean(normalizedIconSearch)}>
-                    <summary>{group}</summary>
+                    <summary>
+                      <span className={styles.iconAccordionTwistie}>
+                        <ChevronIcon size={12} />
+                      </span>
+                      <span>{group}</span>
+                    </summary>
                     <div className={styles.iconGrid}>
                       {icons.map((icon) => {
                         const isSelected = p.iconId === icon.id;

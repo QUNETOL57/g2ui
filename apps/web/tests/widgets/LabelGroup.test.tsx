@@ -28,4 +28,20 @@ describe("LabelGroup", () => {
     fireEvent.click(screen.getByRole("button", { name: "Align middle" }));
     expect(handler).toHaveBeenLastCalledWith({ verticalAlign: "center" });
   });
+
+  it("renders text color and background outside the typography card", () => {
+    const node = makeLabel("lbl_1", "Hi");
+    const { container } = render(
+      <LabelGroup node={node} palette={[]} onChange={() => undefined} onStyleChange={() => undefined} />,
+    );
+
+    const typographyCard = screen.getByTestId("typography-card");
+    expect(typographyCard).toHaveTextContent("Typography");
+    expect(typographyCard).not.toHaveTextContent("Color");
+    expect(typographyCard).not.toHaveTextContent("Background");
+    expect(container.querySelector("[data-testid='typography-card'] [class*='typographyColorGrid']")).toBeNull();
+
+    expect(screen.getByText("Color")).toBeInTheDocument();
+    expect(screen.getByText("Background")).toBeInTheDocument();
+  });
 });

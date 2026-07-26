@@ -33,6 +33,8 @@ export interface StyleRef {
   textColor?: ColorRef;
   drawBackground?: boolean;
   drawBorder?: boolean;
+  /** When false/undefined with radius 0, corners are off. Legacy: radius > 0 without flag still draws. */
+  drawCorners?: boolean;
 }
 
 /** Absolute-layout frame. Required when parent uses `absolute`. */
@@ -93,7 +95,8 @@ export interface LabelProps {
 }
 
 export interface ButtonProps {
-  text: string;
+  /** When omitted, the button renders without a text label. */
+  text?: string;
   iconId?: string;
   iconPosition?: "left" | "right" | "top" | "bottom";
   iconGap?: number;

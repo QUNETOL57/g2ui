@@ -1,4 +1,5 @@
 import type { ColorRef, WidgetNode } from "@entities/ui-project";
+import { isCornersEnabled } from "@entities/ui-project/lib/style";
 import { cn } from "@shared/lib/cn";
 import { RangeSlider } from "@shared/ui/RangeSlider";
 
@@ -23,6 +24,7 @@ export function StyleGroup({
   const borderColor = s.borderColor ?? { kind: "hex", value: defaultBorderColor } satisfies ColorRef;
   const fillEnabled = s.drawBackground !== false;
   const borderEnabled = Boolean(s.drawBorder);
+  const cornersEnabled = isCornersEnabled(s);
   const showFill = node.type !== "label";
   const showRadius = node.type === "button" || node.type === "panel" || node.type === "rect";
   const radius = Math.max(0, s.borderRadius ?? 0);
@@ -105,34 +107,51 @@ export function StyleGroup({
         </InspectorCard>
       ) : null}
       {showRadius ? (
-        <InspectorCard title="Corners">
-          <div className={cn(styles.row, styles.radiusRow)}>
-            <label htmlFor={`${node.id}-corner-radius`}>radius</label>
-            <div className={styles.radiusControl}>
-              <RangeSlider
-                aria-label="corner radius"
-                min={0}
-                max={radiusMax}
-                step={1}
-                value={radius}
-                progress={radiusProgress}
-                onChange={(event) =>
-                  updateStyle(node.id, { borderRadius: Math.max(0, Number(event.target.value) || 0) })
-                }
-              />
-              <input
-                id={`${node.id}-corner-radius`}
-                className={styles.inputText}
-                type="number"
-                min={0}
-                max={radiusMax}
-                value={radius}
-                onChange={(event) =>
-                  updateStyle(node.id, { borderRadius: Math.max(0, Number(event.target.value) || 0) })
-                }
-              />
+        <InspectorCard
+          title="Corners"
+          checked={cornersEnabled}
+          onToggle={(checked) =>
+            updateStyle(node.id, {
+              drawCorners: checked,
+              borderRadius: checked ? radius : s.borderRadius,
+            })
+          }
+        >
+          {cornersEnabled ? (
+            <div className={cn(styles.row, styles.radiusRow)}>
+              <label htmlFor={`${node.id}-corner-radius`}>radius</label>
+              <div className={styles.radiusControl}>
+                <RangeSlider
+                  aria-label="corner radius"
+                  min={0}
+                  max={radiusMax}
+                  step={1}
+                  value={radius}
+                  progress={radiusProgress}
+                  onChange={(event) =>
+                    updateStyle(node.id, {
+                      drawCorners: true,
+                      borderRadius: Math.max(0, Number(event.target.value) || 0),
+                    })
+                  }
+                />
+                <input
+                  id={`${node.id}-corner-radius`}
+                  className={styles.inputText}
+                  type="number"
+                  min={0}
+                  max={radiusMax}
+                  value={radius}
+                  onChange={(event) =>
+                    updateStyle(node.id, {
+                      drawCorners: true,
+                      borderRadius: Math.max(0, Number(event.target.value) || 0),
+                    })
+                  }
+                />
+              </div>
             </div>
-          </div>
+          ) : null}
         </InspectorCard>
       ) : null}
       <InspectorCard

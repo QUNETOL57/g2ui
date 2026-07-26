@@ -25,7 +25,9 @@ export function ButtonGroup({
   const paddingBottom = p.paddingBottom ?? p.paddingY ?? 0;
   const paddingLeft = p.paddingLeft ?? p.paddingX ?? 0;
   const hasIcon = p.iconId !== undefined;
+  const hasText = p.text !== undefined;
   const [iconSearch, setIconSearch] = useState(p.iconId ?? "");
+  const [lastText, setLastText] = useState(p.text ?? "Button");
   const normalizedIconSearch = iconSearch.trim().toLowerCase();
   const filteredIconGroups = useMemo(
     () =>
@@ -45,18 +47,23 @@ export function ButtonGroup({
     setIconSearch(p.iconId ?? "");
   }, [node.id, p.iconId]);
 
+  useEffect(() => {
+    if (p.text !== undefined) setLastText(p.text || "Button");
+  }, [node.id, p.text]);
+
   return (
     <div className={cn(styles.group, styles.textGroup)}>
       <div className={styles.typographyCard}>
         <div className={styles.inspectorCardHead}>
-          <div className={styles.typographyCardTitle}>Button Icon</div>
+          <div className={styles.typographyCardTitle}>Icon</div>
           <label className={styles.visibilityToggle}>
             <input
               type="checkbox"
+              aria-label="Show icon"
+              title="Show icon"
               checked={hasIcon}
               onChange={(event) => onChange({ iconId: event.target.checked ? "earth" : undefined })}
             />
-            Show icon
           </label>
         </div>
         {hasIcon ? (
@@ -152,6 +159,20 @@ export function ButtonGroup({
         )}
       </div>
       <TypographyCard
+        title="Text"
+        headerToggle={{
+          label: "Show text",
+          checked: hasText,
+          onChange: (checked) => {
+            if (checked) {
+              onChange({ text: lastText || "Button" });
+              return;
+            }
+            if (p.text !== undefined) setLastText(p.text || "Button");
+            onChange({ text: undefined });
+          },
+        }}
+        disabledHint="Enable text to edit typography, padding, and color."
         props={p}
         style={node.style}
         palette={palette}

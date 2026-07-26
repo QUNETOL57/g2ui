@@ -175,4 +175,60 @@ describe("TypographyCard: background toggle", () => {
     expect(handler).toHaveBeenCalled();
     expect(handler.mock.calls.at(-1)?.[0]).toMatchObject({ drawBackground: true });
   });
+
+  it("can render color cards outside the typography card", () => {
+    render(
+      <TypographyCard
+        props={defaultProps}
+        style={{}}
+        palette={palette}
+        backgroundDefaultEnabled={false}
+        showBackground
+        colorsOutside
+        onPropsChange={() => undefined}
+        onStyleChange={() => undefined}
+      />,
+    );
+
+    const typographyCard = screen.getByTestId("typography-card");
+    expect(typographyCard).not.toHaveTextContent("Color");
+    expect(typographyCard).not.toHaveTextContent("Background");
+    expect(screen.getByText("Color")).toBeInTheDocument();
+    expect(screen.getByText("Background")).toBeInTheDocument();
+  });
+
+  it("nests Typography, Padding, and Color inside the Text card", async () => {
+    const toggle = vi.fn();
+    render(
+      <TypographyCard
+        title="Text"
+        headerToggle={{ label: "Show text", checked: true, onChange: toggle }}
+        props={defaultProps}
+        style={{}}
+        palette={palette}
+        backgroundDefaultEnabled
+        showBackground={false}
+        onPropsChange={() => undefined}
+        onStyleChange={() => undefined}
+        paddingControls={{
+          horizontalAlign: "center",
+          verticalAlign: "center",
+          top: 1,
+          right: 2,
+          bottom: 3,
+          left: 4,
+          onChange: () => undefined,
+        }}
+      />,
+    );
+
+    const textCard = screen.getByTestId("typography-card");
+    expect(textCard).toHaveTextContent("Text");
+    expect(textCard).toHaveTextContent("Typography");
+    expect(textCard).toHaveTextContent("Padding");
+    expect(textCard).toHaveTextContent("Color");
+
+    await userEvent.click(screen.getByLabelText("Show text"));
+    expect(toggle).toHaveBeenCalledWith(false);
+  });
 });

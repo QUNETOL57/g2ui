@@ -323,6 +323,11 @@
   cursor: pointer;
 }
 
+.inspectorCardToggle input[type="checkbox"] {
+  margin: 0;
+  flex: 0 0 auto;
+}
+
 .visibilityToggle {
   display: inline-flex;
   align-items: center;

@@ -7,14 +7,44 @@ import { ButtonGroup } from "@widgets/properties-panel/groups/ButtonGroup";
 import { makeButton } from "../fixtures/projects";
 
 describe("ButtonGroup", () => {
-  it("renders typography and padding controls", () => {
+  it("renders Text with nested Typography, Padding, and Color cards", () => {
     const node = makeButton("bt_1", "Save");
     render(
       <ButtonGroup node={node} palette={[]} onChange={() => undefined} onStyleChange={() => undefined} />,
     );
-    expect(screen.getByText("Typography")).toBeInTheDocument();
-    expect(screen.getByText("Padding")).toBeInTheDocument();
+    const textCard = screen.getByTestId("typography-card");
+    expect(textCard).toHaveTextContent("Text");
+    expect(textCard).toHaveTextContent("Typography");
+    expect(textCard).toHaveTextContent("Padding");
+    expect(textCard).toHaveTextContent("Color");
+    expect(screen.getByLabelText("Show text")).toBeChecked();
     expect(screen.queryByLabelText("button text")).toBeNull();
+  });
+
+  it("can hide button text with the show-text checkbox", async () => {
+    const handler = vi.fn();
+    const node = makeButton("bt_1", "Save");
+    render(
+      <ButtonGroup node={node} palette={[]} onChange={handler} onStyleChange={() => undefined} />,
+    );
+
+    await userEvent.click(screen.getByLabelText("Show text"));
+    expect(handler).toHaveBeenLastCalledWith({ text: undefined });
+  });
+
+  it("restores previous text when show-text is re-enabled", async () => {
+    const handler = vi.fn();
+    const button = makeButton("bt_1", "Save");
+    const node = { ...button, props: { ...(button.props ?? {}), text: undefined } };
+    render(
+      <ButtonGroup node={node} palette={[]} onChange={handler} onStyleChange={() => undefined} />,
+    );
+
+    expect(screen.getByLabelText("Show text")).not.toBeChecked();
+    expect(screen.getByText(/Enable text to edit typography/)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByLabelText("Show text"));
+    expect(handler).toHaveBeenLastCalledWith({ text: "Button" });
   });
 
   it("emits padding alignment changes", () => {

@@ -317,6 +317,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   beginLabelTextEdit: (nodeId) => {
     const node = findNode(get().project, nodeId);
     if (!node || (node.type !== "label" && node.type !== "button")) return;
+    if (node.type === "button" && (node.props as ButtonProps | undefined)?.text === undefined) {
+      return;
+    }
     get().selectNode(nodeId);
     get().beginHistoryBatch();
     set({ editingLabelId: nodeId });

@@ -30,10 +30,23 @@ interface TypographyCardProps {
   palette: { token: string; hex: string }[] | undefined;
   backgroundDefaultEnabled: boolean;
   showBackground?: boolean;
+  /** When true, color cards render as siblings outside the Typography card. */
+  colorsOutside?: boolean;
+  /** When true, padding card renders as a sibling outside the typography card. */
+  paddingOutside?: boolean;
+  title?: string;
+  headerToggle?: {
+    label: string;
+    checked: boolean;
+    onChange: (checked: boolean) => void;
+  };
+  disabledHint?: string;
   onPropsChange: (patch: Partial<LabelProps & ButtonProps>) => void;
   onStyleChange: (patch: Partial<NonNullable<WidgetNode["style"]>>) => void;
   align?: NonNullable<LabelProps["align"]>;
   onAlignChange?: (align: NonNullable<LabelProps["align"]>) => void;
+  verticalAlign?: NonNullable<LabelProps["verticalAlign"]>;
+  onVerticalAlignChange?: (align: NonNullable<LabelProps["verticalAlign"]>) => void;
   paddingControls?: {
     horizontalAlign: NonNullable<ButtonProps["horizontalAlign"]>;
     verticalAlign: NonNullable<ButtonProps["verticalAlign"]>;
@@ -51,95 +64,176 @@ export function TypographyCard({
   palette,
   backgroundDefaultEnabled,
   showBackground = true,
+  colorsOutside = false,
+  paddingOutside = false,
+  title = "Typography",
+  headerToggle,
+  disabledHint,
   onPropsChange,
   onStyleChange,
   align,
   onAlignChange,
+  verticalAlign,
+  onVerticalAlignChange,
   paddingControls,
 }: TypographyCardProps) {
   const s = style ?? {};
   const fillColor = s.background ?? { kind: "hex", value: "#FFFFFF" } satisfies ColorRef;
   const fillEnabled = backgroundDefaultEnabled ? s.drawBackground !== false : Boolean(s.drawBackground);
+  const contentEnabled = headerToggle ? headerToggle.checked : true;
 
-  return (
-    <div className={styles.typographyCard}>
-      <div className={styles.typographyCardTitle}>Typography</div>
+  const paddingAlignFields = paddingControls ? (
+    <>
+      <AlignIconGroup
+        label="horizontal"
+        value={paddingControls.horizontalAlign}
+        onChange={(horizontalAlign) => paddingControls.onChange({ horizontalAlign })}
+        wide
+      />
+      <VerticalAlignIconGroup
+        value={paddingControls.verticalAlign}
+        onChange={(verticalAlign) => paddingControls.onChange({ verticalAlign })}
+      />
+    </>
+  ) : null;
+
+  const paddingFields = paddingControls ? (
+    <div className={styles.paddingGrid4}>
+      <NumberField
+        label="top"
+        value={paddingControls.top}
+        min={0}
+        onChange={(v) => paddingControls.onChange({ paddingTop: Math.max(0, v) })}
+      />
+      <NumberField
+        label="right"
+        value={paddingControls.right}
+        min={0}
+        onChange={(v) => paddingControls.onChange({ paddingRight: Math.max(0, v) })}
+      />
+      <NumberField
+        label="bottom"
+        value={paddingControls.bottom}
+        min={0}
+        onChange={(v) => paddingControls.onChange({ paddingBottom: Math.max(0, v) })}
+      />
+      <NumberField
+        label="left"
+        value={paddingControls.left}
+        min={0}
+        onChange={(v) => paddingControls.onChange({ paddingLeft: Math.max(0, v) })}
+      />
+    </div>
+  ) : null;
+
+  const textColorField = (
+    <ColorField
+      label="color"
+      value={s.textColor}
+      palette={palette}
+      onChange={(v) => onStyleChange({ textColor: v })}
+    />
+  );
+
+  const backgroundCard = showBackground ? (
+    <InspectorCard
+      title="Background"
+      checked={fillEnabled}
+      onToggle={(checked) =>
+        onStyleChange({
+          drawBackground: checked,
+          background: checked ? fillColor : s.background,
+        })
+      }
+    >
+      {fillEnabled ? (
+        <ColorField
+          label="color"
+          value={fillColor}
+          palette={palette}
+          onChange={(v) => onStyleChange({ background: v, drawBackground: true })}
+        />
+      ) : null}
+    </InspectorCard>
+  ) : null;
+
+  /** Sibling cards (label): keep Text color / Background as separate inspector cards. */
+  const colorGridOutside = (
+    <div className={styles.typographyColorGrid}>
+      <InspectorCard title="Color">{textColorField}</InspectorCard>
+      {backgroundCard}
+    </div>
+  );
+
+  /** Button Text: one outer card with Typography / Padding / Color nested inside. */
+  const nestedSections = Boolean(paddingControls) && !paddingOutside && !colorsOutside;
+
+  const fontBlock = (
+    <>
       <FontFields props={props} onChange={onPropsChange} compact />
       {align && onAlignChange ? (
         <AlignIconGroup value={align} onChange={onAlignChange} wide />
       ) : null}
-      {paddingControls ? (
-        <InspectorCard title="Padding">
-          <AlignIconGroup
-            label="horizontal"
-            value={paddingControls.horizontalAlign}
-            onChange={(horizontalAlign) => paddingControls.onChange({ horizontalAlign })}
-            wide
-          />
-          <VerticalAlignIconGroup
-            value={paddingControls.verticalAlign}
-            onChange={(verticalAlign) => paddingControls.onChange({ verticalAlign })}
-          />
-          <div className={styles.paddingGrid4}>
-            <NumberField
-              label="top"
-              value={paddingControls.top}
-              min={0}
-              onChange={(v) => paddingControls.onChange({ paddingTop: Math.max(0, v) })}
-            />
-            <NumberField
-              label="right"
-              value={paddingControls.right}
-              min={0}
-              onChange={(v) => paddingControls.onChange({ paddingRight: Math.max(0, v) })}
-            />
-            <NumberField
-              label="bottom"
-              value={paddingControls.bottom}
-              min={0}
-              onChange={(v) => paddingControls.onChange({ paddingBottom: Math.max(0, v) })}
-            />
-            <NumberField
-              label="left"
-              value={paddingControls.left}
-              min={0}
-              onChange={(v) => paddingControls.onChange({ paddingLeft: Math.max(0, v) })}
-            />
-          </div>
-        </InspectorCard>
+      {verticalAlign && onVerticalAlignChange ? (
+        <VerticalAlignIconGroup value={verticalAlign} onChange={onVerticalAlignChange} />
       ) : null}
-      <div className={styles.typographyColorGrid}>
-        <InspectorCard title="Text color">
-          <ColorField
-            label="color"
-            value={s.textColor}
-            palette={palette}
-            onChange={(v) => onStyleChange({ textColor: v })}
-          />
-        </InspectorCard>
-        {showBackground ? (
-          <InspectorCard
-            title="Background"
-            checked={fillEnabled}
-            onToggle={(checked) =>
-              onStyleChange({
-                drawBackground: checked,
-                background: checked ? fillColor : s.background,
-              })
-            }
-          >
-            {fillEnabled ? (
-              <ColorField
-                label="color"
-                value={fillColor}
-                palette={palette}
-                onChange={(v) => onStyleChange({ background: v, drawBackground: true })}
+    </>
+  );
+
+  return (
+    <>
+      <div className={styles.typographyCard} data-testid="typography-card">
+        {headerToggle ? (
+          <div className={styles.inspectorCardHead}>
+            <div className={styles.typographyCardTitle}>{title}</div>
+            <label className={styles.visibilityToggle}>
+              <input
+                type="checkbox"
+                aria-label={headerToggle.label}
+                title={headerToggle.label}
+                checked={headerToggle.checked}
+                onChange={(event) => headerToggle.onChange(event.target.checked)}
               />
-            ) : null}
-          </InspectorCard>
-        ) : null}
+            </label>
+          </div>
+        ) : (
+          <div className={styles.typographyCardTitle}>{title}</div>
+        )}
+        {contentEnabled ? (
+          nestedSections ? (
+            <>
+              <InspectorCard title="Typography">
+                {fontBlock}
+                {paddingAlignFields}
+              </InspectorCard>
+              <InspectorCard title="Padding">{paddingFields}</InspectorCard>
+              <InspectorCard title="Color">{textColorField}</InspectorCard>
+              {backgroundCard}
+            </>
+          ) : (
+            <>
+              {fontBlock}
+              {paddingAlignFields}
+              {paddingOutside ? null : paddingFields}
+              {colorsOutside ? null : (
+                <>
+                  {textColorField}
+                  {backgroundCard}
+                </>
+              )}
+            </>
+          )
+        ) : (
+          <p className={styles.fieldHint}>
+            {disabledHint ?? "Enable text to edit typography and layout."}
+          </p>
+        )}
       </div>
-    </div>
+      {contentEnabled && paddingOutside ? (
+        <InspectorCard title="Padding">{paddingFields}</InspectorCard>
+      ) : null}
+      {contentEnabled && colorsOutside ? colorGridOutside : null}
+    </>
   );
 }
 
@@ -341,13 +435,13 @@ function VerticalAlignIconGroup({
   value,
   onChange,
 }: {
-  value: NonNullable<ButtonProps["verticalAlign"]>;
-  onChange: (align: NonNullable<ButtonProps["verticalAlign"]>) => void;
+  value: NonNullable<LabelProps["verticalAlign"] | ButtonProps["verticalAlign"]>;
+  onChange: (align: NonNullable<LabelProps["verticalAlign"]>) => void;
 }) {
   return (
     <div className={cn(styles.row, styles.alignRowWide)}>
       <label>vertical</label>
-      <IconButtonGroup ariaLabel="button vertical align">
+      <IconButtonGroup ariaLabel="vertical align">
         <IconToggleButton label="Align top" active={value === "top"} onClick={() => onChange("top")}>
           <VerticalAlignTopIcon fontSize="inherit" />
         </IconToggleButton>

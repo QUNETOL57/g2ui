@@ -28,7 +28,14 @@ export function defaultProps(type: WidgetType): Record<string, unknown> {
     case "panel":
       return { scrollable: false } satisfies PanelProps;
     case "label":
-      return { text: "Label", align: "left", fontFamily: "BDF", fontSize: 7, fontStyle: "regular" } satisfies LabelProps;
+      return {
+        text: "Label",
+        align: "left",
+        verticalAlign: "top",
+        fontFamily: "BDF",
+        fontSize: 7,
+        fontStyle: "regular",
+      } satisfies LabelProps;
     case "button":
       return {
         text: "Button",

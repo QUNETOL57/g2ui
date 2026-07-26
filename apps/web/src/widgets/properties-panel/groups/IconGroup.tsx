@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { IconProps, WidgetNode } from "@entities/ui-project";
 import { ICON_GROUPS, IconGlyph } from "@entities/icon/iconLibrary";
 import { cn } from "@shared/lib/cn";
+import { ChevronIcon } from "@widgets/canvas-workspace/toolbarIcons";
 
 import styles from "../PropertiesPanel.module.css";
 
@@ -73,7 +74,12 @@ export function IconGroup({
                 );
               }}
             >
-              <summary>{group}</summary>
+              <summary>
+                <span className={styles.iconAccordionTwistie}>
+                  <ChevronIcon size={12} />
+                </span>
+                <span>{group}</span>
+              </summary>
               <div className={styles.iconGrid}>
                 {icons.map((icon) => {
                   const isSelected = p.iconId === icon.id;

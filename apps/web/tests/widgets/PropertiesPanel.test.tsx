@@ -83,13 +83,16 @@ describe("PropertiesPanel: per-type groups", () => {
     expect(screen.getByText("Typography")).toBeInTheDocument();
   });
 
-  it("for button shows typography controls without a separate text field", () => {
+  it("for button shows text controls without a separate text field", () => {
     const project = withChildren(makeFixtureProject(), [makeButton("bt_1", "Save")]);
     get().setProject(project);
     selectAndRender("bt_1");
     expect(screen.getByText(/Properties · button/)).toBeInTheDocument();
+    expect(screen.getByText("Text")).toBeInTheDocument();
     expect(screen.getByText("Typography")).toBeInTheDocument();
     expect(screen.getByText("Padding")).toBeInTheDocument();
+    expect(screen.getByText("Color")).toBeInTheDocument();
+    expect(screen.getByLabelText("Show text")).toBeChecked();
     expect(screen.queryByLabelText("button text")).toBeNull();
   });
 
@@ -98,6 +101,18 @@ describe("PropertiesPanel: per-type groups", () => {
     get().setProject(project);
     selectAndRender("ic_1");
     expect(screen.getByPlaceholderText(/search or enter iconId/i)).toHaveValue("earth");
+  });
+
+  it("uses the shared chevron icon for icon-library accordions", () => {
+    const project = withChildren(makeFixtureProject(), [makeIcon("ic_1", "earth")]);
+    get().setProject(project);
+    selectAndRender("ic_1");
+
+    const summary = screen.getByText("Transport & Places").closest("summary");
+    const chevron = summary?.querySelector("svg");
+    expect(chevron).toHaveAttribute("width", "12");
+    expect(chevron).toHaveAttribute("height", "12");
+    expect(chevron?.querySelector("path")).toHaveAttribute("d", "M6 15l6-6 6 6");
   });
 
   it("for panel shows LayoutGroup with mode controls", () => {
@@ -205,12 +220,16 @@ describe("PropertiesPanel: writes to store via shared inputs", () => {
     get().setProject(project);
     selectAndRender("bt_1");
 
-    const cornersCard = screen.getByText("Corners").closest("div")!.parentElement!;
+    const cornersToggle = screen.getByText("Corners").closest("label")!;
+    await userEvent.click(within(cornersToggle).getByRole("checkbox"));
+
+    const cornersCard = cornersToggle.parentElement!;
     const radiusSlider = within(cornersCard).getByRole("slider", { name: "corner radius" });
     const radiusInput = within(cornersCard).getByLabelText("radius");
     fireEvent.change(radiusSlider, { target: { value: "6" } });
 
     expect(get().project.screens[0].children?.[0].style?.borderRadius).toBe(6);
+    expect(get().project.screens[0].children?.[0].style?.drawCorners).toBe(true);
 
     await userEvent.clear(radiusInput);
     await userEvent.type(radiusInput, "4");

@@ -15,6 +15,7 @@ import type {
 } from "@entities/ui-project";
 import type { LayoutNode } from "@entities/ui-project/lib/layoutEngine";
 import { resolveColor } from "@entities/ui-project/lib/color";
+import { effectiveBorderRadius } from "@entities/ui-project/lib/style";
 import { BitmapText, type BitmapTextAlign } from "@entities/font/BitmapText";
 import type { BitmapFontFace } from "@entities/font/fontTypes";
 import { findFontFace, measureTextWidth } from "@entities/font/fontLibrary";
@@ -271,7 +272,7 @@ function PanelVisual({
       ? resolveColor(node.style?.borderColor, ctx.palette, "#FFFFFF")
       : "transparent";
   const rectProps = (node.props ?? {}) as Partial<RectProps>;
-  const borderRadius = Math.max(0, node.style?.borderRadius ?? rectProps.radius ?? 0);
+  const borderRadius = effectiveBorderRadius(node.style, rectProps.radius ?? 0);
   if (borderRadius > 0) {
     return (
       <PixelRoundedBox
@@ -875,7 +876,7 @@ function labelTextOrigin(
   align: BitmapTextAlign,
   boxWidth: number,
   boxHeight: number,
-  verticalAlign: "top" | "center" | "bottom" = "center",
+  verticalAlign: "top" | "center" | "bottom" = "top",
 ) {
   const textWidth = measureTextWidth(face, text);
   const textHeight = face.lineHeight;
@@ -885,9 +886,9 @@ function labelTextOrigin(
   } else if (align === "right") {
     originX = boxWidth - textWidth;
   }
-  let originY = Math.floor((boxHeight - textHeight) / 2);
-  if (verticalAlign === "top") {
-    originY = 0;
+  let originY = 0;
+  if (verticalAlign === "center") {
+    originY = Math.floor((boxHeight - textHeight) / 2);
   } else if (verticalAlign === "bottom") {
     originY = boxHeight - textHeight;
   }
@@ -941,7 +942,7 @@ function LabelInlineEditor({
   color,
   bg,
   align,
-  verticalAlign = "center",
+  verticalAlign = "top",
   rect,
   nodeFrame,
   onCommit,
@@ -1137,6 +1138,7 @@ function LabelVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; re
     : "transparent";
   const face = findFontFace(props);
   const align = props.align ?? "left";
+  const verticalAlign = props.verticalAlign ?? "top";
   const isEditing = ctx.editingLabelId === node.id;
 
   if (isEditing && ctx.onLabelTextCommit) {
@@ -1148,6 +1150,7 @@ function LabelVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; re
         color={color}
         bg={bg}
         align={align}
+        verticalAlign={verticalAlign}
         rect={rect}
         nodeFrame={node.frame ?? { x: 0, y: 0, width: rect.width, height: rect.height }}
         onCommit={ctx.onLabelTextCommit}
@@ -1171,6 +1174,7 @@ function LabelVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; re
         text={props.text ?? ""}
         color={color}
         align={align}
+        verticalAlign={verticalAlign}
         boxWidth={rect.width}
         boxHeight={rect.height}
       />
@@ -1213,10 +1217,11 @@ function ButtonVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; r
   const horizontalAlign = props.horizontalAlign ?? "center";
   const verticalAlign = props.verticalAlign ?? "center";
   const isEditing = ctx.editingLabelId === node.id;
-  const text = props.text ?? "";
+  const showText = props.text !== undefined;
+  const text = showText ? (props.text ?? "") : "";
   const icon = props.iconId !== undefined ? getResolvedIconDefinition(props.iconId) : null;
   const iconPosition = props.iconPosition ?? "left";
-  const iconGap = text && icon ? Math.max(0, props.iconGap ?? 2) : 0;
+  const iconGap = showText && text && icon ? Math.max(0, props.iconGap ?? 2) : 0;
   const isIconVertical = iconPosition === "top" || iconPosition === "bottom";
   const textWidth = text ? measureTextWidth(face, text) : 0;
   const textHeight = text ? face.lineHeight : 0;
@@ -1249,7 +1254,7 @@ function ButtonVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; r
   const textBoxHeight = !isIconVertical || iconPosition === "top"
     ? Math.max(0, contentHeight - textTop)
     : Math.max(0, iconTop - iconGap - textTop);
-  const borderRadius = Math.max(0, node.style?.borderRadius ?? 0);
+  const borderRadius = effectiveBorderRadius(node.style);
 
   return (
     <div
@@ -1292,31 +1297,33 @@ function ButtonVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; r
         }}
       >
         {!icon ? (
-          isEditing && ctx.onLabelTextCommit ? (
-            <LabelInlineEditor
-              nodeId={node.id}
-              face={face}
-              initialText={text}
-              color={fg}
-              bg="transparent"
-              align={horizontalAlign}
-              verticalAlign={verticalAlign}
-              rect={{ x: 0, y: 0, width: contentWidth, height: contentHeight }}
-              nodeFrame={node.frame ?? { x: 0, y: 0, width: contentWidth, height: contentHeight }}
-              onCommit={ctx.onLabelTextCommit}
-              onSelect={ctx.onSelect}
-            />
-          ) : (
-            <BitmapText
-              face={face}
-              text={text}
-              color={fg}
-              align={horizontalAlign}
-              verticalAlign={verticalAlign}
-              boxWidth={contentWidth}
-              boxHeight={contentHeight}
-            />
-          )
+          showText ? (
+            isEditing && ctx.onLabelTextCommit ? (
+              <LabelInlineEditor
+                nodeId={node.id}
+                face={face}
+                initialText={text}
+                color={fg}
+                bg="transparent"
+                align={horizontalAlign}
+                verticalAlign={verticalAlign}
+                rect={{ x: 0, y: 0, width: contentWidth, height: contentHeight }}
+                nodeFrame={node.frame ?? { x: 0, y: 0, width: contentWidth, height: contentHeight }}
+                onCommit={ctx.onLabelTextCommit}
+                onSelect={ctx.onSelect}
+              />
+            ) : (
+              <BitmapText
+                face={face}
+                text={text}
+                color={fg}
+                align={horizontalAlign}
+                verticalAlign={verticalAlign}
+                boxWidth={contentWidth}
+                boxHeight={contentHeight}
+              />
+            )
+          ) : null
         ) : (
           <>
             <div
@@ -1330,7 +1337,7 @@ function ButtonVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; r
             >
               <IconGlyph iconId={icon.id} color={fg} pixelSize={iconPixelSize} />
             </div>
-            {isEditing && ctx.onLabelTextCommit ? (
+            {showText && isEditing && ctx.onLabelTextCommit ? (
               <div
                 style={{
                   position: "absolute",
@@ -1367,7 +1374,7 @@ function ButtonVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; r
                   onSelect={ctx.onSelect}
                 />
               </div>
-            ) : text ? (
+            ) : showText && text ? (
               <div
                 style={{
                   position: "absolute",

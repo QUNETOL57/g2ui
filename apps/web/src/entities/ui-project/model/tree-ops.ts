@@ -69,6 +69,13 @@ export function insertChild(p: UiProject, parentId: string, child: WidgetNode): 
   parent.children.push(child);
 }
 
+export function prependChild(p: UiProject, parentId: string, child: WidgetNode): void {
+  const parent = findNode(p, parentId);
+  if (!parent) return;
+  if (!parent.children) parent.children = [];
+  parent.children.unshift(child);
+}
+
 export function insertChildAfter(p: UiProject, siblingId: string, child: WidgetNode): boolean {
   const parent = findParent(p, siblingId);
   if (!parent?.children) return false;

@@ -68,12 +68,32 @@ describe("StyleGroup: button variant", () => {
     expect(screen.queryByText("Text")).not.toBeInTheDocument();
   });
 
+  it("Corners checkbox is off by default", () => {
+    const node = makeButton("bt_1");
+    render(<StyleGroup node={node} palette={palette} updateStyle={() => undefined} />);
+    const cornersCheckbox = screen.getByText("Corners").closest("label")!.querySelector("input")!;
+    expect(cornersCheckbox).not.toBeChecked();
+    expect(screen.queryByLabelText("radius")).not.toBeInTheDocument();
+  });
+
+  it("toggling Corners shows radius controls", async () => {
+    const handler = vi.fn();
+    const node = makeButton("bt_1");
+    render(<StyleGroup node={node} palette={palette} updateStyle={handler} />);
+    const cornersCheckbox = screen.getByText("Corners").closest("label")!.querySelector("input")!;
+    await userEvent.click(cornersCheckbox);
+    expect(handler).toHaveBeenCalledWith(
+      "bt_1",
+      expect.objectContaining({ drawCorners: true }),
+    );
+  });
+
   it("toggling Border shows width/color controls", async () => {
     const handler = vi.fn();
     const node = makeButton("bt_1");
     render(<StyleGroup node={node} palette={palette} updateStyle={handler} />);
     const cards = screen.getAllByRole("checkbox");
-    const borderCheckbox = cards[1];
+    const borderCheckbox = cards[2];
     await userEvent.click(borderCheckbox);
     expect(handler).toHaveBeenCalledWith(
       "bt_1",

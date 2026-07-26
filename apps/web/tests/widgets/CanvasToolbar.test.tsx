@@ -54,7 +54,10 @@ describe("CanvasToolbar: create tools", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Shapes tools" }));
     await userEvent.click(screen.getByRole("menuitem", { name: "Triangle" }));
-    expect(get().project.screens[0].children?.[1].type).toBe("triangle");
+    expect(get().project.screens[0].children?.map((child) => child.type)).toEqual([
+      "triangle",
+      "circle",
+    ]);
   });
 
   it("toggles marker drawing mode", async () => {

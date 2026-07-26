@@ -1,5 +1,5 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
 import { LabelGroup } from "@widgets/properties-panel/groups/LabelGroup";
 
@@ -13,5 +13,35 @@ describe("LabelGroup", () => {
     );
     expect(screen.queryByLabelText("label text")).toBeNull();
     expect(screen.getByText("Typography")).toBeInTheDocument();
+  });
+
+  it("exposes vertical alignment and emits changes", () => {
+    const handler = vi.fn();
+    const node = makeLabel("lbl_1", "Hi");
+    render(
+      <LabelGroup node={node} palette={[]} onChange={handler} onStyleChange={() => undefined} />,
+    );
+
+    expect(screen.getByRole("group", { name: "vertical align" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Align top" })).toHaveAttribute("aria-pressed", "true");
+
+    fireEvent.click(screen.getByRole("button", { name: "Align middle" }));
+    expect(handler).toHaveBeenLastCalledWith({ verticalAlign: "center" });
+  });
+
+  it("renders text color and background outside the typography card", () => {
+    const node = makeLabel("lbl_1", "Hi");
+    const { container } = render(
+      <LabelGroup node={node} palette={[]} onChange={() => undefined} onStyleChange={() => undefined} />,
+    );
+
+    const typographyCard = screen.getByTestId("typography-card");
+    expect(typographyCard).toHaveTextContent("Typography");
+    expect(typographyCard).not.toHaveTextContent("Color");
+    expect(typographyCard).not.toHaveTextContent("Background");
+    expect(container.querySelector("[data-testid='typography-card'] [class*='typographyColorGrid']")).toBeNull();
+
+    expect(screen.getByText("Color")).toBeInTheDocument();
+    expect(screen.getByText("Background")).toBeInTheDocument();
   });
 });

@@ -214,7 +214,10 @@ describe("CanvasWorkspace: marker drawing", () => {
     fireEvent.mouseUp(window);
 
     expect(get().project.screens[0].children).toHaveLength(2);
-    expect(get().project.screens[0].children?.[1]?.type).toBe("freehand");
+    expect(get().project.screens[0].children?.map((child) => child.type)).toEqual([
+      "freehand",
+      "label",
+    ]);
   });
 });
 

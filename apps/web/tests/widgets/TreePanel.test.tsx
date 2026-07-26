@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import type { WidgetNode } from "@entities/ui-project";
@@ -18,6 +18,12 @@ import {
 import { resetEditorStore } from "../fixtures/store";
 
 const get = () => useEditorStore.getState();
+
+function getTreeRowIds() {
+  return screen
+    .getAllByTestId("tree-node-row")
+    .map((row) => row.dataset.treeNodeId);
+}
 
 beforeEach(() => {
   resetEditorStore();
@@ -54,6 +60,34 @@ describe("TreePanel: rendering", () => {
     render(<TreePanel />);
     expect(screen.getAllByText("pn_1").length).toBeGreaterThan(0);
     expect(screen.getAllByText("lbl_inner").length).toBeGreaterThan(0);
+  });
+
+  it("renders a newly added screen widget at the top of the layer list", () => {
+    get().setProject(withChildren(makeFixtureProject(), [makeLabel("lbl_existing")]));
+    render(<TreePanel />);
+
+    let newId: string | null = null;
+    act(() => {
+      newId = get().addWidget("screen_main", "button");
+    });
+
+    expect(getTreeRowIds()).toEqual(["screen_main", newId, "lbl_existing"]);
+  });
+
+  it("renders a newly added panel child above its existing siblings", () => {
+    get().setProject(
+      withChildren(makeFixtureProject(), [
+        makePanel("pan_1", [makeLabel("lbl_existing")]),
+      ]),
+    );
+    render(<TreePanel />);
+
+    let newId: string | null = null;
+    act(() => {
+      newId = get().addWidget("pan_1", "button");
+    });
+
+    expect(getTreeRowIds()).toEqual(["screen_main", "pan_1", newId, "lbl_existing"]);
   });
 
   it("shows 'No active screen' when active screen id is invalid", () => {

@@ -25,10 +25,13 @@ export function LabelGroup({
         palette={palette}
         backgroundDefaultEnabled={false}
         showBackground
+        colorsOutside
         onPropsChange={(patch) => onChange(patch as Partial<LabelProps>)}
         onStyleChange={onStyleChange}
         align={p.align ?? "left"}
         onAlignChange={(align) => onChange({ align })}
+        verticalAlign={p.verticalAlign ?? "top"}
+        onVerticalAlignChange={(verticalAlign) => onChange({ verticalAlign })}
       />
     </div>
   );

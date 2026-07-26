@@ -37,6 +37,7 @@ import {
   normalizeProjectTextFrames,
   normalizeTextNodeFrame,
   offsetWidgetFrame,
+  prependChild,
   pruneCopySelection,
   removeNode,
   resolvePasteParentOutsideClipboard,
@@ -316,6 +317,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   beginLabelTextEdit: (nodeId) => {
     const node = findNode(get().project, nodeId);
     if (!node || (node.type !== "label" && node.type !== "button")) return;
+    if (node.type === "button" && (node.props as ButtonProps | undefined)?.text === undefined) {
+      return;
+    }
     get().selectNode(nodeId);
     get().beginHistoryBatch();
     set({ editingLabelId: nodeId });
@@ -444,7 +448,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const id = nextId(type.slice(0, 3), usedIds);
       newId = id;
       const node = makeWidgetWithFrame(id, type, parentId, nextProject);
-      insertChild(nextProject, parentId, node);
+      prependChild(nextProject, parentId, node);
       return {
         ...recordHistory(state),
         project: nextProject,
@@ -466,7 +470,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const usedIds = collectIds(nextProject);
       const id = nextId("fre", usedIds);
       const stroke = makeFreehandStroke(id, parentId, normalizedPoints, nextProject, state.markerStyle);
-      insertChild(nextProject, parentId, stroke);
+      prependChild(nextProject, parentId, stroke);
       newId = id;
       return {
         ...recordHistory(state),

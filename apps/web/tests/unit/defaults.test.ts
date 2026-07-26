@@ -35,9 +35,10 @@ describe("defaultProps", () => {
     expect(defaultProps("panel")).toEqual({ scrollable: false });
   });
 
-  it("provides label text", () => {
-    const label = defaultProps("label") as { text: string };
+  it("provides label text top-aligned by default", () => {
+    const label = defaultProps("label") as { text: string; verticalAlign?: string };
     expect(label.text).toBe("Label");
+    expect(label.verticalAlign).toBe("top");
   });
 
   it("provides button paddings and alignment", () => {

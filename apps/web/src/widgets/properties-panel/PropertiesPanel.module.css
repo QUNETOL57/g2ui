@@ -323,6 +323,11 @@
   cursor: pointer;
 }
 
+.inspectorCardToggle input[type="checkbox"] {
+  margin: 0;
+  flex: 0 0 auto;
+}
+
 .visibilityToggle {
   display: inline-flex;
   align-items: center;
@@ -481,12 +486,37 @@
 }
 
 .iconAccordion summary {
+  display: flex;
+  align-items: center;
+  gap: 2px;
   cursor: pointer;
   padding: 6px 0;
   font-size: var(--font-size-md);
   color: var(--color-text);
-  list-style-position: inside;
+  list-style: none;
   user-select: none;
+}
+
+.iconAccordion summary::-webkit-details-marker {
+  display: none;
+}
+
+.iconAccordionTwistie {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  color: var(--color-text-muted);
+  line-height: 0;
+  transform: rotate(90deg);
+  transition: transform 120ms ease, color 120ms ease;
+}
+
+.iconAccordion[open] .iconAccordionTwistie {
+  color: var(--color-accent);
+  transform: rotate(180deg);
 }
 
 .iconAccordion[open] summary {

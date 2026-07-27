@@ -197,7 +197,7 @@ describe("TypographyCard: background toggle", () => {
     expect(screen.getByText("Background")).toBeInTheDocument();
   });
 
-  it("nests Typography, Padding, and Color inside the Text card", async () => {
+  it("nests Typography and Padding inside Text, with Color as a sibling card", async () => {
     const toggle = vi.fn();
     render(
       <TypographyCard
@@ -208,6 +208,7 @@ describe("TypographyCard: background toggle", () => {
         palette={palette}
         backgroundDefaultEnabled
         showBackground={false}
+        colorsOutside
         onPropsChange={() => undefined}
         onStyleChange={() => undefined}
         paddingControls={{
@@ -226,9 +227,41 @@ describe("TypographyCard: background toggle", () => {
     expect(textCard).toHaveTextContent("Text");
     expect(textCard).toHaveTextContent("Typography");
     expect(textCard).toHaveTextContent("Padding");
-    expect(textCard).toHaveTextContent("Color");
+    expect(textCard).not.toHaveTextContent("Color");
+    expect(screen.getByTestId("color-card")).toHaveTextContent("Color");
 
     await userEvent.click(screen.getByLabelText("Show text"));
     expect(toggle).toHaveBeenCalledWith(false);
+    expect(screen.getByTestId("color-card")).toBeInTheDocument();
+  });
+
+  it("keeps Color visible when text is disabled", () => {
+    render(
+      <TypographyCard
+        title="Text"
+        headerToggle={{ label: "Show text", checked: false, onChange: () => undefined }}
+        disabledHint="Enable text to edit typography and padding."
+        props={defaultProps}
+        style={{}}
+        palette={palette}
+        backgroundDefaultEnabled
+        showBackground={false}
+        colorsOutside
+        onPropsChange={() => undefined}
+        onStyleChange={() => undefined}
+        paddingControls={{
+          horizontalAlign: "center",
+          verticalAlign: "center",
+          top: 1,
+          right: 2,
+          bottom: 3,
+          left: 4,
+          onChange: () => undefined,
+        }}
+      />,
+    );
+
+    expect(screen.getByText(/Enable text to edit typography and padding/)).toBeInTheDocument();
+    expect(screen.getByTestId("color-card")).toBeInTheDocument();
   });
 });

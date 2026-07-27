@@ -6,7 +6,13 @@ import { useEditorStore } from "@entities/ui-project/model/store";
 import { findNode } from "@entities/ui-project/model/tree-ops";
 import { EditorPage } from "@pages/editor/EditorPage";
 
-import { makeFixtureProject, makeLabel, withChildren } from "../fixtures/projects";
+import {
+  makeFixtureProject,
+  makeLabel,
+  makeLine,
+  makeRect,
+  withChildren,
+} from "../fixtures/projects";
 import { resetEditorStore } from "../fixtures/store";
 
 const get = () => useEditorStore.getState();
@@ -52,6 +58,8 @@ describe("EditorPage", () => {
     expect(screen.getByRole("menuitem", { name: "View" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Keyboard shortcuts" })).toBeInTheDocument();
     expect(screen.getByText("Enter / Double-click")).toBeInTheDocument();
+    expect(screen.getByText("Rotate shape 90°")).toBeInTheDocument();
+    expect(screen.getByText("R")).toBeInTheDocument();
   });
 
   it("renders the error banner when lastError is set", () => {
@@ -241,5 +249,50 @@ describe("EditorPage keyboard shortcuts", () => {
 
     await userEvent.keyboard("{Control>}v{/Control}");
     expect(get().project.screens[0].children).toHaveLength(1);
+  });
+
+  it("R rotates the selected shape by 90° clockwise", async () => {
+    const project = withChildren(makeFixtureProject(), [{ ...makeRect("rc_1"), rotation: 0 }]);
+    get().setProject(project);
+    get().selectNode("rc_1");
+    render(<EditorPage onBackToLibrary={() => undefined} />);
+
+    await userEvent.keyboard("r");
+    expect(findNode(get().project, "rc_1")?.rotation).toBe(90);
+
+    await userEvent.keyboard("r");
+    expect(findNode(get().project, "rc_1")?.rotation).toBe(180);
+  });
+
+  it("Shift+R rotates the selected shape by 90° counter-clockwise", async () => {
+    const project = withChildren(makeFixtureProject(), [{ ...makeLine("ln_1"), rotation: 0 }]);
+    get().setProject(project);
+    get().selectNode("ln_1");
+    render(<EditorPage onBackToLibrary={() => undefined} />);
+
+    await userEvent.keyboard("{Shift>}r{/Shift}");
+    expect(findNode(get().project, "ln_1")?.rotation).toBe(270);
+  });
+
+  it("does not rotate non-shape selection with R", async () => {
+    const project = withChildren(makeFixtureProject(), [makeLabel("lbl_1")]);
+    get().setProject(project);
+    get().selectNode("lbl_1");
+    render(<EditorPage onBackToLibrary={() => undefined} />);
+
+    await userEvent.keyboard("r");
+    expect(findNode(get().project, "lbl_1")?.rotation).toBeUndefined();
+  });
+
+  it("does not rotate when focus is in a text input", async () => {
+    const project = withChildren(makeFixtureProject(), [{ ...makeRect("rc_1"), rotation: 0 }]);
+    get().setProject(project);
+    get().selectNode("rc_1");
+    render(<EditorPage onBackToLibrary={() => undefined} />);
+
+    const input = screen.getAllByRole("textbox")[0] as HTMLInputElement;
+    input.focus();
+    await userEvent.keyboard("r");
+    expect(findNode(get().project, "rc_1")?.rotation).toBe(0);
   });
 });

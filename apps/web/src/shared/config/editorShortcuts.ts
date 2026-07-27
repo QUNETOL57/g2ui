@@ -27,6 +27,14 @@ export function getDuplicateShortcut() {
   return isMacPlatform() ? "⌘D" : "Ctrl+D";
 }
 
+export function getRotateClockwiseShortcut() {
+  return "R";
+}
+
+export function getRotateCounterClockwiseShortcut() {
+  return "Shift+R";
+}
+
 export function getEditorShortcuts(): EditorShortcut[] {
   const mac = isMacPlatform();
   const mod = mac ? "⌘" : "Ctrl";
@@ -38,6 +46,8 @@ export function getEditorShortcuts(): EditorShortcut[] {
     { label: "Paste", keys: getPasteShortcut() },
     { label: "Duplicate selection", keys: getDuplicateShortcut() },
     { label: "Delete selection", keys: "Delete / Backspace" },
+    { label: "Rotate shape 90°", keys: getRotateClockwiseShortcut() },
+    { label: "Rotate shape −90°", keys: getRotateCounterClockwiseShortcut() },
     { label: "Edit label or button", keys: "Enter / Double-click" },
     { label: "Add to selection", keys: mac ? "⌘Click" : "Ctrl+Click" },
     { label: "Range selection", keys: "Shift+Click" },

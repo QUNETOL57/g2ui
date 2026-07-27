@@ -53,6 +53,7 @@ export function ButtonGroup({
 
   return (
     <div className={cn(styles.group, styles.textGroup)}>
+      <h4>Content</h4>
       <div className={styles.typographyCard}>
         <div className={styles.inspectorCardHead}>
           <div className={styles.typographyCardTitle}>Icon</div>
@@ -172,12 +173,13 @@ export function ButtonGroup({
             onChange({ text: undefined });
           },
         }}
-        disabledHint="Enable text to edit typography, padding, and color."
+        disabledHint="Enable text to edit typography and padding."
         props={p}
         style={node.style}
         palette={palette}
         backgroundDefaultEnabled
         showBackground={false}
+        colorsOutside
         onPropsChange={(patch) => onChange(patch as Partial<ButtonProps>)}
         onStyleChange={onStyleChange}
         paddingControls={{

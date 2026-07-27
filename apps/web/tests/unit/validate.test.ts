@@ -120,6 +120,14 @@ describe("validateProject", () => {
     expect(validateProject(project)).toEqual({ ok: true, issues: [] });
   });
 
+  it("returns ok for shapes with 90° rotation", () => {
+    const project = withChildren(makeFixtureProject(), [
+      { ...makeCircle("cir_1"), rotation: 90 },
+      { ...makeTriangle("tri_1"), rotation: 180 },
+    ]);
+    expect(validateProject(project)).toEqual({ ok: true, issues: [] });
+  });
+
   it("schema version constant is stable", () => {
     expect(IR_SCHEMA_VERSION).toBe("0.1.0");
   });

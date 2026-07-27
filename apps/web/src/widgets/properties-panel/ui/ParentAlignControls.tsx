@@ -18,6 +18,8 @@ interface ParentAlignControlsProps {
   onHorizontalChange: (value: ParentAlignHorizontal) => void;
   onVerticalChange: (value: ParentAlignVertical) => void;
   disabled?: boolean;
+  /** Optional controls rendered after the align buttons (same row). */
+  trailing?: ReactNode;
 }
 
 const horizontalOptions = [
@@ -66,6 +68,7 @@ export function ParentAlignControls({
   onHorizontalChange,
   onVerticalChange,
   disabled = false,
+  trailing,
 }: ParentAlignControlsProps) {
   return (
     <div className={styles.parentAlignButtons} role="toolbar" aria-label="Align in parent">
@@ -92,6 +95,12 @@ export function ParentAlignControls({
           <Icon fontSize="inherit" />
         </ParentAlignButton>
       ))}
+      {trailing ? (
+        <>
+          <span className={styles.parentAlignDivider} aria-hidden />
+          {trailing}
+        </>
+      ) : null}
     </div>
   );
 }

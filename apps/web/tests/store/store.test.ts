@@ -5,11 +5,16 @@ import { findNode } from "@entities/ui-project/model/tree-ops";
 
 import {
   makeButton,
+  makeCircle,
   makeFixtureProject,
+  makeFreehand,
   makeIcon,
   makeLabel,
+  makeLine,
   makePanel,
+  makeRect,
   makeSecondScreen,
+  makeTriangle,
   withChildren,
   withScreens,
 } from "../fixtures/projects";
@@ -380,6 +385,91 @@ describe("store: updateNode / updateFrame / updateProps / updateLayout / updateS
     expect(() => get().updateProps("ghost", {})).not.toThrow();
     expect(() => get().updateLayout("ghost", {})).not.toThrow();
     expect(() => get().updateStyle("ghost", {})).not.toThrow();
+  });
+
+  it("updateNode snaps shape rotation to 90° steps", () => {
+    get().setProject(
+      withChildren(makeFixtureProject(), [
+        makeRect("rc_1"),
+        makeCircle("cir_1"),
+        makeTriangle("tri_1"),
+        makeLine("ln_1"),
+      ]),
+    );
+
+    get().updateNode("rc_1", { rotation: 45 });
+    get().updateNode("cir_1", { rotation: 100 });
+    get().updateNode("tri_1", { rotation: -10 });
+    get().updateNode("ln_1", { rotation: 405 });
+
+    expect(findNode(get().project, "rc_1")?.rotation).toBe(90);
+    expect(findNode(get().project, "cir_1")?.rotation).toBe(90);
+    expect(findNode(get().project, "tri_1")?.rotation).toBe(0);
+    expect(findNode(get().project, "ln_1")?.rotation).toBe(90);
+  });
+});
+
+describe("store: rotateSelectedNodes", () => {
+  it("rotates selected rotatable shapes by 90° clockwise", () => {
+    get().setProject(
+      withChildren(makeFixtureProject(), [
+        { ...makeRect("rc_1"), rotation: 0 },
+        { ...makeLine("ln_1"), rotation: 270 },
+      ]),
+    );
+    get().setSelection(["rc_1", "ln_1"]);
+
+    expect(get().rotateSelectedNodes()).toBe(true);
+    expect(findNode(get().project, "rc_1")?.rotation).toBe(90);
+    expect(findNode(get().project, "ln_1")?.rotation).toBe(0);
+  });
+
+  it("rotates counter-clockwise and wraps across 0", () => {
+    get().setProject(withChildren(makeFixtureProject(), [{ ...makeCircle("cir_1"), rotation: 0 }]));
+    get().selectNode("cir_1");
+
+    expect(get().rotateSelectedNodes(-1)).toBe(true);
+    expect(findNode(get().project, "cir_1")?.rotation).toBe(270);
+  });
+
+  it("skips locked nodes and non-rotatable types", () => {
+    get().setProject(
+      withChildren(makeFixtureProject(), [
+        { ...makeTriangle("tri_1"), rotation: 90 },
+        { ...makeRect("rc_1"), rotation: 0, locked: true },
+        makeLabel("lbl_1"),
+        makeFreehand("fre_1"),
+      ]),
+    );
+    get().setSelection(["tri_1", "rc_1", "lbl_1", "fre_1"]);
+
+    expect(get().rotateSelectedNodes(1)).toBe(true);
+    expect(findNode(get().project, "tri_1")?.rotation).toBe(180);
+    expect(findNode(get().project, "rc_1")?.rotation).toBe(0);
+    expect(findNode(get().project, "lbl_1")?.rotation).toBeUndefined();
+    expect(findNode(get().project, "fre_1")?.rotation).toBeUndefined();
+  });
+
+  it("returns false when nothing rotatable is selected", () => {
+    get().setProject(withChildren(makeFixtureProject(), [makeButton("btn_1")]));
+    get().selectNode("btn_1");
+    expect(get().rotateSelectedNodes()).toBe(false);
+
+    get().selectNode(null);
+    expect(get().rotateSelectedNodes()).toBe(false);
+  });
+
+  it("records history so rotation can be undone", () => {
+    get().setProject(withChildren(makeFixtureProject(), [{ ...makeRect("rc_1"), rotation: 0 }]));
+    get().selectNode("rc_1");
+    get().rotateSelectedNodes(1);
+    expect(findNode(get().project, "rc_1")?.rotation).toBe(90);
+
+    get().undo();
+    expect(findNode(get().project, "rc_1")?.rotation).toBe(0);
+
+    get().redo();
+    expect(findNode(get().project, "rc_1")?.rotation).toBe(90);
   });
 });
 

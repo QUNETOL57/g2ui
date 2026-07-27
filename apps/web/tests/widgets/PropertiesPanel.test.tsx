@@ -14,6 +14,7 @@ import {
   makeLabel,
   makeLine,
   makePanel,
+  makeRect,
   makeTriangle,
   withChildren,
 } from "../fixtures/projects";
@@ -123,11 +124,13 @@ describe("PropertiesPanel: per-type groups", () => {
     expect(screen.getByRole("button", { name: "layout mode" })).toBeInTheDocument();
   });
 
-  it("for line shows Appearance / Stroke", () => {
+  it("for line shows Appearance / Stroke and rotate controls", () => {
     const project = withChildren(makeFixtureProject(), [makeLine("ln_1")]);
     get().setProject(project);
     selectAndRender("ln_1");
     expect(screen.getByText("Stroke")).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Rotate shape" })).toBeInTheDocument();
+    expect(screen.getByRole("toolbar", { name: "Align in parent" })).toBeInTheDocument();
   });
 
   it("for circle shows fill, border and rotation", () => {
@@ -137,7 +140,7 @@ describe("PropertiesPanel: per-type groups", () => {
     expect(screen.getByText(/Properties · circle/)).toBeInTheDocument();
     expect(screen.getByText("Fill")).toBeInTheDocument();
     expect(screen.getByText("Border")).toBeInTheDocument();
-    expect(screen.getByText("R")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Rotate 90° clockwise" })).toBeInTheDocument();
   });
 
   it("for triangle shows fill, border and rotation", () => {
@@ -145,16 +148,28 @@ describe("PropertiesPanel: per-type groups", () => {
     get().setProject(project);
     selectAndRender("tri_1");
     expect(screen.getByText(/Properties · triangle/)).toBeInTheDocument();
-    expect(screen.getByText("R")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Rotate 90° counter-clockwise" })).toBeInTheDocument();
   });
 
-  it("for freehand shows stroke controls", () => {
+  it("for rect shows 90° rotate controls", () => {
+    const project = withChildren(makeFixtureProject(), [makeRect("rc_1")]);
+    get().setProject(project);
+    selectAndRender("rc_1");
+    expect(screen.getByText(/Properties · rect/)).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Rotate shape" })).toBeInTheDocument();
+    expect(screen.getByRole("toolbar", { name: "Align in parent" })).toContainElement(
+      screen.getByRole("group", { name: "Rotate shape" }),
+    );
+  });
+
+  it("for freehand shows stroke controls without rotation", () => {
     const project = withChildren(makeFixtureProject(), [makeFreehand("fre_1")]);
     get().setProject(project);
     selectAndRender("fre_1");
     expect(screen.getByText(/Properties · freehand/)).toBeInTheDocument();
     expect(screen.getByText("Stroke")).toBeInTheDocument();
     expect(screen.queryByText("Fill")).not.toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Rotate shape" })).not.toBeInTheDocument();
   });
 });
 

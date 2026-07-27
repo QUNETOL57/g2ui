@@ -4,7 +4,18 @@ import { describe, expect, it, vi } from "vitest";
 
 import { FrameGroup } from "@widgets/properties-panel/groups/FrameGroup";
 
-import { makeButton, makeCircle, makeFixtureProject, makeFreehand, makeIcon, makeLabel, makeRect, makeTriangle, withChildren } from "../fixtures/projects";
+import {
+  makeButton,
+  makeCircle,
+  makeFixtureProject,
+  makeFreehand,
+  makeIcon,
+  makeLabel,
+  makeLine,
+  makeRect,
+  makeTriangle,
+  withChildren,
+} from "../fixtures/projects";
 
 describe("FrameGroup", () => {
   const project = withChildren(makeFixtureProject(), [makeLabel("lbl_1")]);
@@ -48,34 +59,32 @@ describe("FrameGroup", () => {
     expect(handler).toHaveBeenCalledWith("b_1", { x: 5 });
   });
 
-  it("shows rotation for shapes and commits a normalized value", async () => {
-    const node = { ...makeRect("rc_1"), rotation: 0 };
-    const updateNode = vi.fn();
-    render(
-      <FrameGroup
-        node={node}
-        project={project}
-        draftFrame={null}
-        updateFrame={() => undefined}
-        updateNode={updateNode}
-      />,
-    );
-    expect(screen.getByText("R")).toBeInTheDocument();
-
-    const inputs = screen.getAllByRole("spinbutton");
-    await userEvent.clear(inputs[4]);
-    await userEvent.type(inputs[4], "405");
-    await userEvent.tab();
-
-    expect(updateNode).toHaveBeenCalledWith("rc_1", { rotation: 45 });
+  it("shows rotate buttons for rect, circle, triangle and line", () => {
+    for (const node of [
+      { ...makeRect("rc_1"), rotation: 45 },
+      { ...makeCircle("cir_1"), rotation: 10 },
+      { ...makeTriangle("tri_1"), rotation: 200 },
+      { ...makeLine("ln_1"), rotation: 270 },
+    ]) {
+      const shapeProject = withChildren(makeFixtureProject(), [node]);
+      const { unmount } = render(
+        <FrameGroup
+          node={node}
+          project={shapeProject}
+          draftFrame={null}
+          updateFrame={() => undefined}
+          updateNode={() => undefined}
+        />,
+      );
+      expect(screen.queryByText("R")).not.toBeInTheDocument();
+      const alignToolbar = screen.getByRole("toolbar", { name: "Align in parent" });
+      expect(alignToolbar).toContainElement(screen.getByRole("group", { name: "Rotate shape" }));
+      unmount();
+    }
   });
 
-  it("shows rotation for circle, triangle and freehand", () => {
-    for (const node of [
-      { ...makeCircle("cir_1"), rotation: 10 },
-      { ...makeTriangle("tri_1"), rotation: 20 },
-      { ...makeFreehand("fre_1"), rotation: 30 },
-    ]) {
+  it("does not show rotation controls for freehand, button or label", () => {
+    for (const node of [makeFreehand("fre_1"), makeButton("b_1"), makeLabel("lbl_1")]) {
       const { unmount } = render(
         <FrameGroup
           node={node}
@@ -85,9 +94,66 @@ describe("FrameGroup", () => {
           updateNode={() => undefined}
         />,
       );
-      expect(screen.getByText("R")).toBeInTheDocument();
+      expect(screen.queryByRole("group", { name: "Rotate shape" })).not.toBeInTheDocument();
       unmount();
     }
+  });
+
+  it("rotates clockwise and counter-clockwise by 90° via toolbar buttons", async () => {
+    const node = { ...makeRect("rc_1"), rotation: 90 };
+    const updateNode = vi.fn();
+    render(
+      <FrameGroup
+        node={node}
+        project={withChildren(makeFixtureProject(), [node])}
+        draftFrame={null}
+        updateFrame={() => undefined}
+        updateNode={updateNode}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Rotate 90° clockwise" }));
+    expect(updateNode).toHaveBeenCalledWith("rc_1", { rotation: 180 });
+
+    await userEvent.click(screen.getByRole("button", { name: "Rotate 90° counter-clockwise" }));
+    expect(updateNode).toHaveBeenLastCalledWith("rc_1", { rotation: 0 });
+  });
+
+  it.each([
+    ["rect", makeRect("rc_1"), 0, 90],
+    ["circle", makeCircle("cir_1"), 90, 180],
+    ["triangle", makeTriangle("tri_1"), 180, 270],
+    ["line", makeLine("ln_1"), 270, 0],
+  ] as const)("rotates %s from %i to %i clockwise", async (_type, base, from, to) => {
+    const updateNode = vi.fn();
+    const node = { ...base, rotation: from };
+    render(
+      <FrameGroup
+        node={node}
+        project={withChildren(makeFixtureProject(), [node])}
+        draftFrame={null}
+        updateFrame={() => undefined}
+        updateNode={updateNode}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Rotate 90° clockwise" }));
+    expect(updateNode).toHaveBeenCalledWith(base.id, { rotation: to });
+  });
+
+  it("disables rotate controls when the node is locked", () => {
+    const node = { ...makeLine("ln_1"), rotation: 0, locked: true };
+    render(
+      <FrameGroup
+        node={node}
+        project={project}
+        draftFrame={null}
+        updateFrame={() => undefined}
+        updateNode={() => undefined}
+        disabled
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Rotate 90° clockwise" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Rotate 90° counter-clockwise" })).toBeDisabled();
   });
 
   it("clamps W to icon definition size for icon nodes", async () => {

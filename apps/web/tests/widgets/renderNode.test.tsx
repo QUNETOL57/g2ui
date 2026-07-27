@@ -450,23 +450,31 @@ describe("PreviewNode: per-type rendering", () => {
     expect(middleRow.some((rect) => Number(rect.getAttribute("width")) === 2)).toBe(true);
   });
 
-  it("applies rotation to shape nodes", () => {
-    const rect = { ...makeRect("rc_1"), rotation: 45 };
-    const { container } = renderProject([rect]);
-    const node = container.querySelector('[data-widget-type="rect"]') as HTMLElement;
-    expect(node.style.transform).toBe("rotate(45deg)");
-  });
-
-  it("applies rotation to circle and triangle nodes", () => {
-    const circle = { ...makeCircle("cir_1"), rotation: 30 };
-    const triangle = { ...makeTriangle("tri_1"), rotation: -15 };
-    const { container } = renderProject([circle, triangle]);
+  it("applies 90° rotation to rect, circle, triangle and line", () => {
+    const { container } = renderProject([
+      { ...makeRect("rc_1"), rotation: 90 },
+      { ...makeCircle("cir_1"), rotation: 180 },
+      { ...makeTriangle("tri_1"), rotation: 270 },
+      { ...makeLine("ln_1"), rotation: 90 },
+    ]);
+    expect((container.querySelector('[data-widget-type="rect"]') as HTMLElement).style.transform).toBe(
+      "rotate(90deg)",
+    );
     expect((container.querySelector('[data-widget-type="circle"]') as HTMLElement).style.transform).toBe(
-      "rotate(30deg)",
+      "rotate(180deg)",
     );
     expect((container.querySelector('[data-widget-type="triangle"]') as HTMLElement).style.transform).toBe(
-      "rotate(-15deg)",
+      "rotate(270deg)",
     );
+    expect((container.querySelector('[data-widget-type="line"]') as HTMLElement).style.transform).toBe(
+      "rotate(90deg)",
+    );
+  });
+
+  it("omits transform when rotation is 0", () => {
+    const { container } = renderProject([{ ...makeRect("rc_1"), rotation: 0 }]);
+    const node = container.querySelector('[data-widget-type="rect"]') as HTMLElement;
+    expect(node.style.transform).toBe("");
   });
 
   it("uses pixelated rendering on triangle svg", () => {

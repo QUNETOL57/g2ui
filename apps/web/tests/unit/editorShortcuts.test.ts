@@ -5,6 +5,8 @@ import {
   getDuplicateShortcut,
   getEditorShortcuts,
   getPasteShortcut,
+  getRotateClockwiseShortcut,
+  getRotateCounterClockwiseShortcut,
 } from "@shared/config/editorShortcuts";
 
 describe("editorShortcuts", () => {
@@ -20,8 +22,15 @@ describe("editorShortcuts", () => {
     expect(labels).toContain("Paste");
     expect(labels).toContain("Duplicate selection");
     expect(labels).toContain("Delete selection");
+    expect(labels).toContain("Rotate shape 90°");
+    expect(labels).toContain("Rotate shape −90°");
     expect(labels).toContain("Zoom canvas");
     expect(labels).toContain("Close menu, dialog, or dropdown");
+  });
+
+  it("exposes rotate shortcuts", () => {
+    expect(getRotateClockwiseShortcut()).toBe("R");
+    expect(getRotateCounterClockwiseShortcut()).toBe("Shift+R");
   });
 
   it("merges label editing shortcuts into one row", () => {

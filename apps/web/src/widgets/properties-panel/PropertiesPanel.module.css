@@ -133,6 +133,12 @@
   margin-top: 8px;
 }
 
+.inlineButtonGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .parentAlignDivider {
   width: 1px;
   height: 25px;

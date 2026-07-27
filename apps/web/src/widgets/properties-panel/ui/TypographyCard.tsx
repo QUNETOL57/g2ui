@@ -165,8 +165,16 @@ export function TypographyCard({
     </div>
   );
 
-  /** Button Text: one outer card with Typography / Padding / Color nested inside. */
-  const nestedSections = Boolean(paddingControls) && !paddingOutside && !colorsOutside;
+  /** Button content: Color as a sibling card matching Icon / Text. */
+  const colorCardOutside = (
+    <div className={styles.typographyCard} data-testid="color-card">
+      <div className={styles.typographyCardTitle}>Color</div>
+      {textColorField}
+    </div>
+  );
+
+  /** Button Text: nest Typography / Padding; Color may stay inside or move outside. */
+  const nestedSections = Boolean(paddingControls) && !paddingOutside;
 
   const fontBlock = (
     <>
@@ -207,8 +215,12 @@ export function TypographyCard({
                 {paddingAlignFields}
               </InspectorCard>
               <InspectorCard title="Padding">{paddingFields}</InspectorCard>
-              <InspectorCard title="Color">{textColorField}</InspectorCard>
-              {backgroundCard}
+              {colorsOutside ? null : (
+                <>
+                  <InspectorCard title="Color">{textColorField}</InspectorCard>
+                  {backgroundCard}
+                </>
+              )}
             </>
           ) : (
             <>
@@ -232,7 +244,11 @@ export function TypographyCard({
       {contentEnabled && paddingOutside ? (
         <InspectorCard title="Padding">{paddingFields}</InspectorCard>
       ) : null}
-      {contentEnabled && colorsOutside ? colorGridOutside : null}
+      {colorsOutside
+        ? showBackground
+          ? colorGridOutside
+          : colorCardOutside
+        : null}
     </>
   );
 }

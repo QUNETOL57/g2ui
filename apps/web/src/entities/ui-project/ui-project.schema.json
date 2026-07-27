@@ -68,6 +68,7 @@
         "visible": { "type": "boolean" },
         "enabled": { "type": "boolean" },
         "locked": { "type": "boolean" },
+        "rotation": { "type": "integer", "enum": [0, 90, 180, 270] },
         "frame": {
           "type": "object",
           "required": ["x", "y", "width", "height"],

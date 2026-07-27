@@ -43,6 +43,7 @@ export function EditorPage({
   const copySelectedNodes = useEditorStore((s) => s.copySelectedNodes);
   const pasteClipboard = useEditorStore((s) => s.pasteClipboard);
   const duplicateSelectedNodes = useEditorStore((s) => s.duplicateSelectedNodes);
+  const rotateSelectedNodes = useEditorStore((s) => s.rotateSelectedNodes);
   const beginLabelTextEdit = useEditorStore((s) => s.beginLabelTextEdit);
   const undo = useEditorStore((s) => s.undo);
   const redo = useEditorStore((s) => s.redo);
@@ -91,6 +92,13 @@ export function EditorPage({
         return;
       }
 
+      if (!isModifier && !isEditingText && key === "r" && selectedNodeIds.length > 0) {
+        if (rotateSelectedNodes(event.shiftKey ? -1 : 1)) {
+          event.preventDefault();
+        }
+        return;
+      }
+
       if (
         event.key === "Enter" &&
         !isModifier &&
@@ -127,6 +135,7 @@ export function EditorPage({
     duplicateSelectedNodes,
     pasteClipboard,
     redo,
+    rotateSelectedNodes,
     selectedNodeId,
     selectedNodeIds,
     undo,

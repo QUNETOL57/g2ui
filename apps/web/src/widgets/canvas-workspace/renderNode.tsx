@@ -23,6 +23,10 @@ import { IconGlyph } from "@entities/icon/iconLibrary";
 import { DEFAULT_ICON_ID, getIconScaleForFrame, getResolvedIconDefinition } from "@entities/icon/iconSizing";
 
 import { innerFillScanline, roundedRowInset } from "./lib/pixelRounded";
+import {
+  buildTriangleScanlines as buildPixelTriangleScanlines,
+  triangleVertices,
+} from "./lib/pixelTriangle";
 import styles from "./renderNode.module.css";
 
 interface RenderCtx {
@@ -467,6 +471,12 @@ function PixelTriangle({
   const innerW = Math.max(0, width - bw * 2);
   const innerH = Math.max(0, height - bw * 2);
   const borderSegments = hasBorder ? triangleBorderSegments(width, height, direction, bw) : [];
+  const outerScanlines = hasFill && !hasBorder
+    ? buildPixelTriangleScanlines(width, height, direction)
+    : null;
+  const innerScanlines = hasBorder && hasFill && innerW > 0 && innerH > 0
+    ? buildPixelTriangleScanlines(innerW, innerH, direction)
+    : null;
 
   return (
     <svg
@@ -477,25 +487,23 @@ function PixelTriangle({
       shapeRendering="crispEdges"
       style={{ display: "block", width: "100%", height: "100%", imageRendering: "pixelated" }}
     >
-      {hasFill && !hasBorder
-        ? Array.from({ length: height }, (_, y) => {
-            const outer = triangleScanline(y, width, height, direction);
+      {outerScanlines
+        ? outerScanlines.map((outer, y) => {
             if (!outer) return null;
-          return (
-            <rect
-              key={`outer-${y}`}
-              x={outer.x}
-              y={y}
-              width={outer.width}
-              height={1}
-              fill={fill}
-            />
+            return (
+              <rect
+                key={`outer-${y}`}
+                x={outer.x}
+                y={y}
+                width={outer.width}
+                height={1}
+                fill={fill}
+              />
             );
           })
         : null}
-      {hasBorder && hasFill && innerW > 0 && innerH > 0
-        ? Array.from({ length: innerH }, (_, y) => {
-            const inner = triangleScanline(y, innerW, innerH, direction);
+      {innerScanlines
+        ? innerScanlines.map((inner, y) => {
             if (!inner) return null;
             return (
               <rect
@@ -541,70 +549,6 @@ function ellipseScanline(
   const left = Math.max(0, Math.ceil(cx - halfWidth));
   const right = Math.min(width - 1, Math.floor(cx + halfWidth));
   return right >= left ? { x: left, width: right - left + 1 } : null;
-}
-
-function triangleScanline(
-  y: number,
-  width: number,
-  height: number,
-  direction: NonNullable<TriangleProps["direction"]>,
-): { x: number; width: number } | null {
-  if (width <= 0 || height <= 0) return null;
-  if (direction === "up" || direction === "down") {
-    const sourceY = direction === "up" ? y : height - 1 - y;
-    const progress = height <= 1 ? 1 : sourceY / (height - 1);
-    const rowWidth = Math.max(1, Math.round(1 + progress * (width - 1)));
-    const x = Math.max(0, Math.floor((width - rowWidth) / 2));
-    return { x, width: Math.min(width - x, rowWidth) };
-  }
-
-  const progress = height <= 1
-    ? 1
-    : direction === "right"
-      ? y / Math.max(1, height - 1)
-      : 1 - y / Math.max(1, height - 1);
-  const rowWidth = Math.max(1, Math.round(width * (1 - Math.abs(progress - 0.5) * 2)));
-  const x = direction === "right" ? 0 : width - rowWidth;
-  return { x, width: rowWidth };
-}
-
-function triangleVertices(
-  width: number,
-  height: number,
-  direction: NonNullable<TriangleProps["direction"]>,
-): [PixelPoint, PixelPoint, PixelPoint] {
-  const maxX = Math.max(0, width - 1);
-  const maxY = Math.max(0, height - 1);
-  const centerX = Math.floor(maxX / 2);
-  const centerY = Math.floor(height / 2);
-
-  switch (direction) {
-    case "down":
-      return [
-        { x: 0, y: 0 },
-        { x: maxX, y: 0 },
-        { x: centerX, y: maxY },
-      ];
-    case "left":
-      return [
-        { x: maxX, y: 0 },
-        { x: 0, y: centerY },
-        { x: maxX, y: maxY },
-      ];
-    case "right":
-      return [
-        { x: 0, y: 0 },
-        { x: maxX, y: centerY },
-        { x: 0, y: maxY },
-      ];
-    case "up":
-    default:
-      return [
-        { x: centerX, y: 0 },
-        { x: maxX, y: maxY },
-        { x: 0, y: maxY },
-      ];
-  }
 }
 
 function triangleBorderSegments(

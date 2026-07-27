@@ -7,16 +7,20 @@ import { ButtonGroup } from "@widgets/properties-panel/groups/ButtonGroup";
 import { makeButton } from "../fixtures/projects";
 
 describe("ButtonGroup", () => {
-  it("renders Text with nested Typography, Padding, and Color cards", () => {
+  it("renders Content with Icon, Text, and Color cards", () => {
     const node = makeButton("bt_1", "Save");
     render(
       <ButtonGroup node={node} palette={[]} onChange={() => undefined} onStyleChange={() => undefined} />,
     );
+    expect(screen.getByText("Content")).toBeInTheDocument();
+    expect(screen.getByText("Icon")).toBeInTheDocument();
     const textCard = screen.getByTestId("typography-card");
     expect(textCard).toHaveTextContent("Text");
     expect(textCard).toHaveTextContent("Typography");
     expect(textCard).toHaveTextContent("Padding");
-    expect(textCard).toHaveTextContent("Color");
+    expect(textCard).not.toHaveTextContent("Color");
+    const colorCard = screen.getByTestId("color-card");
+    expect(colorCard).toHaveTextContent("Color");
     expect(screen.getByLabelText("Show text")).toBeChecked();
     expect(screen.queryByLabelText("button text")).toBeNull();
   });
@@ -41,7 +45,8 @@ describe("ButtonGroup", () => {
     );
 
     expect(screen.getByLabelText("Show text")).not.toBeChecked();
-    expect(screen.getByText(/Enable text to edit typography/)).toBeInTheDocument();
+    expect(screen.getByText(/Enable text to edit typography and padding/)).toBeInTheDocument();
+    expect(screen.getByTestId("color-card")).toBeInTheDocument();
 
     await userEvent.click(screen.getByLabelText("Show text"));
     expect(handler).toHaveBeenLastCalledWith({ text: "Button" });

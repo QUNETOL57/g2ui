@@ -9,6 +9,7 @@ interface DraftNumberInputProps {
   onChange: (value: number) => void;
   min?: number;
   max?: number;
+  step?: number;
   title?: string;
   className?: string;
   variant?: "default" | "bare";
@@ -20,6 +21,7 @@ export function DraftNumberInput({
   onChange,
   min,
   max,
+  step,
   title,
   className,
   variant = "default",
@@ -66,6 +68,7 @@ export function DraftNumberInput({
       value={draft}
       min={min}
       max={max}
+      step={step}
       title={title}
       disabled={disabled}
       className={cn(variant === "bare" ? styles.bare : styles.input, className)}

@@ -1,5 +1,11 @@
 import type { Frame, LineProps } from "@entities/ui-project";
+import {
+  frameCenter,
+  rotatedFrameAabb,
+  rotatePoint90,
+} from "@entities/ui-project/lib/rotation";
 
+export { frameCenter, rotatedFrameAabb, rotatePoint90 };
 export const MAX_ZOOM = 15;
 export const MIN_ZOOM = 1;
 /** Zoom increment below the pixel-grid threshold. */
@@ -92,6 +98,19 @@ export function visualRectForNode(
   return { ...rect, height: Math.max(rect.height, lineStrokeWidthFor(node)) };
 }
 
+/** Visual selection bounds for overlay/guides, including stroke and 90° rotation. */
+export function selectionRectForNode(
+  node: {
+    type: string;
+    rotation?: number;
+    style?: { borderWidth?: number };
+    props?: unknown;
+  } | null,
+  rect: Frame,
+): Frame {
+  return rotatedFrameAabb(visualRectForNode(node, rect), node?.rotation);
+}
+
 export function lineEndpointsForRect(
   node: { props?: unknown; style?: { borderWidth?: number } },
   rect: Frame,
@@ -113,6 +132,25 @@ export function lineEndpointsForRect(
       x: rect.x + Math.round(props.x2 ?? Math.max(0, rect.width - 1)),
       y: rect.y + visibleY(props.y2),
     },
+  };
+}
+
+/** Line endpoints in screen space after applying the node's visual stroke and rotation. */
+export function selectionLineEndpointsForNode(
+  node: {
+    type: string;
+    rotation?: number;
+    style?: { borderWidth?: number };
+    props?: unknown;
+  },
+  rect: Frame,
+): { start: Point; end: Point } {
+  const visual = visualRectForNode(node, rect);
+  const endpoints = lineEndpointsForRect(node, visual);
+  const center = frameCenter(visual);
+  return {
+    start: rotatePoint90(endpoints.start, center, node.rotation),
+    end: rotatePoint90(endpoints.end, center, node.rotation),
   };
 }
 

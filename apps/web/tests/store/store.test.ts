@@ -387,56 +387,52 @@ describe("store: updateNode / updateFrame / updateProps / updateLayout / updateS
     expect(() => get().updateStyle("ghost", {})).not.toThrow();
   });
 
-  it("updateNode snaps shape rotation to 90° steps", () => {
-    get().setProject(
-      withChildren(makeFixtureProject(), [
-        makeRect("rc_1"),
-        makeCircle("cir_1"),
-        makeTriangle("tri_1"),
-        makeLine("ln_1"),
-      ]),
-    );
+  it("updateNode bakes shape rotation into the frame and clears CSS rotation", () => {
+    const rect = { ...makeRect("rc_1"), frame: { x: 0, y: 0, width: 40, height: 20 } };
+    get().setProject(withChildren(makeFixtureProject(), [rect]));
 
     get().updateNode("rc_1", { rotation: 45 });
-    get().updateNode("cir_1", { rotation: 100 });
-    get().updateNode("tri_1", { rotation: -10 });
-    get().updateNode("ln_1", { rotation: 405 });
-
-    expect(findNode(get().project, "rc_1")?.rotation).toBe(90);
-    expect(findNode(get().project, "cir_1")?.rotation).toBe(90);
-    expect(findNode(get().project, "tri_1")?.rotation).toBe(0);
-    expect(findNode(get().project, "ln_1")?.rotation).toBe(90);
+    const node = findNode(get().project, "rc_1")!;
+    expect(node.rotation).toBe(0);
+    expect(node.frame).toEqual({ x: 10, y: -10, width: 20, height: 40 });
   });
 });
 
 describe("store: rotateSelectedNodes", () => {
-  it("rotates selected rotatable shapes by 90° clockwise", () => {
-    get().setProject(
-      withChildren(makeFixtureProject(), [
-        { ...makeRect("rc_1"), rotation: 0 },
-        { ...makeLine("ln_1"), rotation: 270 },
-      ]),
-    );
+  it("bakes 90° clockwise into selected shape frames", () => {
+    const rect = { ...makeRect("rc_1"), frame: { x: 0, y: 0, width: 40, height: 20 } };
+    const line = {
+      ...makeLine("ln_1"),
+      frame: { x: 0, y: 10, width: 20, height: 1 },
+      props: { x1: 0, y1: 0, x2: 19, y2: 0, strokeWidth: 1 },
+    };
+    get().setProject(withChildren(makeFixtureProject(), [rect, line]));
     get().setSelection(["rc_1", "ln_1"]);
 
     expect(get().rotateSelectedNodes()).toBe(true);
-    expect(findNode(get().project, "rc_1")?.rotation).toBe(90);
+    expect(findNode(get().project, "rc_1")?.rotation).toBe(0);
+    expect(findNode(get().project, "rc_1")?.frame).toEqual({ x: 10, y: -10, width: 20, height: 40 });
     expect(findNode(get().project, "ln_1")?.rotation).toBe(0);
+    expect(findNode(get().project, "ln_1")!.frame!.height).toBeGreaterThan(
+      findNode(get().project, "ln_1")!.frame!.width,
+    );
   });
 
-  it("rotates counter-clockwise and wraps across 0", () => {
-    get().setProject(withChildren(makeFixtureProject(), [{ ...makeCircle("cir_1"), rotation: 0 }]));
+  it("rotates counter-clockwise by rebuilding geometry", () => {
+    const circle = { ...makeCircle("cir_1"), frame: { x: 0, y: 0, width: 40, height: 20 } };
+    get().setProject(withChildren(makeFixtureProject(), [circle]));
     get().selectNode("cir_1");
 
     expect(get().rotateSelectedNodes(-1)).toBe(true);
-    expect(findNode(get().project, "cir_1")?.rotation).toBe(270);
+    expect(findNode(get().project, "cir_1")?.rotation).toBe(0);
+    expect(findNode(get().project, "cir_1")?.frame).toEqual({ x: 10, y: -10, width: 20, height: 40 });
   });
 
   it("skips locked nodes and non-rotatable types", () => {
     get().setProject(
       withChildren(makeFixtureProject(), [
-        { ...makeTriangle("tri_1"), rotation: 90 },
-        { ...makeRect("rc_1"), rotation: 0, locked: true },
+        { ...makeTriangle("tri_1"), props: { direction: "up" }, frame: { x: 0, y: 0, width: 36, height: 20 } },
+        { ...makeRect("rc_1"), frame: { x: 0, y: 0, width: 40, height: 20 }, locked: true },
         makeLabel("lbl_1"),
         makeFreehand("fre_1"),
       ]),
@@ -444,8 +440,9 @@ describe("store: rotateSelectedNodes", () => {
     get().setSelection(["tri_1", "rc_1", "lbl_1", "fre_1"]);
 
     expect(get().rotateSelectedNodes(1)).toBe(true);
-    expect(findNode(get().project, "tri_1")?.rotation).toBe(180);
-    expect(findNode(get().project, "rc_1")?.rotation).toBe(0);
+    expect(findNode(get().project, "tri_1")?.rotation).toBe(0);
+    expect((findNode(get().project, "tri_1")?.props as { direction?: string }).direction).toBe("right");
+    expect(findNode(get().project, "rc_1")?.frame).toEqual({ x: 0, y: 0, width: 40, height: 20 });
     expect(findNode(get().project, "lbl_1")?.rotation).toBeUndefined();
     expect(findNode(get().project, "fre_1")?.rotation).toBeUndefined();
   });
@@ -459,17 +456,18 @@ describe("store: rotateSelectedNodes", () => {
     expect(get().rotateSelectedNodes()).toBe(false);
   });
 
-  it("records history so rotation can be undone", () => {
-    get().setProject(withChildren(makeFixtureProject(), [{ ...makeRect("rc_1"), rotation: 0 }]));
+  it("records history so baked rotation can be undone", () => {
+    const rect = { ...makeRect("rc_1"), frame: { x: 0, y: 0, width: 40, height: 20 } };
+    get().setProject(withChildren(makeFixtureProject(), [rect]));
     get().selectNode("rc_1");
     get().rotateSelectedNodes(1);
-    expect(findNode(get().project, "rc_1")?.rotation).toBe(90);
+    expect(findNode(get().project, "rc_1")?.frame).toEqual({ x: 10, y: -10, width: 20, height: 40 });
 
     get().undo();
-    expect(findNode(get().project, "rc_1")?.rotation).toBe(0);
+    expect(findNode(get().project, "rc_1")?.frame).toEqual({ x: 0, y: 0, width: 40, height: 20 });
 
     get().redo();
-    expect(findNode(get().project, "rc_1")?.rotation).toBe(90);
+    expect(findNode(get().project, "rc_1")?.frame).toEqual({ x: 10, y: -10, width: 20, height: 40 });
   });
 });
 

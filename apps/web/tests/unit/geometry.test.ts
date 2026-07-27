@@ -12,13 +12,18 @@ import {
   clampPointToContent,
   clampZoom,
   formatZoomLabel,
+  frameCenter,
   lineEndpointsForRect,
   lineFrameFromEndpoints,
   lineStrokeWidthFor,
   nextWheelZoom,
   normalizeZoom,
   renderZoomFor,
+  rotatePoint90,
+  rotatedFrameAabb,
   sameFrame,
+  selectionLineEndpointsForNode,
+  selectionRectForNode,
   visualRectForNode,
   zoomToProgress,
 } from "@widgets/canvas-workspace/lib/geometry";
@@ -226,6 +231,91 @@ describe("visualRectForNode", () => {
     const rect = { x: 0, y: 0, width: 10, height: 1 };
     const result = visualRectForNode({ type: "line", style: { borderWidth: 3 } }, rect);
     expect(result.height).toBe(3);
+  });
+});
+
+describe("rotatedFrameAabb", () => {
+  const rect = { x: 10, y: 20, width: 40, height: 24 };
+
+  it("keeps the rect for 0° and 180°", () => {
+    expect(rotatedFrameAabb(rect, 0)).toEqual(rect);
+    expect(rotatedFrameAabb(rect, 180)).toEqual(rect);
+  });
+
+  it("swaps width/height around the center for 90° and 270°", () => {
+    const expected = { x: 18, y: 12, width: 24, height: 40 };
+    expect(rotatedFrameAabb(rect, 90)).toEqual(expected);
+    expect(rotatedFrameAabb(rect, 270)).toEqual(expected);
+  });
+
+  it("snaps free-form angles to the nearest 90° step", () => {
+    expect(rotatedFrameAabb(rect, 45)).toEqual(rotatedFrameAabb(rect, 90));
+    expect(rotatedFrameAabb(rect, -10)).toEqual(rect);
+  });
+
+  it("preserves the center for non-square frames", () => {
+    const rotated = rotatedFrameAabb(rect, 90);
+    expect(frameCenter(rotated)).toEqual(frameCenter(rect));
+  });
+});
+
+describe("rotatePoint90", () => {
+  const center = { x: 10, y: 10 };
+
+  it("rotates clockwise in 90° steps", () => {
+    const point = { x: 10, y: 4 };
+    expect(rotatePoint90(point, center, 0)).toEqual({ x: 10, y: 4 });
+    expect(rotatePoint90(point, center, 90)).toEqual({ x: 4, y: 10 });
+    expect(rotatePoint90(point, center, 180)).toEqual({ x: 10, y: 16 });
+    expect(rotatePoint90(point, center, 270)).toEqual({ x: 16, y: 10 });
+  });
+});
+
+describe("selectionRectForNode", () => {
+  it("returns the unrotated visual rect at 0°", () => {
+    const rect = { x: 4, y: 8, width: 32, height: 16 };
+    expect(selectionRectForNode({ type: "rect", rotation: 0 }, rect)).toEqual(rect);
+  });
+
+  it("matches CSS-rotated AABB for rect/circle/triangle at 90°", () => {
+    const rect = { x: 0, y: 0, width: 32, height: 16 };
+    const expected = { x: 8, y: -8, width: 16, height: 32 };
+    for (const type of ["rect", "circle", "triangle"] as const) {
+      expect(selectionRectForNode({ type, rotation: 90 }, rect)).toEqual(expected);
+    }
+  });
+
+  it("applies line stroke height before rotating", () => {
+    const rect = { x: 0, y: 10, width: 20, height: 1 };
+    const node = { type: "line", rotation: 90, style: { borderWidth: 3 } };
+    // visual: height 3 → center (10, 11.5) → AABB width 3, height 20
+    expect(selectionRectForNode(node, rect)).toEqual({
+      x: 9,
+      y: 2,
+      width: 3,
+      height: 20,
+    });
+  });
+});
+
+describe("selectionLineEndpointsForNode", () => {
+  it("keeps endpoints unrotated at 0°", () => {
+    const endpoints = selectionLineEndpointsForNode(
+      { type: "line", rotation: 0, props: { x1: 0, y1: 0, x2: 19, y2: 0 }, style: { borderWidth: 1 } },
+      { x: 0, y: 0, width: 20, height: 1 },
+    );
+    expect(endpoints.start).toEqual({ x: 0, y: 0 });
+    expect(endpoints.end).toEqual({ x: 19, y: 0 });
+  });
+
+  it("rotates endpoints with the line at 90°", () => {
+    const endpoints = selectionLineEndpointsForNode(
+      { type: "line", rotation: 90, props: { x1: 0, y1: 0, x2: 19, y2: 0 }, style: { borderWidth: 1 } },
+      { x: 0, y: 0, width: 20, height: 1 },
+    );
+    // center (10, 0.5); start(0,0)->(9.5,10.5); end(19,0)->(9.5,-8.5)
+    expect(endpoints.start).toEqual({ x: 10, y: 11 });
+    expect(endpoints.end).toEqual({ x: 10, y: -8 });
   });
 });
 

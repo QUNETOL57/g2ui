@@ -71,7 +71,10 @@ export interface WidgetNode {
   enabled?: boolean;
   /** Editor-only: when true, transform and property edits are blocked. */
   locked?: boolean;
-  /** Shape rotation in degrees; snapped to 0 / 90 / 180 / 270 for rotatable shapes. */
+  /**
+   * Legacy CSS rotation in degrees. Editor rotate actions bake 90° turns into
+   * frame/geometry and clear this field; kept for older projects until normalized.
+   */
   rotation?: number;
   frame?: Frame;
   layout?: LayoutSpec;

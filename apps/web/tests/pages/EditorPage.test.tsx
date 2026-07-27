@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { useEditorStore } from "@entities/ui-project/model/store";
 import { findNode } from "@entities/ui-project/model/tree-ops";
 import { EditorPage } from "@pages/editor/EditorPage";
+import { selectionRectForNode } from "@widgets/canvas-workspace/lib/geometry";
 
 import {
   makeFixtureProject,
@@ -85,6 +86,39 @@ describe("EditorPage", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Show properties" }));
     expect(screen.getByText(/Select a widget/)).toBeInTheDocument();
+  });
+
+  it("aligns selection guides to a 90°-rotated shape AABB", () => {
+    const rect = {
+      ...makeRect("rc_1"),
+      rotation: 90,
+      frame: { x: 10, y: 20, width: 40, height: 24 },
+    };
+    get().setProject(withChildren(makeFixtureProject(), [rect]));
+    get().selectNode("rc_1");
+    render(<EditorPage onBackToLibrary={() => undefined} />);
+
+    const expected = selectionRectForNode(rect, {
+      x: 10,
+      y: 20,
+      width: 40,
+      height: 24,
+    });
+    // Editor canvas defaults to 2× zoom.
+    const zoom = 2;
+    const left = `${expected.x * zoom}px`;
+    const top = `${expected.y * zoom}px`;
+    const width = `${expected.width * zoom}px`;
+    const height = `${expected.height * zoom}px`;
+
+    const frames = screen.getAllByTestId("selection-frame");
+    const horizontalFrames = frames.filter((frame) => frame.className.includes("guideHorizontal"));
+    const verticalFrames = frames.filter((frame) => frame.className.includes("guideVertical"));
+
+    expect(horizontalFrames.map((frame) => frame.style.left)).toEqual([left, left]);
+    expect(horizontalFrames.map((frame) => frame.style.width)).toEqual([width, width]);
+    expect(verticalFrames.map((frame) => frame.style.top)).toEqual([top, top]);
+    expect(verticalFrames.map((frame) => frame.style.height)).toEqual([height, height]);
   });
 
   it("toggles grid, rulers, and guides from the View menu", async () => {
@@ -251,27 +285,38 @@ describe("EditorPage keyboard shortcuts", () => {
     expect(get().project.screens[0].children).toHaveLength(1);
   });
 
-  it("R rotates the selected shape by 90° clockwise", async () => {
-    const project = withChildren(makeFixtureProject(), [{ ...makeRect("rc_1"), rotation: 0 }]);
+  it("R rotates the selected shape by baking 90° into its frame", async () => {
+    const project = withChildren(makeFixtureProject(), [
+      { ...makeRect("rc_1"), frame: { x: 0, y: 0, width: 40, height: 20 } },
+    ]);
     get().setProject(project);
     get().selectNode("rc_1");
     render(<EditorPage onBackToLibrary={() => undefined} />);
 
     await userEvent.keyboard("r");
-    expect(findNode(get().project, "rc_1")?.rotation).toBe(90);
+    expect(findNode(get().project, "rc_1")?.rotation).toBe(0);
+    expect(findNode(get().project, "rc_1")?.frame).toEqual({ x: 10, y: -10, width: 20, height: 40 });
 
     await userEvent.keyboard("r");
-    expect(findNode(get().project, "rc_1")?.rotation).toBe(180);
+    expect(findNode(get().project, "rc_1")?.frame).toEqual({ x: 0, y: 0, width: 40, height: 20 });
   });
 
-  it("Shift+R rotates the selected shape by 90° counter-clockwise", async () => {
-    const project = withChildren(makeFixtureProject(), [{ ...makeLine("ln_1"), rotation: 0 }]);
+  it("Shift+R rotates the selected line by rebuilding endpoints", async () => {
+    const project = withChildren(makeFixtureProject(), [
+      {
+        ...makeLine("ln_1"),
+        frame: { x: 0, y: 10, width: 20, height: 1 },
+        props: { x1: 0, y1: 0, x2: 19, y2: 0, strokeWidth: 1 },
+      },
+    ]);
     get().setProject(project);
     get().selectNode("ln_1");
     render(<EditorPage onBackToLibrary={() => undefined} />);
 
     await userEvent.keyboard("{Shift>}r{/Shift}");
-    expect(findNode(get().project, "ln_1")?.rotation).toBe(270);
+    const line = findNode(get().project, "ln_1")!;
+    expect(line.rotation).toBe(0);
+    expect(line.frame!.height).toBeGreaterThan(line.frame!.width);
   });
 
   it("does not rotate non-shape selection with R", async () => {
@@ -285,7 +330,9 @@ describe("EditorPage keyboard shortcuts", () => {
   });
 
   it("does not rotate when focus is in a text input", async () => {
-    const project = withChildren(makeFixtureProject(), [{ ...makeRect("rc_1"), rotation: 0 }]);
+    const project = withChildren(makeFixtureProject(), [
+      { ...makeRect("rc_1"), frame: { x: 0, y: 0, width: 40, height: 20 } },
+    ]);
     get().setProject(project);
     get().selectNode("rc_1");
     render(<EditorPage onBackToLibrary={() => undefined} />);
@@ -293,6 +340,6 @@ describe("EditorPage keyboard shortcuts", () => {
     const input = screen.getAllByRole("textbox")[0] as HTMLInputElement;
     input.focus();
     await userEvent.keyboard("r");
-    expect(findNode(get().project, "rc_1")?.rotation).toBe(0);
+    expect(findNode(get().project, "rc_1")?.frame).toEqual({ x: 0, y: 0, width: 40, height: 20 });
   });
 });

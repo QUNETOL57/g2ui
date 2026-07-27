@@ -15,7 +15,8 @@ import type {
 } from "..";
 import { defaultLayout } from "../defaults";
 import { normalizePalette } from "../lib/palette";
-import { isRotatableShapeType, rotateBy90, snapRotation90 } from "../lib/rotation";
+import { isRotatableShapeType } from "../lib/rotation";
+import { bakeShapeRotationTo, rotateShapeByQuarterTurns } from "../lib/shapeRotation";
 import { makeWidget, nextId, validateProject } from "..";
 import { getIconDefinition } from "@entities/icon/iconLibrary";
 import { fitIconFrameToContent, normalizeIconNodeFrame } from "@entities/icon/iconSizing";
@@ -777,12 +778,18 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const next = cloneProject(state.project);
       const node = findNode(next, id);
       if (!node) return state;
-      const nextPatch =
-        patch.rotation !== undefined && isRotatableShapeType(node.type)
-          ? { ...patch, rotation: snapRotation90(patch.rotation) }
-          : patch;
-      Object.assign(node, nextPatch);
-      if (nextPatch.locked === true && node.type === "panel") {
+      const { rotation: nextRotation, ...restPatch } = patch;
+      Object.assign(node, restPatch);
+      if (
+        nextRotation !== undefined &&
+        isRotatableShapeType(node.type) &&
+        !node.locked
+      ) {
+        bakeShapeRotationTo(node, nextRotation);
+      } else if (nextRotation !== undefined && !isRotatableShapeType(node.type)) {
+        node.rotation = nextRotation;
+      }
+      if (restPatch.locked === true && node.type === "panel") {
         lockWidgetSubtree(node);
       }
       return { ...recordHistory(state), project: next, draftFrame: null };
@@ -797,14 +804,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const next = cloneProject(state.project);
     for (const id of ids) {
       const node = findNode(next, id);
-      if (!node || node.locked || !isRotatableShapeType(node.type)) continue;
-      const rotation = rotateBy90(node.rotation, quarterTurns);
-      const current = snapRotation90(node.rotation ?? 0);
-      if (rotation === current && (node.rotation === rotation || node.rotation === undefined)) {
-        continue;
-      }
-      node.rotation = rotation;
-      changed = true;
+      if (!node) continue;
+      if (rotateShapeByQuarterTurns(node, quarterTurns)) changed = true;
     }
     if (!changed) return false;
     set({ ...recordHistory(state), project: next, draftFrame: null });

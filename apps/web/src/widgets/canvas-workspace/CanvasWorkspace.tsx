@@ -30,6 +30,8 @@ import {
   normalizeZoom,
   renderZoomFor,
   sameFrame,
+  selectionLineEndpointsForNode,
+  selectionRectForNode,
   visualRectForNode,
   zoomToProgress,
 } from "./lib/geometry";
@@ -199,15 +201,15 @@ export function CanvasWorkspace({
         ? draftFrame.frame
         : selectedRect;
   const displayedSelectedRect = rawDisplayedSelectedRect && selectedNode
-    ? visualRectForNode(selectedNode, rawDisplayedSelectedRect)
+    ? selectionRectForNode(selectedNode, rawDisplayedSelectedRect)
     : rawDisplayedSelectedRect;
   const displayedLineEndpoints =
-    displayedSelectedRect && selectedNode?.type === "line"
-      ? lineEndpointsForRect(
+    rawDisplayedSelectedRect && selectedNode?.type === "line"
+      ? selectionLineEndpointsForNode(
           dragPreview?.nodeId === selectedNodeId && dragPreview.lineProps
             ? { ...selectedNode, props: { ...(selectedNode.props ?? {}), ...dragPreview.lineProps } }
             : selectedNode,
-          displayedSelectedRect,
+          rawDisplayedSelectedRect,
         )
       : null;
   const selectedParentMode: LayoutMode = selectedParentNode?.layout?.mode ?? "absolute";

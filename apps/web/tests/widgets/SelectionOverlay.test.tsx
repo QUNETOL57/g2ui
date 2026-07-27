@@ -2,6 +2,7 @@ import { fireEvent, render } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { SelectionOverlay } from "@widgets/canvas-workspace/SelectionOverlay";
+import { selectionRectForNode } from "@widgets/canvas-workspace/lib/geometry";
 
 describe("SelectionOverlay", () => {
   const rect = { x: 5, y: 5, width: 20, height: 30 };
@@ -80,6 +81,42 @@ describe("SelectionOverlay", () => {
     expect(horizontalFrames.every((frame) => frame.style.width === "40px")).toBe(true);
     expect(verticalFrames.every((frame) => frame.style.top === "10px")).toBe(true);
     expect(verticalFrames.every((frame) => frame.style.height === "60px")).toBe(true);
+  });
+
+  it("places guides on the rotated visual AABB for a 90° shape", () => {
+    const layoutRect = { x: 10, y: 20, width: 40, height: 24 };
+    const rotatedRect = selectionRectForNode({ type: "rect", rotation: 90 }, layoutRect);
+    expect(rotatedRect).toEqual({ x: 18, y: 12, width: 24, height: 40 });
+
+    const { getAllByTestId } = render(
+      <SelectionOverlay
+        rect={rotatedRect}
+        renderZoom={1}
+        scaledW={200}
+        scaledH={200}
+        showGuides
+        showMoveMask={false}
+        showResizeHandles={false}
+        lineEndpoints={null}
+        onResizeHandleMouseDown={() => () => undefined}
+        onLineEndpointMouseDown={() => () => undefined}
+      />,
+    );
+
+    const frames = getAllByTestId("selection-frame");
+    const horizontalFrames = frames.filter((frame) => frame.className.includes("guideHorizontal"));
+    const verticalFrames = frames.filter((frame) => frame.className.includes("guideVertical"));
+
+    expect(horizontalFrames.every((frame) => frame.style.left === "18px")).toBe(true);
+    expect(horizontalFrames.every((frame) => frame.style.width === "24px")).toBe(true);
+    expect(verticalFrames.every((frame) => frame.style.top === "12px")).toBe(true);
+    expect(verticalFrames.every((frame) => frame.style.height === "40px")).toBe(true);
+
+    const guides = getAllByTestId("selection-guide");
+    const verticalGuides = guides.filter((guide) => guide.className.includes("guideVertical"));
+    // Left/right canvas-edge guides are anchored at the rotated AABB x edges.
+    expect(verticalGuides.some((guide) => guide.style.left === "18px")).toBe(true);
+    expect(verticalGuides.some((guide) => guide.style.left === "42px")).toBe(true);
   });
 
   it("hides only canvas-edge guides when showGuides=false", () => {

@@ -255,14 +255,15 @@ describe("PreviewNode: per-type rendering", () => {
     expect(rects).toHaveLength(32);
     expect(rects.every((rect) => rect.getAttribute("fill") === "#00FF00")).toBe(true);
     expect(rects.some((rect) => Number(rect.getAttribute("width")) > 30)).toBe(true);
-    expect(rects.some((rect) => Number(rect.getAttribute("width")) === 1)).toBe(true);
+    const tipWidth = direction === "up" || direction === "down" ? 2 : 1;
+    expect(rects.some((rect) => Number(rect.getAttribute("width")) === tipWidth)).toBe(true);
   });
 
   it.each([
-    ["up", 0, 31, 1, 36],
-    ["down", 0, 31, 36, 1],
-    ["right", 0, 16, 1, 35],
-    ["left", 0, 16, 1, 35],
+    ["up", 0, 31, 2, 36],
+    ["down", 0, 31, 36, 2],
+    ["right", 0, 16, 1, 36],
+    ["left", 0, 16, 1, 36],
   ] as const)("orients %s triangle scanlines", (direction, tipY, wideY, tipWidth, wideWidth) => {
     const triangle = makeTriangle("tri_1");
     triangle.style = {
@@ -277,7 +278,7 @@ describe("PreviewNode: per-type rendering", () => {
     const wideRow = rowRects(container, wideY);
 
     expect(rowTotalWidth(tipRow)).toBe(tipWidth);
-    expect(rowTotalWidth(wideRow)).toBeGreaterThanOrEqual(wideWidth);
+    expect(rowTotalWidth(wideRow)).toBe(wideWidth);
     if (direction === "left") {
       expect(Number(tipRow[0].getAttribute("x"))).toBe(35);
       expect(Number(wideRow[0].getAttribute("x"))).toBeLessThanOrEqual(1);
@@ -286,6 +287,32 @@ describe("PreviewNode: per-type rendering", () => {
       expect(Number(tipRow[0].getAttribute("x"))).toBe(0);
       expect(Number(wideRow[0].getAttribute("x"))).toBe(0);
     }
+  });
+
+  it("renders an up triangle as a centered odd-width pixel pyramid", () => {
+    const triangle = makeTriangle("tri_1");
+    triangle.frame = { x: 0, y: 0, width: 5, height: 3 };
+    triangle.style = {
+      ...(triangle.style ?? {}),
+      drawBackground: true,
+      background: { kind: "hex", value: "#FFFFFF" },
+      drawBorder: false,
+    };
+    triangle.props = { ...(triangle.props ?? {}), direction: "up" };
+    const { container } = renderProject([triangle]);
+
+    expect(rowRects(container, 0).map((rect) => [
+      Number(rect.getAttribute("x")),
+      Number(rect.getAttribute("width")),
+    ])).toEqual([[2, 1]]);
+    expect(rowRects(container, 1).map((rect) => [
+      Number(rect.getAttribute("x")),
+      Number(rect.getAttribute("width")),
+    ])).toEqual([[1, 3]]);
+    expect(rowRects(container, 2).map((rect) => [
+      Number(rect.getAttribute("x")),
+      Number(rect.getAttribute("width")),
+    ])).toEqual([[0, 5]]);
   });
 
   it("renders no triangle pixels when fill and border are disabled", () => {

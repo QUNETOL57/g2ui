@@ -128,6 +128,22 @@ describe("validateProject", () => {
     expect(validateProject(project)).toEqual({ ok: true, issues: [] });
   });
 
+  it("flags invalid class tokens", () => {
+    const project = withChildren(makeFixtureProject(), [
+      { ...makeLabel("lbl_1"), class: "btn 1bad" },
+    ]);
+    const result = validateProject(project);
+    expect(result.ok).toBe(false);
+    expect(result.issues.some((i) => i.path.endsWith(".class"))).toBe(true);
+  });
+
+  it("accepts valid class strings", () => {
+    const project = withChildren(makeFixtureProject(), [
+      { ...makeLabel("lbl_1"), class: "btn primary" },
+    ]);
+    expect(validateProject(project)).toEqual({ ok: true, issues: [] });
+  });
+
   it("schema version constant is stable", () => {
     expect(IR_SCHEMA_VERSION).toBe("0.1.0");
   });

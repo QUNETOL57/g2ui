@@ -25,6 +25,7 @@ export function PropertiesPanel() {
   const selectedNodeId = useEditorStore((s) => s.selectedNodeId);
   const draftFrame = useEditorStore((s) => s.draftFrame);
   const updateNode = useEditorStore((s) => s.updateNode);
+  const renameNode = useEditorStore((s) => s.renameNode);
   const updateFrame = useEditorStore((s) => s.updateFrame);
   const updateProps = useEditorStore((s) => s.updateProps);
   const updateLayout = useEditorStore((s) => s.updateLayout);
@@ -82,7 +83,7 @@ export function PropertiesPanel() {
     <>
       <SectionTitle>Properties · {node.type}</SectionTitle>
 
-      <SelectedGroup node={node} updateNode={updateNode} />
+      <SelectedGroup node={node} updateNode={updateNode} renameNode={renameNode} />
 
       {node.type !== "screen" ? (
         <FrameGroup

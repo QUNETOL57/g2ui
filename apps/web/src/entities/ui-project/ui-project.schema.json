@@ -65,6 +65,7 @@
           "enum": ["screen", "panel", "label", "button", "icon", "image", "line", "rect", "circle", "triangle", "freehand"]
         },
         "name": { "type": "string" },
+        "class": { "type": "string" },
         "visible": { "type": "boolean" },
         "enabled": { "type": "boolean" },
         "locked": { "type": "boolean" },

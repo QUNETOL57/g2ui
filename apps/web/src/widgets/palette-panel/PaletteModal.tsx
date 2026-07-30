@@ -99,7 +99,7 @@ export const PaletteModal = memo(function PaletteModal({ open, onClose }: Palett
               </div>
               <div className={styles.entryList}>
                 {draft.map((entry, index) => (
-                  <div key={`${entry.token}-${index}`} className={styles.entryRow}>
+                  <div key={index} className={styles.entryRow}>
                     <input
                       type="color"
                       className={styles.swatchInput}

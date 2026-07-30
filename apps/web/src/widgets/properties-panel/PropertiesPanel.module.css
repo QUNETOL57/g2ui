@@ -63,7 +63,7 @@
 .summary {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
-  grid-template-rows: 20px 25px;
+  grid-auto-rows: auto;
   gap: 8px;
   align-items: center;
   background: var(--color-bg-deep);
@@ -95,6 +95,24 @@
   white-space: nowrap;
 }
 
+.summaryTitle {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  line-height: 20px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.idInput {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-sm);
+}
+
 .summaryActions {
   grid-column: 3;
   grid-row: 1;
@@ -112,11 +130,39 @@
   flex: 0 0 auto;
 }
 
-.summaryNameRow {
+.summaryFieldRow {
   grid-column: 1 / -1;
-  grid-row: 2;
   grid-template-columns: 72px minmax(0, 1fr);
   margin-bottom: 0;
+}
+
+.summaryNameRow {
+  grid-column: 1 / -1;
+  grid-template-columns: 72px minmax(0, 1fr);
+  margin-bottom: 0;
+}
+
+.summaryClassRow {
+  grid-column: 1 / -1;
+  grid-template-columns: 72px minmax(0, 1fr);
+  margin-bottom: 0;
+}
+
+.summaryFieldError {
+  grid-column: 1 / -1;
+  margin: -4px 0 0;
+  color: var(--color-danger, #e35d6a);
+  font-size: var(--font-size-sm);
+  line-height: 1.3;
+}
+
+.inputInvalid {
+  border-color: var(--color-danger, #e35d6a);
+}
+
+.inputInvalid:focus {
+  outline-color: var(--color-danger, #e35d6a);
+  border-color: var(--color-danger, #e35d6a);
 }
 
 .transformGrid {

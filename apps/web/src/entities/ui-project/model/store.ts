@@ -42,9 +42,11 @@ import {
   prependChild,
   pruneCopySelection,
   removeNode,
+  renameNodeInProject,
   resolvePasteParentOutsideClipboard,
   lockWidgetSubtree,
 } from "./tree-ops";
+import { normalizeClass } from "../lib/cssClass";
 import {
   MAX_HISTORY,
   recordHistory,
@@ -119,6 +121,8 @@ interface EditorState {
   absolutizeLayout: (parentId: string, childFrames: Array<{ id: string; frame: Frame }>) => void;
   reparentNode: (id: string, newParentId: string) => void;
 
+  /** Rename a widget id with uniqueness/format checks and reference remapping. */
+  renameNode: (oldId: string, newId: string) => boolean;
   updateNode: (id: string, patch: Partial<WidgetNode>) => void;
   /** Rotate selected rotatable shapes by `quarterTurns` × 90° (positive = clockwise). */
   rotateSelectedNodes: (quarterTurns?: number) => boolean;
@@ -773,13 +777,45 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       };
     }),
 
+  renameNode: (oldId, newId) => {
+    const trimmed = newId.trim();
+    if (oldId === trimmed) return true;
+    const state = get();
+    const next = cloneProject(state.project);
+    if (!renameNodeInProject(next, oldId, trimmed)) return false;
+
+    const mapId = (id: string | null) => (id === oldId ? trimmed : id);
+    const selectedNodeIds = state.selectedNodeIds.map((id) => (id === oldId ? trimmed : id));
+    const draftFrame =
+      state.draftFrame?.nodeId === oldId
+        ? { ...state.draftFrame, nodeId: trimmed }
+        : state.draftFrame;
+
+    set({
+      ...recordHistory(state),
+      project: next,
+      selectedNodeId: mapId(state.selectedNodeId),
+      selectedNodeIds,
+      activeScreenId: mapId(state.activeScreenId) ?? state.activeScreenId,
+      editingLabelId: mapId(state.editingLabelId),
+      draftFrame,
+    });
+    return true;
+  },
+
   updateNode: (id, patch) =>
     set((state) => {
       const next = cloneProject(state.project);
       const node = findNode(next, id);
       if (!node) return state;
-      const { rotation: nextRotation, ...restPatch } = patch;
+      const { rotation: nextRotation, id: _ignoredId, class: nextClass, ...restPatch } = patch;
       Object.assign(node, restPatch);
+      if ("class" in patch) {
+        const normalized =
+          typeof nextClass === "string" ? normalizeClass(nextClass) : nextClass;
+        if (normalized) node.class = normalized;
+        else delete node.class;
+      }
       if (
         nextRotation !== undefined &&
         isRotatableShapeType(node.type) &&

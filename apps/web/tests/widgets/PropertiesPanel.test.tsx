@@ -202,8 +202,7 @@ describe("PropertiesPanel: writes to store via shared inputs", () => {
     const project = withChildren(makeFixtureProject(), [makeLabel("lbl_1")]);
     get().setProject(project);
     selectAndRender("lbl_1");
-    const summary = screen.getByText("lbl_1").closest("div")!.parentElement!;
-    const nameInput = within(summary).getByRole("textbox");
+    const nameInput = screen.getByLabelText("name");
     await userEvent.type(nameInput, "renamed");
     const stored = get().project.screens[0].children?.[0];
     expect(stored?.name).toBe("renamed");

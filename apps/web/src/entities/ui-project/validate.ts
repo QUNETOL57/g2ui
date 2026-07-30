@@ -1,5 +1,6 @@
 import { IR_SCHEMA_VERSION, IR_WIDGET_TYPES } from "./schema.js";
 import { isValidId } from "./ids.js";
+import { isValidClass } from "./lib/cssClass.js";
 import type { UiProject, WidgetNode } from "./types.js";
 
 export interface ValidationIssue {
@@ -69,6 +70,10 @@ function validateWidget(
 
   if (!(IR_WIDGET_TYPES as readonly string[]).includes(node.type)) {
     issues.push({ path: `${path}.type`, message: `unknown widget type ${String(node.type)}` });
+  }
+
+  if (node.class !== undefined && !isValidClass(node.class)) {
+    issues.push({ path: `${path}.class`, message: `invalid class ${JSON.stringify(node.class)}` });
   }
 
   (node.children ?? []).forEach((child, i) =>

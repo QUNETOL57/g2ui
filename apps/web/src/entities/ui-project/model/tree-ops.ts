@@ -1,5 +1,6 @@
 import type { Frame, LabelProps, ScreenNode, UiProject, WidgetNode, WidgetType } from "..";
 import { makeWidget, nextId } from "..";
+import { isValidId } from "../ids";
 import { defaultProps } from "../defaults";
 import { findFontFace, measureTextWidth } from "@entities/font/fontLibrary";
 import { DEFAULT_ICON_ID, getResolvedIconDefinition } from "@entities/icon/iconSizing";
@@ -186,6 +187,34 @@ export function isAncestor(p: UiProject, ancestorId: string, nodeId: string): bo
   const ancestor = findNode(p, ancestorId);
   if (!ancestor) return false;
   return containsId(ancestor, nodeId);
+}
+
+/** Rewrite project-level and widget-level references from `oldId` to `newId`. */
+export function remapNodeIdRefs(p: UiProject, oldId: string, newId: string): void {
+  if (p.initialScreenId === oldId) p.initialScreenId = newId;
+
+  const walk = (n: WidgetNode) => {
+    if (n.onPress?.target === oldId) n.onPress.target = newId;
+    (n.children ?? []).forEach(walk);
+  };
+  p.screens.forEach(walk);
+}
+
+/**
+ * Rename a widget id in-place. Returns false if the node is missing, the new id
+ * is invalid, or the new id is already used by another node.
+ */
+export function renameNodeInProject(p: UiProject, oldId: string, newId: string): boolean {
+  if (oldId === newId) return true;
+  if (!isValidId(newId)) return false;
+  const node = findNode(p, oldId);
+  if (!node) return false;
+  const used = collectIds(p);
+  used.delete(oldId);
+  if (used.has(newId)) return false;
+  node.id = newId;
+  remapNodeIdRefs(p, oldId, newId);
+  return true;
 }
 
 export function clampIndex(value: number, max: number): number {

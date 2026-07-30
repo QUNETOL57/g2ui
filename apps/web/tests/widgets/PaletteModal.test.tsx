@@ -56,6 +56,15 @@ describe("PaletteModal", () => {
     expect(get().project.palette?.find((entry) => entry.token === "bg")?.hex).toBe("#112233");
   });
 
+  it("keeps focus while renaming a token", async () => {
+    await openPaletteModal();
+    const tokenInput = screen.getByLabelText(/Token name for bg/i);
+    tokenInput.focus();
+    await userEvent.type(tokenInput, "_surface");
+    expect(tokenInput).toHaveFocus();
+    expect(tokenInput).toHaveValue("bg_surface");
+  });
+
   it("syncs draft when store palette changes", () => {
     get().setPalette([
       { token: "surface", hex: "#000000" },

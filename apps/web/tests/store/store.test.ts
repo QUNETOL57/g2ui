@@ -608,3 +608,49 @@ describe("store: marker tool and freehand strokes", () => {
     expect(get().activeTool).toBe("select");
   });
 });
+
+describe("store: renameNode", () => {
+  it("renames a widget and updates selection", () => {
+    resetEditorStore(withChildren(makeFixtureProject(), [makeLabel("lbl_1", "Hi")]));
+    get().selectNode("lbl_1");
+    expect(get().renameNode("lbl_1", "lbl_header")).toBe(true);
+    expect(findNode(get().project, "lbl_1")).toBeNull();
+    expect(findNode(get().project, "lbl_header")?.type).toBe("label");
+    expect(get().selectedNodeId).toBe("lbl_header");
+    expect(get().selectedNodeIds).toEqual(["lbl_header"]);
+  });
+
+  it("rejects duplicate and invalid ids", () => {
+    resetEditorStore(
+      withChildren(makeFixtureProject(), [makeLabel("lbl_1"), makeLabel("lbl_2")]),
+    );
+    expect(get().renameNode("lbl_1", "lbl_2")).toBe(false);
+    expect(get().renameNode("lbl_1", "BAD ID")).toBe(false);
+    expect(findNode(get().project, "lbl_1")).not.toBeNull();
+  });
+
+  it("remaps initialScreenId and onPress.target", () => {
+    const project = makeFixtureProject();
+    project.initialScreenId = "screen_main";
+    project.screens[0].children = [
+      {
+        ...makeButton("btn_1", "Go"),
+        onPress: { kind: "navigate", target: "screen_main" },
+      },
+    ];
+    resetEditorStore(project);
+    get().setActiveScreen("screen_main");
+    expect(get().renameNode("screen_main", "screen_home")).toBe(true);
+    expect(get().project.initialScreenId).toBe("screen_home");
+    expect(get().activeScreenId).toBe("screen_home");
+    expect(findNode(get().project, "btn_1")?.onPress?.target).toBe("screen_home");
+  });
+
+  it("ignores id changes via updateNode and normalizes class", () => {
+    resetEditorStore(withChildren(makeFixtureProject(), [makeLabel("lbl_1")]));
+    get().updateNode("lbl_1", { id: "hacked", class: "  btn   primary  " });
+    expect(findNode(get().project, "lbl_1")?.id).toBe("lbl_1");
+    expect(findNode(get().project, "hacked")).toBeNull();
+    expect(findNode(get().project, "lbl_1")?.class).toBe("btn primary");
+  });
+});

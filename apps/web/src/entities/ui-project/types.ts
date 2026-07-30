@@ -60,13 +60,15 @@ export interface BindingSpec {
 }
 
 /**
- * Stable widget node. `id` must be unique inside the project and never
- * reassigned; editor, preview, codegen and runtime all rely on it.
+ * Stable widget node. `id` must be unique inside the project.
+ * Renames are allowed when all id references in the project are remapped.
  */
 export interface WidgetNode {
   id: string;
   type: WidgetType;
   name?: string;
+  /** HTML-like space-separated class names for runtime/selectors. */
+  class?: string;
   visible?: boolean;
   enabled?: boolean;
   /** Editor-only: when true, transform and property edits are blocked. */

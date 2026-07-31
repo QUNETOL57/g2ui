@@ -113,4 +113,31 @@ describe("ColorField", () => {
     await userEvent.click(screen.getByRole("option", { name: /fg/i }));
     expect(onChange).toHaveBeenCalledWith({ kind: "token", token: "fg" });
   });
+
+  it("keeps palette mode when the hex picker would otherwise emit", async () => {
+    const onChange = vi.fn();
+    const { rerender } = render(
+      <ColorField
+        label="bg"
+        value={{ kind: "hex", value: "#000000" }}
+        palette={palette}
+        onChange={onChange}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "bg mode" }));
+    await userEvent.click(screen.getByRole("option", { name: /palette/i }));
+    expect(onChange).toHaveBeenLastCalledWith({ kind: "token", token: "bg" });
+
+    rerender(
+      <ColorField
+        label="bg"
+        value={{ kind: "token", token: "bg" }}
+        palette={palette}
+        onChange={onChange}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "bg token" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "bg hex picker" })).not.toBeInTheDocument();
+  });
 });

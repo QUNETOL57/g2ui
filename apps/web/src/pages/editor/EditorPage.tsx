@@ -56,9 +56,6 @@ export function EditorPage({
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      // While any modal is open, keep editor hotkeys from acting on the selection.
-      if (document.querySelector('[aria-modal="true"]')) return;
-
       const target = event.target;
       const isEditingText =
         target instanceof HTMLInputElement ||
@@ -72,6 +69,24 @@ export function EditorPage({
       const isCopyKey = isModifier && key === "c" && !event.shiftKey && !event.altKey;
       const isPasteKey = isModifier && key === "v" && !event.shiftKey && !event.altKey;
       const isDuplicateKey = isModifier && key === "d" && !event.shiftKey && !event.altKey;
+      const isDeleteKey =
+        event.key === "Delete" ||
+        event.key === "Backspace" ||
+        event.code === "Delete" ||
+        event.code === "Backspace";
+
+      // Always swallow Delete/Backspace outside fields so the browser cannot
+      // treat them as history navigation (e.g. back to /docs#/).
+      if (isDeleteKey && !isEditingText) {
+        event.preventDefault();
+        if (document.querySelector('[aria-modal="true"]')) return;
+        if (selectedNodeIds.length === 0) return;
+        deleteNodes(selectedNodeIds);
+        return;
+      }
+
+      // While any modal is open, keep editor hotkeys from acting on the selection.
+      if (document.querySelector('[aria-modal="true"]')) return;
 
       if ((isUndoKey || isRedoKey) && !isEditingText) {
         event.preventDefault();
@@ -112,21 +127,8 @@ export function EditorPage({
         if (node?.type === "label" || node?.type === "button") {
           event.preventDefault();
           beginLabelTextEdit(selectedNodeId);
-          return;
         }
       }
-
-      const isDeleteKey =
-        event.key === "Delete" ||
-        event.key === "Backspace" ||
-        event.code === "Delete" ||
-        event.code === "Backspace";
-
-      if (!isDeleteKey || selectedNodeIds.length === 0) return;
-      if (isEditingText) return;
-
-      event.preventDefault();
-      deleteNodes(selectedNodeIds);
     };
 
     window.addEventListener("keydown", handleKeyDown, { capture: true });

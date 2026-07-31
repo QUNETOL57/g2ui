@@ -21,6 +21,8 @@ import {
   offsetWidgetFrame,
   pruneCopySelection,
   removeNode,
+  renameNodeInProject,
+  remapColorTokenRefs,
   resolvePasteParentOutsideClipboard,
 } from "@entities/ui-project/model/tree-ops";
 
@@ -443,5 +445,89 @@ describe("lockWidgetSubtree", () => {
     expect(panel.children?.[0].locked).toBe(true);
     expect(panel.children?.[1].locked).toBe(true);
     expect(panel.children?.[1].children?.[0].locked).toBe(true);
+  });
+});
+
+describe("remapColorTokenRefs", () => {
+  it("renames token refs across style and screen props", () => {
+    const label = makeLabel("lbl_1");
+    label.style = {
+      textColor: { kind: "token", token: "fg" },
+      background: { kind: "token", token: "bg" },
+      borderColor: { kind: "token", token: "accent" },
+    };
+    const project = withChildren(makeFixtureProject(), [label]);
+
+    const changed = remapColorTokenRefs(project, "bg", { kind: "token", token: "surface" });
+    expect(changed).toBe(3); // screen style + screen props + label background
+    expect(project.screens[0].style?.background).toEqual({ kind: "token", token: "surface" });
+    expect(project.screens[0].props).toMatchObject({
+      background: { kind: "token", token: "surface" },
+    });
+    expect(label.style?.background).toEqual({ kind: "token", token: "surface" });
+    expect(label.style?.textColor).toEqual({ kind: "token", token: "fg" });
+  });
+
+  it("replaces deleted token refs with a solid hex color", () => {
+    const button = makeButton("btn_1");
+    button.style = { background: { kind: "token", token: "accent" } };
+    button.props = {
+      ...(button.props as object),
+      pressedBackground: { kind: "token", token: "accent" },
+    } as typeof button.props;
+    const project = withChildren(makeFixtureProject(), [button]);
+
+    remapColorTokenRefs(project, "accent", { kind: "hex", value: "#1E90FF" });
+    expect(button.style?.background).toEqual({ kind: "hex", value: "#1E90FF" });
+    expect((button.props as { pressedBackground?: unknown }).pressedBackground).toEqual({
+      kind: "hex",
+      value: "#1E90FF",
+    });
+  });
+
+  it("remaps tokens inside nested panel children", () => {
+    const nested = makeLabel("lbl_nested");
+    nested.style = {
+      textColor: { kind: "token", token: "fg" },
+      background: { kind: "token", token: "bg" },
+    };
+    const panel = makePanel("pan_1", [nested]);
+    const project = withChildren(makeFixtureProject(), [panel]);
+
+    remapColorTokenRefs(project, "fg", { kind: "token", token: "ink" });
+    expect(nested.style?.textColor).toEqual({ kind: "token", token: "ink" });
+    expect(nested.style?.background).toEqual({ kind: "token", token: "bg" });
+  });
+
+  it("returns zero and no-ops for an empty fromToken", () => {
+    const project = makeFixtureProject();
+    const before = JSON.stringify(project);
+    expect(remapColorTokenRefs(project, "", { kind: "hex", value: "#FFFFFF" })).toBe(0);
+    expect(JSON.stringify(project)).toBe(before);
+  });
+
+  it("clones replacement ColorRefs so later mutations do not leak", () => {
+    const label = makeLabel("lbl_1");
+    label.style = { textColor: { kind: "token", token: "fg" } };
+    const project = withChildren(makeFixtureProject(), [label]);
+    const replacement = { kind: "hex" as const, value: "#ABCDEF" };
+
+    remapColorTokenRefs(project, "fg", replacement);
+    replacement.value = "#000000";
+    expect(label.style?.textColor).toEqual({ kind: "hex", value: "#ABCDEF" });
+  });
+
+  it("leaves unrelated hex and token refs untouched", () => {
+    const label = makeLabel("lbl_1");
+    label.style = {
+      textColor: { kind: "hex", value: "#ABCDEF" },
+      background: { kind: "token", token: "fg" },
+    };
+    const project = withChildren(makeFixtureProject(), [label]);
+    remapColorTokenRefs(project, "bg", { kind: "hex", value: "#FFFFFF" });
+    expect(label.style).toEqual({
+      textColor: { kind: "hex", value: "#ABCDEF" },
+      background: { kind: "token", token: "fg" },
+    });
   });
 });

@@ -43,6 +43,7 @@ import {
   pruneCopySelection,
   removeNode,
   renameNodeInProject,
+  remapColorTokenRefs,
   resolvePasteParentOutsideClipboard,
   lockWidgetSubtree,
 } from "./tree-ops";
@@ -101,7 +102,10 @@ interface EditorState {
   commitLabelText: (nodeId: string, text: string, frame?: Frame) => void;
   cancelLabelTextEdit: () => void;
   setDisplaySize: (width: number, height: number) => void;
-  setPalette: (palette: PaletteEntry[]) => void;
+  setPalette: (
+    palette: PaletteEntry[],
+    options?: { remaps?: Array<{ from: string; to: ColorRef }> },
+  ) => void;
   loadHelloSample: () => void;
   undo: () => void;
   redo: () => void;
@@ -387,18 +391,40 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       return { ...recordHistory(state), project: next, draftFrame: null };
     }),
 
-  setPalette: (palette) =>
+  setPalette: (palette, options) =>
     set((state) => {
       const result = normalizePalette(palette);
       if (!result.ok) {
         return { lastError: result.error };
       }
+      const remaps = options?.remaps ?? [];
       const current = JSON.stringify(state.project.palette ?? []);
       const nextPalette = JSON.stringify(result.entries);
-      if (current === nextPalette) return state;
+      const hasRemaps = remaps.length > 0;
+      if (current === nextPalette && !hasRemaps) return state;
+
       const next = cloneProject(state.project);
       next.palette = result.entries;
-      return { ...recordHistory(state), project: next, lastError: null, draftFrame: null };
+      for (const remap of remaps) {
+        if (!remap.from) continue;
+        remapColorTokenRefs(next, remap.from, remap.to);
+      }
+
+      let markerStyle = state.markerStyle;
+      if (hasRemaps && markerStyle.color.kind === "token") {
+        const hit = remaps.find((remap) => remap.from === markerStyle.color.token);
+        if (hit) {
+          markerStyle = { ...markerStyle, color: { ...hit.to } };
+        }
+      }
+
+      return {
+        ...recordHistory(state),
+        project: next,
+        markerStyle,
+        lastError: null,
+        draftFrame: null,
+      };
     }),
 
   loadHelloSample: () => {

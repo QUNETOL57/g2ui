@@ -1,4 +1,12 @@
-import type { Frame, LabelProps, ScreenNode, UiProject, WidgetNode, WidgetType } from "..";
+import type {
+  ColorRef,
+  Frame,
+  LabelProps,
+  ScreenNode,
+  UiProject,
+  WidgetNode,
+  WidgetType,
+} from "..";
 import { makeWidget, nextId } from "..";
 import { isValidId } from "../ids";
 import { defaultProps } from "../defaults";
@@ -198,6 +206,48 @@ export function remapNodeIdRefs(p: UiProject, oldId: string, newId: string): voi
     (n.children ?? []).forEach(walk);
   };
   p.screens.forEach(walk);
+}
+
+function replaceColorToken(color: ColorRef | undefined, fromToken: string, to: ColorRef): ColorRef | undefined {
+  if (!color || color.kind !== "token" || color.token !== fromToken) return color;
+  return { ...to };
+}
+
+/**
+ * Replace every `{ kind: "token", token: fromToken }` ColorRef in the project
+ * with a clone of `to` (rename target or solid hex fallback).
+ * Returns how many color fields were updated.
+ */
+export function remapColorTokenRefs(p: UiProject, fromToken: string, to: ColorRef): number {
+  if (!fromToken) return 0;
+  let changed = 0;
+
+  const apply = (color: ColorRef | undefined): ColorRef | undefined => {
+    const next = replaceColorToken(color, fromToken, to);
+    if (next !== color) changed += 1;
+    return next;
+  };
+
+  const walk = (n: WidgetNode) => {
+    if (n.style) {
+      n.style.background = apply(n.style.background);
+      n.style.borderColor = apply(n.style.borderColor);
+      n.style.textColor = apply(n.style.textColor);
+    }
+    if (n.props && typeof n.props === "object") {
+      const props = n.props as Record<string, unknown>;
+      if ("background" in props) {
+        props.background = apply(props.background as ColorRef | undefined);
+      }
+      if ("pressedBackground" in props) {
+        props.pressedBackground = apply(props.pressedBackground as ColorRef | undefined);
+      }
+    }
+    (n.children ?? []).forEach(walk);
+  };
+
+  p.screens.forEach(walk);
+  return changed;
 }
 
 /**

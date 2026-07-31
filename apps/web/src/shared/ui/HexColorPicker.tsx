@@ -1,4 +1,13 @@
-import { useEffect, useId, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
+import { createPortal } from "react-dom";
 
 import { normalizeHex } from "@entities/ui-project/lib/palette";
 import { cn } from "@shared/lib/cn";
@@ -11,18 +20,31 @@ interface HexColorPickerProps {
   onChange: (hex: string) => void;
   ariaLabel: string;
   className?: string;
+  /** Horizontal alignment of the popover relative to the swatch. */
+  align?: "start" | "end";
 }
 
 function clamp01(n: number): number {
   return Math.max(0, Math.min(1, n));
 }
 
-export function HexColorPicker({ value, onChange, ariaLabel, className }: HexColorPickerProps) {
+const PANEL_WIDTH = 220;
+const PANEL_GAP = 6;
+
+export function HexColorPicker({
+  value,
+  onChange,
+  ariaLabel,
+  className,
+  align = "end",
+}: HexColorPickerProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
   const svRef = useRef<HTMLDivElement | null>(null);
   const hueRef = useRef<HTMLDivElement | null>(null);
   const panelId = useId();
   const [open, setOpen] = useState(false);
+  const [panelStyle, setPanelStyle] = useState<CSSProperties>({});
   const [draft, setDraft] = useState(value);
   const [hsv, setHsv] = useState<Hsv>(() => hexToHsv(value) ?? { h: 0, s: 0, v: 1 });
   const hsvRef = useRef(hsv);
@@ -36,7 +58,6 @@ export function HexColorPicker({ value, onChange, ariaLabel, className }: HexCol
     const normalized = normalizeHex(value)?.toUpperCase() ?? value.toUpperCase();
     setDraft(value);
 
-    // Ignore echo of our own drag/emit updates — RGB round-trip would reset hue near white.
     if (draggingRef.current) return;
     if (normalized === lastEmittedHexRef.current) return;
 
@@ -48,19 +69,53 @@ export function HexColorPicker({ value, onChange, ariaLabel, className }: HexCol
     lastEmittedHexRef.current = normalized;
   }, [value]);
 
+  useLayoutEffect(() => {
+    if (!open || !rootRef.current) return;
+
+    const updatePosition = () => {
+      const rect = rootRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const left =
+        align === "start"
+          ? Math.min(rect.left, window.innerWidth - PANEL_WIDTH - 8)
+          : Math.min(Math.max(8, rect.right - PANEL_WIDTH), window.innerWidth - PANEL_WIDTH - 8);
+      const top = Math.min(rect.bottom + PANEL_GAP, window.innerHeight - 8);
+      setPanelStyle({
+        position: "fixed",
+        top,
+        left: Math.max(8, left),
+        width: PANEL_WIDTH,
+        zIndex: 400,
+      });
+    };
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [open, align]);
+
   useEffect(() => {
     if (!open) return;
     const handlePointerDown = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+      const target = event.target as Node;
+      if (rootRef.current?.contains(target) || panelRef.current?.contains(target)) return;
+      setOpen(false);
     };
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopPropagation();
+      setOpen(false);
     };
     window.addEventListener("pointerdown", handlePointerDown);
-    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown, true);
     return () => {
       window.removeEventListener("pointerdown", handlePointerDown);
-      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keydown", handleKeyDown, true);
     };
   }, [open]);
 
@@ -133,6 +188,61 @@ export function HexColorPicker({ value, onChange, ariaLabel, className }: HexCol
 
   const hueColor = hsvToHex({ h: hsv.h, s: 1, v: 1 });
 
+  const panel = open ? (
+    <div
+      ref={panelRef}
+      className={styles.panel}
+      id={panelId}
+      role="dialog"
+      aria-label={`${ariaLabel} color picker`}
+      style={panelStyle}
+    >
+      <div
+        ref={svRef}
+        className={styles.sv}
+        style={{ backgroundColor: hueColor }}
+        onPointerDown={(event) => bindDrag(event, updateSvFromPointer)}
+      >
+        <div className={styles.svWhite} />
+        <div className={styles.svBlack} />
+        <span
+          className={styles.svThumb}
+          style={{ left: `${hsv.s * 100}%`, top: `${(1 - hsv.v) * 100}%` }}
+        />
+      </div>
+
+      <div
+        ref={hueRef}
+        className={styles.hue}
+        onPointerDown={(event) => bindDrag(event, (clientX) => updateHueFromPointer(clientX))}
+      >
+        <span className={styles.hueThumb} style={{ left: `${(hsv.h / 360) * 100}%` }} />
+      </div>
+
+      <div className={styles.hexRow}>
+        <span className={styles.hexLabel}>HEX</span>
+        <input
+          type="text"
+          className={styles.panelHexInput}
+          value={draft}
+          spellCheck={false}
+          aria-label={ariaLabel}
+          placeholder="#FFFFFF"
+          onChange={(event) => applyHexText(event.target.value, false)}
+          onBlur={() => applyHexText(draft, true)}
+          onFocus={(event) => event.currentTarget.select()}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") event.currentTarget.blur();
+            if (event.key === "Escape") {
+              setDraft(value);
+              event.currentTarget.blur();
+            }
+          }}
+        />
+      </div>
+    </div>
+  ) : null;
+
   return (
     <div className={cn(styles.root, className)} ref={rootRef}>
       <button
@@ -146,56 +256,7 @@ export function HexColorPicker({ value, onChange, ariaLabel, className }: HexCol
         style={{ backgroundColor: preview }}
         onClick={() => setOpen((current) => !current)}
       />
-
-      {open ? (
-        <div className={styles.panel} id={panelId} role="dialog" aria-label={`${ariaLabel} color picker`}>
-          <div
-            ref={svRef}
-            className={styles.sv}
-            style={{ backgroundColor: hueColor }}
-            onPointerDown={(event) => bindDrag(event, updateSvFromPointer)}
-          >
-            <div className={styles.svWhite} />
-            <div className={styles.svBlack} />
-            <span
-              className={styles.svThumb}
-              style={{ left: `${hsv.s * 100}%`, top: `${(1 - hsv.v) * 100}%` }}
-            />
-          </div>
-
-          <div
-            ref={hueRef}
-            className={styles.hue}
-            onPointerDown={(event) =>
-              bindDrag(event, (clientX) => updateHueFromPointer(clientX))
-            }
-          >
-            <span className={styles.hueThumb} style={{ left: `${(hsv.h / 360) * 100}%` }} />
-          </div>
-
-          <div className={styles.hexRow}>
-            <span className={styles.hexLabel}>HEX</span>
-            <input
-              type="text"
-              className={styles.panelHexInput}
-              value={draft}
-              spellCheck={false}
-              aria-label={ariaLabel}
-              placeholder="#FFFFFF"
-              onChange={(event) => applyHexText(event.target.value, false)}
-              onBlur={() => applyHexText(draft, true)}
-              onFocus={(event) => event.currentTarget.select()}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") event.currentTarget.blur();
-                if (event.key === "Escape") {
-                  setDraft(value);
-                  event.currentTarget.blur();
-                }
-              }}
-            />
-          </div>
-        </div>
-      ) : null}
+      {panel ? createPortal(panel, document.body) : null}
     </div>
   );
 }

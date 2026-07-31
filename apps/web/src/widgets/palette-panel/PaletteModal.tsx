@@ -3,9 +3,11 @@ import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 
-import type { PaletteEntry } from "@entities/ui-project";
+import type { ColorRef, PaletteEntry } from "@entities/ui-project";
 import { createPaletteEntry, normalizeHex, normalizePalette } from "@entities/ui-project/lib/palette";
 import { useEditorStore } from "@entities/ui-project/model/store";
+import { Button } from "@shared/ui/Button";
+import { HexColorPicker } from "@shared/ui/HexColorPicker";
 import { IconButton } from "@shared/ui/IconButton";
 import { Modal } from "@shared/ui/Modal";
 
@@ -20,17 +22,26 @@ export const PaletteModal = memo(function PaletteModal({ open, onClose }: Palett
   const palette = useEditorStore((s) => s.project.palette ?? []);
   const setPalette = useEditorStore((s) => s.setPalette);
   const [draft, setDraft] = useState<PaletteEntry[]>(palette);
+  const [pendingDelete, setPendingDelete] = useState<{
+    index: number;
+    token: string;
+    hex: string;
+  } | null>(null);
 
   useEffect(() => {
-    if (open) setDraft(palette);
+    if (open) {
+      setDraft(palette);
+      setPendingDelete(null);
+    }
   }, [open, palette]);
 
   const commit = useCallback(
-    (next: PaletteEntry[]) => {
+    (next: PaletteEntry[], remaps?: Array<{ from: string; to: ColorRef }>) => {
       const result = normalizePalette(next);
-      if (!result.ok) return;
+      if (!result.ok) return false;
       setDraft(result.entries);
-      setPalette(result.entries);
+      setPalette(result.entries, remaps?.length ? { remaps } : undefined);
+      return true;
     },
     [setPalette],
   );
@@ -45,6 +56,7 @@ export const PaletteModal = memo(function PaletteModal({ open, onClose }: Palett
   };
 
   const commitEntry = (index: number, patch?: Partial<PaletteEntry>) => {
+    const previousToken = palette[index]?.token ?? draft[index]?.token;
     const next = draft.map((entry, i) =>
       i === index ? { ...entry, ...patch, token: (patch?.token ?? entry.token).trim() } : entry,
     );
@@ -52,11 +64,30 @@ export const PaletteModal = memo(function PaletteModal({ open, onClose }: Palett
     const hex = normalizeHex(patch?.hex ?? entry.hex);
     if (!hex) return;
     next[index] = { ...entry, hex };
-    commit(next);
+
+    const remaps: Array<{ from: string; to: ColorRef }> = [];
+    if (previousToken && entry.token !== previousToken) {
+      remaps.push({ from: previousToken, to: { kind: "token", token: entry.token } });
+    }
+    commit(next, remaps);
   };
 
-  const removeEntry = (index: number) => {
-    commit(draft.filter((_, i) => i !== index));
+  const confirmDelete = () => {
+    if (!pendingDelete) return;
+    const { index, token, hex } = pendingDelete;
+    const resolvedHex = normalizeHex(hex) ?? normalizeHex(draft[index]?.hex) ?? "#FFFFFF";
+    const next = draft.filter((_, i) => i !== index);
+    if (commit(next, [{ from: token, to: { kind: "hex", value: resolvedHex } }])) {
+      setPendingDelete(null);
+    }
+  };
+
+  const dismissOrClose = () => {
+    if (pendingDelete) {
+      setPendingDelete(null);
+      return;
+    }
+    onClose();
   };
 
   const addEntry = () => {
@@ -66,7 +97,7 @@ export const PaletteModal = memo(function PaletteModal({ open, onClose }: Palett
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={dismissOrClose}
       size="md"
       className={styles.paletteDialog}
       closeOnBackdrop={false}
@@ -87,27 +118,41 @@ export const PaletteModal = memo(function PaletteModal({ open, onClose }: Palett
         </div>
 
         <div className={styles.modalContent}>
-          {draft.length === 0 ? (
+          {pendingDelete ? (
+            <div className={styles.deleteConfirm} role="alertdialog" aria-labelledby="delete-token-title">
+              <h2 id="delete-token-title">Delete token?</h2>
+              <p>
+                Remove <strong>{pendingDelete.token}</strong> from the palette. Widgets and screens
+                that used this token keep color {pendingDelete.hex} as a plain hex value.
+              </p>
+              <div className={styles.deleteActions}>
+                <Button type="button" size="sm" onClick={() => setPendingDelete(null)}>
+                  Cancel
+                </Button>
+                <Button type="button" size="sm" variant="danger" onClick={confirmDelete}>
+                  Delete
+                </Button>
+              </div>
+            </div>
+          ) : draft.length === 0 ? (
             <div className={styles.emptyState}>No palette tokens yet. Add your first color.</div>
           ) : (
             <>
               <div className={styles.entryHeader}>
-                <span>Color</span>
-                <span>Token</span>
+                <span aria-hidden />
+                <span>Name</span>
                 <span>Hex</span>
                 <span aria-hidden />
               </div>
               <div className={styles.entryList}>
                 {draft.map((entry, index) => (
                   <div key={index} className={styles.entryRow}>
-                    <input
-                      type="color"
-                      className={styles.swatchInput}
+                    <HexColorPicker
+                      className={styles.swatchPicker}
+                      align="start"
                       value={normalizeHex(entry.hex) ?? "#FFFFFF"}
-                      aria-label={`Color swatch for ${entry.token}`}
-                      onChange={(event) => {
-                        const hex = normalizeHex(event.target.value);
-                        if (!hex) return;
+                      ariaLabel={`Color swatch for ${entry.token}`}
+                      onChange={(hex) => {
                         const next = draft.map((item, i) => (i === index ? { ...item, hex } : item));
                         commit(next);
                       }}
@@ -135,9 +180,16 @@ export const PaletteModal = memo(function PaletteModal({ open, onClose }: Palett
                       }}
                     />
                     <IconButton
+                      className={styles.iconButtonDanger}
                       aria-label={`Delete ${entry.token}`}
                       title={`Delete ${entry.token}`}
-                      onClick={() => removeEntry(index)}
+                      onClick={() =>
+                        setPendingDelete({
+                          index,
+                          token: entry.token,
+                          hex: normalizeHex(entry.hex) ?? entry.hex,
+                        })
+                      }
                     >
                       <DeleteOutlineOutlinedIcon />
                     </IconButton>
@@ -147,15 +199,17 @@ export const PaletteModal = memo(function PaletteModal({ open, onClose }: Palett
             </>
           )}
 
-          <div className={styles.actions}>
-            <button type="button" className={styles.addButton} onClick={addEntry}>
-              <AddOutlinedIcon fontSize="small" aria-hidden />
-              Add color
-            </button>
-            <p className={styles.hint}>
-              {sortedPreview.length} token{sortedPreview.length === 1 ? "" : "s"}
-            </p>
-          </div>
+          {!pendingDelete ? (
+            <div className={styles.actions}>
+              <button type="button" className={styles.addButton} onClick={addEntry}>
+                <AddOutlinedIcon fontSize="small" aria-hidden />
+                Add color
+              </button>
+              <p className={styles.hint}>
+                {sortedPreview.length} token{sortedPreview.length === 1 ? "" : "s"}
+              </p>
+            </div>
+          ) : null}
         </div>
       </div>
     </Modal>

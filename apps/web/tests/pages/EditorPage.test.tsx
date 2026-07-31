@@ -186,6 +186,42 @@ describe("EditorPage keyboard shortcuts", () => {
     expect(findNode(get().project, "lbl_1")).not.toBeNull();
   });
 
+  it("does nothing when Delete is pressed with no selection", async () => {
+    const project = withChildren(makeFixtureProject(), [makeLabel("lbl_1")]);
+    get().setProject(project);
+    get().selectNode(null);
+    render(<EditorPage onBackToLibrary={() => undefined} />);
+
+    const event = new KeyboardEvent("keydown", {
+      key: "Delete",
+      code: "Delete",
+      bubbles: true,
+      cancelable: true,
+    });
+    window.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(findNode(get().project, "lbl_1")).not.toBeNull();
+  });
+
+  it("prevents Backspace default when nothing is selected", async () => {
+    const project = withChildren(makeFixtureProject(), [makeLabel("lbl_1")]);
+    get().setProject(project);
+    get().selectNode(null);
+    render(<EditorPage onBackToLibrary={() => undefined} />);
+
+    const event = new KeyboardEvent("keydown", {
+      key: "Backspace",
+      code: "Backspace",
+      bubbles: true,
+      cancelable: true,
+    });
+    window.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(findNode(get().project, "lbl_1")).not.toBeNull();
+  });
+
   it("does not delete selected node while a modal is open", async () => {
     const project = withChildren(makeFixtureProject(), [makeLabel("lbl_1")]);
     get().setProject(project);
@@ -194,6 +230,24 @@ describe("EditorPage keyboard shortcuts", () => {
     await userEvent.click(screen.getByRole("button", { name: /^Palette$/ }));
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     await userEvent.keyboard("{Delete}");
+    expect(findNode(get().project, "lbl_1")).not.toBeNull();
+  });
+
+  it("still prevents Delete default while a modal is open", async () => {
+    const project = withChildren(makeFixtureProject(), [makeLabel("lbl_1")]);
+    get().setProject(project);
+    get().selectNode("lbl_1");
+    render(<EditorPage onBackToLibrary={() => undefined} />);
+    await userEvent.click(screen.getByRole("button", { name: /^Palette$/ }));
+
+    const event = new KeyboardEvent("keydown", {
+      key: "Delete",
+      code: "Delete",
+      bubbles: true,
+      cancelable: true,
+    });
+    window.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(true);
     expect(findNode(get().project, "lbl_1")).not.toBeNull();
   });
 

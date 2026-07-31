@@ -186,6 +186,17 @@ describe("EditorPage keyboard shortcuts", () => {
     expect(findNode(get().project, "lbl_1")).not.toBeNull();
   });
 
+  it("does not delete selected node while a modal is open", async () => {
+    const project = withChildren(makeFixtureProject(), [makeLabel("lbl_1")]);
+    get().setProject(project);
+    get().selectNode("lbl_1");
+    render(<EditorPage onBackToLibrary={() => undefined} />);
+    await userEvent.click(screen.getByRole("button", { name: /^Palette$/ }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    await userEvent.keyboard("{Delete}");
+    expect(findNode(get().project, "lbl_1")).not.toBeNull();
+  });
+
   it("Ctrl+Z triggers undo", async () => {
     render(<EditorPage onBackToLibrary={() => undefined} />);
     const id = get().addWidget("screen_main", "label")!;

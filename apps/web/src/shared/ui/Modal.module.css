@@ -19,6 +19,15 @@
   box-shadow: 0 24px 80px var(--color-shadow-strong);
 }
 
+.dialog:focus {
+  outline: none;
+}
+
+.dialog:focus-visible {
+  outline: 1px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
 .sizeSm {
   width: min(360px, calc(100vw - 48px));
   padding: var(--space-7);

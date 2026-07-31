@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -76,5 +76,37 @@ describe("ColorField", () => {
     await userEvent.click(tokenTrigger);
     await userEvent.click(screen.getByRole("option", { name: /fg/i }));
     expect(onChange).toHaveBeenCalledWith({ kind: "token", token: "fg" });
+  });
+
+  it("keeps palette token after switching from hex (ignores late hex blur)", async () => {
+    let value: ColorRef = { kind: "hex", value: "#112233" };
+    const onChange = vi.fn((next: ColorRef | undefined) => {
+      if (next) value = next;
+    });
+
+    const view = render(
+      <ColorField label="bg" value={value} palette={palette} onChange={onChange} />,
+    );
+
+    const hexInput = document.querySelector('input[type="color"]') as HTMLInputElement;
+    expect(hexInput).toBeTruthy();
+    hexInput.focus();
+
+    const modeTrigger = screen.getByRole("button", { name: "bg mode" });
+    await userEvent.click(modeTrigger);
+    await userEvent.click(screen.getByRole("option", { name: /palette/i }));
+    expect(onChange).toHaveBeenCalledWith({ kind: "token", token: "bg" });
+
+    view.rerender(<ColorField label="bg" value={value} palette={palette} onChange={onChange} />);
+
+    // Late blur from the unmounted-or-unmounting hex input must not revert to hex.
+    fireEvent.blur(hexInput);
+
+    const hexCallsAfterToken = onChange.mock.calls.filter(
+      (call) => (call[0] as ColorRef | undefined)?.kind === "hex",
+    );
+    expect(hexCallsAfterToken).toHaveLength(0);
+    expect(value).toEqual({ kind: "token", token: "bg" });
+    expect(screen.getByRole("button", { name: "bg token" })).toBeInTheDocument();
   });
 });

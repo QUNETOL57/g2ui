@@ -56,6 +56,9 @@ export function EditorPage({
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      // While any modal is open, keep editor hotkeys from acting on the selection.
+      if (document.querySelector('[aria-modal="true"]')) return;
+
       const target = event.target;
       const isEditingText =
         target instanceof HTMLInputElement ||

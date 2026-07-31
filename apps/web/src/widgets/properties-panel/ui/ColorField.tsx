@@ -18,6 +18,16 @@ export function ColorField({
 }) {
   const current = value ?? { kind: "hex", value: "#FFFFFF" };
   const mode = current.kind;
+  // Tracks intended mode synchronously so late HexColorInput blur/timers cannot
+  // overwrite a just-selected palette token before the parent re-renders.
+  const modeLockRef = useRef<"hex" | "token">(mode);
+  modeLockRef.current = mode;
+
+  const emitHex = (nextValue: string) => {
+    if (modeLockRef.current !== "hex") return;
+    onChange({ kind: "hex", value: nextValue });
+  };
+
   return (
     <div className={cn(styles.row, styles.colorField)}>
       <label>{label}</label>
@@ -31,8 +41,9 @@ export function ColorField({
               { value: "hex", label: "hex" },
               { value: "token", label: "palette" },
             ]}
-            onChange={(value) => {
-              const kind = value as "hex" | "token";
+            onChange={(next) => {
+              const kind = next as "hex" | "token";
+              modeLockRef.current = kind;
               if (kind === "hex") return onChange({ kind: "hex", value: "#FFFFFF" });
               return onChange({
                 kind: "token",
@@ -43,7 +54,7 @@ export function ColorField({
           {mode === "hex" ? (
             <HexColorInput
               value={current.kind === "hex" ? current.value : "#FFFFFF"}
-              onChange={(nextValue) => onChange({ kind: "hex", value: nextValue })}
+              onChange={emitHex}
             />
           ) : null}
         </div>
@@ -57,7 +68,10 @@ export function ColorField({
               label: `${p.token} (${p.hex})`,
               color: p.hex,
             }))}
-            onChange={(value) => onChange({ kind: "token", token: value })}
+            onChange={(token) => {
+              modeLockRef.current = "token";
+              onChange({ kind: "token", token });
+            }}
           />
         ) : null}
       </div>
@@ -75,26 +89,37 @@ function HexColorInput({
   const [draft, setDraft] = useState(value);
   const latestRef = useRef(value);
   const timeoutRef = useRef<number | null>(null);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      if (timeoutRef.current !== null) {
+        window.clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     setDraft(value);
     latestRef.current = value;
   }, [value]);
 
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current !== null) {
-        window.clearTimeout(timeoutRef.current);
-      }
-    };
-  }, []);
+  const emit = (nextValue: string) => {
+    if (!mountedRef.current) return;
+    onChange(nextValue);
+  };
 
   const commitLatest = () => {
     if (timeoutRef.current !== null) {
       window.clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
     }
-    onChange(latestRef.current);
+    // Skip no-op blur commits (also avoids overwriting a just-selected palette token).
+    if (latestRef.current.toUpperCase() === value.toUpperCase()) return;
+    emit(latestRef.current);
   };
 
   const scheduleChange = (nextValue: string) => {
@@ -105,7 +130,7 @@ function HexColorInput({
     if (timeoutRef.current !== null) return;
     timeoutRef.current = window.setTimeout(() => {
       timeoutRef.current = null;
-      onChange(latestRef.current);
+      emit(latestRef.current);
     }, 80);
   };
 

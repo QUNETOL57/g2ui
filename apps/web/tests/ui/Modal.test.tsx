@@ -21,6 +21,16 @@ describe("Modal", () => {
       </Modal>,
     );
     expect(screen.getByText("visible")).toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toHaveAttribute("aria-modal", "true");
+  });
+
+  it("moves focus into the dialog when opened", () => {
+    render(
+      <Modal open>
+        <button type="button">inside</button>
+      </Modal>,
+    );
+    expect(screen.getByRole("button", { name: "inside" })).toHaveFocus();
   });
 
   it("calls onClose on Escape by default", async () => {

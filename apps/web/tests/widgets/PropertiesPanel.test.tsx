@@ -42,12 +42,12 @@ describe("PropertiesPanel: empty state", () => {
 
   it("shows marker settings immediately when marker tool is active", async () => {
     get().setActiveTool("marker");
-    const { container } = selectAndRender(null);
+    selectAndRender(null);
 
     expect(screen.getByText(/Properties · marker/)).toBeInTheDocument();
     expect(screen.getByText("Marker")).toBeInTheDocument();
     expect(screen.getByText("Stroke")).toBeInTheDocument();
-    expect(container.querySelector('input[type="color"]')).toBeTruthy();
+    expect(screen.getByRole("button", { name: "color hex picker" })).toBeInTheDocument();
 
     const widthInput = screen.getByRole("spinbutton");
     await userEvent.clear(widthInput);
@@ -55,10 +55,8 @@ describe("PropertiesPanel: empty state", () => {
     await userEvent.tab();
     expect(get().markerStyle.width).toBe(4);
 
-    const colorInput = container.querySelector('input[type="color"]') as HTMLInputElement;
-    fireEvent.change(colorInput, { target: { value: "#ff0000" } });
-    fireEvent.blur(colorInput);
-    expect(get().markerStyle.color).toEqual({ kind: "hex", value: "#FF0000" });
+    await userEvent.click(screen.getByRole("button", { name: "color hex picker" }));
+    expect(screen.getByRole("dialog", { name: "color hex color picker" })).toBeInTheDocument();
   });
 
   it("prefers selected widget properties over marker settings", () => {

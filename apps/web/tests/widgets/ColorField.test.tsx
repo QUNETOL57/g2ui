@@ -18,16 +18,52 @@ describe("ColorField", () => {
     expect(screen.getByText("color")).toBeInTheDocument();
   });
 
-  it("shows hex picker by default for hex values", () => {
-    const { container } = render(
+  it("shows a swatch picker without an inline hex text field", () => {
+    render(
       <ColorField
         label="bg"
-        value={{ kind: "hex", value: "#abcdef" }}
+        value={{ kind: "hex", value: "#ABCDEF" }}
         palette={palette}
         onChange={() => undefined}
       />,
     );
-    expect(container.querySelector('input[type="color"]')).toBeTruthy();
+    expect(screen.getByRole("button", { name: "bg hex picker" })).toBeInTheDocument();
+    expect(screen.queryByLabelText("bg hex")).not.toBeInTheDocument();
+    expect(document.querySelector('input[type="color"]')).toBeNull();
+  });
+
+  it("opens a hex-only color picker panel from the swatch", async () => {
+    render(
+      <ColorField
+        label="bg"
+        value={{ kind: "hex", value: "#FF0000" }}
+        palette={palette}
+        onChange={() => undefined}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "bg hex picker" }));
+    expect(screen.getByRole("dialog", { name: "bg hex color picker" })).toBeInTheDocument();
+    expect(screen.getByText("HEX")).toBeInTheDocument();
+    expect(screen.getByLabelText("bg hex")).toHaveValue("#FF0000");
+    expect(screen.queryByText(/rgb/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/hsl/i)).not.toBeInTheDocument();
+  });
+
+  it("allows pasting a hex value inside the picker", async () => {
+    const onChange = vi.fn();
+    render(
+      <ColorField
+        label="bg"
+        value={{ kind: "hex", value: "#FF0000" }}
+        palette={palette}
+        onChange={onChange}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "bg hex picker" }));
+    const hexInput = screen.getByLabelText("bg hex");
+    await userEvent.clear(hexInput);
+    await userEvent.paste("#5AE5BB");
+    expect(onChange).toHaveBeenCalledWith({ kind: "hex", value: "#5AE5BB" });
   });
 
   it("switches to token mode and reports onChange with first palette token", async () => {
@@ -76,5 +112,32 @@ describe("ColorField", () => {
     await userEvent.click(tokenTrigger);
     await userEvent.click(screen.getByRole("option", { name: /fg/i }));
     expect(onChange).toHaveBeenCalledWith({ kind: "token", token: "fg" });
+  });
+
+  it("keeps palette mode when the hex picker would otherwise emit", async () => {
+    const onChange = vi.fn();
+    const { rerender } = render(
+      <ColorField
+        label="bg"
+        value={{ kind: "hex", value: "#000000" }}
+        palette={palette}
+        onChange={onChange}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "bg mode" }));
+    await userEvent.click(screen.getByRole("option", { name: /palette/i }));
+    expect(onChange).toHaveBeenLastCalledWith({ kind: "token", token: "bg" });
+
+    rerender(
+      <ColorField
+        label="bg"
+        value={{ kind: "token", token: "bg" }}
+        palette={palette}
+        onChange={onChange}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "bg token" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "bg hex picker" })).not.toBeInTheDocument();
   });
 });

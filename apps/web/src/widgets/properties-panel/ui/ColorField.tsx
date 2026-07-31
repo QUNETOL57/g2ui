@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 
 import type { ColorRef } from "@entities/ui-project";
 import { cn } from "@shared/lib/cn";
 import { CustomSelect } from "@shared/ui/CustomSelect";
+import { HexColorPicker } from "@shared/ui/HexColorPicker";
 import styles from "../PropertiesPanel.module.css";
 
 export function ColorField({
@@ -18,6 +19,16 @@ export function ColorField({
 }) {
   const current = value ?? { kind: "hex", value: "#FFFFFF" };
   const mode = current.kind;
+  // Tracks intended mode synchronously so late hex emits cannot overwrite a
+  // just-selected palette token before the parent re-renders.
+  const modeLockRef = useRef<"hex" | "token">(mode);
+  modeLockRef.current = mode;
+
+  const emitHex = (nextValue: string) => {
+    if (modeLockRef.current !== "hex") return;
+    onChange({ kind: "hex", value: nextValue });
+  };
+
   return (
     <div className={cn(styles.row, styles.colorField)}>
       <label>{label}</label>
@@ -31,8 +42,9 @@ export function ColorField({
               { value: "hex", label: "hex" },
               { value: "token", label: "palette" },
             ]}
-            onChange={(value) => {
-              const kind = value as "hex" | "token";
+            onChange={(next) => {
+              const kind = next as "hex" | "token";
+              modeLockRef.current = kind;
               if (kind === "hex") return onChange({ kind: "hex", value: "#FFFFFF" });
               return onChange({
                 kind: "token",
@@ -41,9 +53,10 @@ export function ColorField({
             }}
           />
           {mode === "hex" ? (
-            <HexColorInput
+            <HexColorPicker
+              ariaLabel={`${label} hex`}
               value={current.kind === "hex" ? current.value : "#FFFFFF"}
-              onChange={(nextValue) => onChange({ kind: "hex", value: nextValue })}
+              onChange={emitHex}
             />
           ) : null}
         </div>
@@ -57,65 +70,13 @@ export function ColorField({
               label: `${p.token} (${p.hex})`,
               color: p.hex,
             }))}
-            onChange={(value) => onChange({ kind: "token", token: value })}
+            onChange={(token) => {
+              modeLockRef.current = "token";
+              onChange({ kind: "token", token });
+            }}
           />
         ) : null}
       </div>
     </div>
-  );
-}
-
-function HexColorInput({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  const [draft, setDraft] = useState(value);
-  const latestRef = useRef(value);
-  const timeoutRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    setDraft(value);
-    latestRef.current = value;
-  }, [value]);
-
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current !== null) {
-        window.clearTimeout(timeoutRef.current);
-      }
-    };
-  }, []);
-
-  const commitLatest = () => {
-    if (timeoutRef.current !== null) {
-      window.clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-    onChange(latestRef.current);
-  };
-
-  const scheduleChange = (nextValue: string) => {
-    const normalized = nextValue.toUpperCase();
-    setDraft(normalized);
-    latestRef.current = normalized;
-
-    if (timeoutRef.current !== null) return;
-    timeoutRef.current = window.setTimeout(() => {
-      timeoutRef.current = null;
-      onChange(latestRef.current);
-    }, 80);
-  };
-
-  return (
-    <input
-      type="color"
-      className={styles.hexInput}
-      value={draft}
-      onChange={(event) => scheduleChange(event.target.value)}
-      onBlur={commitLatest}
-    />
   );
 }

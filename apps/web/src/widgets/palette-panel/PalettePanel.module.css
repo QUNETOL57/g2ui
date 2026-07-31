@@ -89,6 +89,10 @@
   align-items: center;
 }
 
+.swatchPicker {
+  justify-self: start;
+}
+
 .swatchInput {
   box-sizing: border-box;
   width: 25px;
@@ -143,12 +147,50 @@
   text-transform: uppercase;
 }
 
+.entryHeader > span {
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.iconButtonDanger:hover:not(:disabled) {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
 .actions {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 8px;
   margin-top: 12px;
+}
+
+.deleteConfirm {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.deleteConfirm h2 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--font-size-xl);
+}
+
+.deleteConfirm p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-md);
+  line-height: 1.45;
+}
+
+.deleteConfirm p strong {
+  color: var(--color-text);
+}
+
+.deleteActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .hint {

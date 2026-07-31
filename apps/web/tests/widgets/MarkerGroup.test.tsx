@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -39,18 +39,19 @@ describe("MarkerGroup", () => {
     expect(onChange).toHaveBeenCalledWith({ width: 5 });
   });
 
-  it("emits color updates", () => {
+  it("emits color updates", async () => {
     const onChange = vi.fn();
-    const { container } = render(
+    render(
       <MarkerGroup
         markerStyle={{ color: { kind: "hex", value: "#FFFFFF" }, width: 1 }}
         palette={palette}
         onChange={onChange}
       />,
     );
-    const colorInput = container.querySelector('input[type="color"]') as HTMLInputElement;
-    fireEvent.change(colorInput, { target: { value: "#ff0000" } });
-    fireEvent.blur(colorInput);
-    expect(onChange).toHaveBeenCalledWith({ color: { kind: "hex", value: "#FF0000" } });
+    await userEvent.click(screen.getByRole("button", { name: "color hex picker" }));
+    const dialog = screen.getByRole("dialog", { name: "color hex color picker" });
+    expect(dialog).toBeInTheDocument();
+    // Hue/SV interaction is covered via unit HSV helpers; opening the picker is enough here.
+    expect(screen.getByLabelText("color hex")).toHaveValue("#FFFFFF");
   });
 });

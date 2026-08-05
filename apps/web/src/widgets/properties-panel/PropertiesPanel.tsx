@@ -13,6 +13,7 @@ import { IconGroup } from "./groups/IconGroup";
 import { LabelGroup } from "./groups/LabelGroup";
 import { LayoutGroup } from "./groups/LayoutGroup";
 import { MarkerGroup } from "./groups/MarkerGroup";
+import { QrCodeGroup } from "./groups/QrCodeGroup";
 import { SelectedGroup } from "./groups/SelectedGroup";
 import { StyleGroup } from "./groups/StyleGroup";
 import { EditorShortcutsList } from "./ui/EditorShortcutsList";
@@ -122,6 +123,13 @@ export function PropertiesPanel() {
         )}
         {node.type === "icon" && (
           <IconGroup node={node} onChange={(patch) => updateProps(node.id, patch)} />
+        )}
+        {node.type === "qrcode" && (
+          <QrCodeGroup
+            node={node}
+            onChange={(patch) => updateProps(node.id, patch)}
+            onFrameChange={(frame) => updateFrame(node.id, frame)}
+          />
         )}
 
         {(node.type === "screen" || node.type === "panel") && (

@@ -115,6 +115,15 @@ describe("CanvasToolbar: create tools", () => {
     await userEvent.click(screen.getByRole("menuitem", { name: "Icon" }));
     expect(get().project.screens[0].children?.[0].type).toBe("icon");
   });
+
+  it("adds a QR code from the media tools menu", async () => {
+    render(<CanvasToolbar />);
+    await userEvent.click(screen.getByRole("button", { name: "Media tools" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "QR code" }));
+    const node = get().project.screens[0].children?.[0];
+    expect(node?.type).toBe("qrcode");
+    expect(node?.props).toMatchObject({ version: 3, ecc: "m", size: "m" });
+  });
 });
 
 describe("CanvasToolbar: arrange actions", () => {

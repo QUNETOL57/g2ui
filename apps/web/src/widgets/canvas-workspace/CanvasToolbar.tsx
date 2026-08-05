@@ -63,6 +63,7 @@ const TOOL_GROUPS: ToolGroup[] = [
     icon: <WidgetTypeIcon type="icon" />,
     items: [
       { type: "icon", label: "Icon", icon: <WidgetTypeIcon type="icon" /> },
+      { type: "qrcode", label: "QR code", icon: <WidgetTypeIcon type="qrcode" /> },
       { type: "button", label: "Button", icon: <WidgetTypeIcon type="button" /> },
     ],
   },

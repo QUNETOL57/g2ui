@@ -66,6 +66,12 @@ describe("defaultProps", () => {
     expect(defaultProps("circle")).toEqual({ radius: 0 });
     expect(defaultProps("triangle")).toEqual({ direction: "up" });
     expect(defaultProps("freehand")).toEqual({ points: [], strokeWidth: 1 });
+    expect(defaultProps("qrcode")).toEqual({
+      text: "WIFI:T:WPA;S:WizardPod-AB12;P:x7k9m2pQ;;",
+      size: "m",
+      version: 3,
+      ecc: "m",
+    });
   });
 });
 
@@ -126,5 +132,10 @@ describe("makeWidget", () => {
     expect(freehand.props).toEqual({ points: [], strokeWidth: 1 });
     expect(freehand.style?.borderColor).toEqual({ kind: "hex", value: "#FFFFFF" });
     expect(freehand.style?.borderWidth).toBe(1);
+
+    const qrcode = makeWidget("qrc_1", "qrcode");
+    expect(qrcode.props).toMatchObject({ size: "m", version: 3, ecc: "m" });
+    expect(qrcode.style?.background).toEqual({ kind: "hex", value: "#FFFFFF" });
+    expect(qrcode.style?.textColor).toEqual({ kind: "hex", value: "#000000" });
   });
 });

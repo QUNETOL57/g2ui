@@ -304,6 +304,8 @@ export function defaultFrameFor(type: WidgetType, parentId: string, p: UiProject
       return { x: 8, y: 8, width: 36, height: 32 };
     case "freehand":
       return { x: 8, y: 8, width: 1, height: 1 };
+    case "qrcode":
+      return { x: 8, y: 8, width: 116, height: 116 };
     case "image":
       return { x: 8, y: 8, width: 32, height: 32 };
     default:

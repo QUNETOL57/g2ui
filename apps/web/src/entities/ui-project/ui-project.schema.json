@@ -62,7 +62,7 @@
       "properties": {
         "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$" },
         "type": {
-          "enum": ["screen", "panel", "label", "button", "icon", "image", "line", "rect", "circle", "triangle", "freehand"]
+          "enum": ["screen", "panel", "label", "button", "icon", "image", "line", "rect", "circle", "triangle", "freehand", "qrcode"]
         },
         "name": { "type": "string" },
         "class": { "type": "string" },

@@ -18,6 +18,7 @@ export function StyleGroup({
   updateStyle: (id: string, patch: Partial<NonNullable<WidgetNode["style"]>>) => void;
 }) {
   const s = node.style ?? {};
+  const isQrCode = node.type === "qrcode";
   const defaultFillColor = node.type === "button" ? "#333333" : "#FFFFFF";
   const fillColor = s.background ?? { kind: "hex", value: defaultFillColor } satisfies ColorRef;
   const defaultBorderColor = "#FFFFFF";
@@ -43,6 +44,7 @@ export function StyleGroup({
     node.type !== "circle" &&
     node.type !== "triangle" &&
     node.type !== "freehand";
+  const textTitle = isQrCode ? "Background" : "Text";
 
   if (node.type === "icon") {
     return (
@@ -183,13 +185,29 @@ export function StyleGroup({
         ) : null}
       </InspectorCard>
       {showText ? (
-        <InspectorCard title="Text">
-          <ColorField
-            label="color"
-            value={s.textColor}
-            palette={palette}
-            onChange={(v) => updateStyle(node.id, { textColor: v })}
-          />
+        <InspectorCard
+          title={textTitle}
+          checked={isQrCode ? fillEnabled : undefined}
+          onToggle={
+            isQrCode
+              ? (checked) =>
+                  updateStyle(node.id, {
+                    drawBackground: checked,
+                    background: checked ? fillColor : s.background,
+                  })
+              : undefined
+          }
+        >
+          {!isQrCode || fillEnabled ? (
+            <ColorField
+              label="color"
+              value={isQrCode ? fillColor : s.textColor}
+              palette={palette}
+              onChange={(v) =>
+                updateStyle(node.id, isQrCode ? { background: v, drawBackground: true } : { textColor: v })
+              }
+            />
+          ) : null}
         </InspectorCard>
       ) : null}
     </div>

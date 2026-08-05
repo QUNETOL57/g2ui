@@ -159,6 +159,16 @@ export interface FreehandProps {
   strokeWidth?: number;
 }
 
+export type QrCodeSize = "xxs" | "xs" | "s" | "m" | "l" | "xl" | "xxl";
+export type QrCodeEcc = "l" | "m" | "q" | "h";
+
+export interface QrCodeProps {
+  text: string;
+  size: QrCodeSize;
+  version: number;
+  ecc: QrCodeEcc;
+}
+
 export interface PanelProps {
   scrollable?: boolean;
 }
@@ -177,6 +187,7 @@ export type WidgetProps =
   | CircleProps
   | TriangleProps
   | FreehandProps
+  | QrCodeProps
   | PanelProps
   | ScreenProps
   | Record<string, never>;

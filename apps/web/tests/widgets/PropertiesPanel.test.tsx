@@ -14,6 +14,7 @@ import {
   makeLabel,
   makeLine,
   makePanel,
+  makeQrCode,
   makeRect,
   makeTriangle,
   withChildren,
@@ -169,6 +170,28 @@ describe("PropertiesPanel: per-type groups", () => {
     expect(screen.queryByText("Fill")).not.toBeInTheDocument();
     expect(screen.queryByRole("group", { name: "Rotate shape" })).not.toBeInTheDocument();
   });
+
+  it("for qrcode shows payload, encoding and appearance controls", () => {
+    const payload = "WIFI:T:WPA;S:WizardPod-AB12;P:x7k9m2pQ;;";
+    const project = withChildren(makeFixtureProject(), [makeQrCode("qr_1")]);
+    get().setProject(project);
+    selectAndRender("qr_1");
+    expect(screen.getByText(/Properties · qrcode/)).toBeInTheDocument();
+    expect(screen.getByText("QR Code")).toBeInTheDocument();
+    expect(screen.getByLabelText("qr text")).toHaveValue(payload);
+    expect(screen.queryByText(`${payload.length} chars`)).not.toBeInTheDocument();
+    expect(screen.getByText(`${payload.length} chars · current capacity 42 byte chars`)).toBeInTheDocument();
+    expect(screen.getByLabelText("qr ecc")).toHaveValue("m");
+    expect(screen.getByLabelText("qr version")).toHaveValue("3");
+    expect(screen.getByLabelText("qr size")).toHaveValue("m");
+    expect(screen.getByText("Appearance")).toBeInTheDocument();
+    expect(screen.getByText(/Error correction level/)).toBeInTheDocument();
+    expect(screen.getByText("Fill")).toBeInTheDocument();
+    expect(screen.getByText("Background")).toBeInTheDocument();
+    expect(screen.getByText("Border")).toBeInTheDocument();
+    expect(screen.queryByText("Modules")).not.toBeInTheDocument();
+    expect(screen.queryByText("Text")).not.toBeInTheDocument();
+  });
 });
 
 describe("PropertiesPanel: absolute draftFrame conversion", () => {
@@ -246,5 +269,69 @@ describe("PropertiesPanel: writes to store via shared inputs", () => {
     await userEvent.clear(radiusInput);
     await userEvent.type(radiusInput, "4");
     expect(get().project.screens[0].children?.[0].style?.borderRadius).toBe(4);
+  });
+
+  it("QR text changes auto-pick version and keep JSON matrix-free", async () => {
+    const project = withChildren(makeFixtureProject(), [makeQrCode("qr_1")]);
+    get().setProject(project);
+    selectAndRender("qr_1");
+
+    const textArea = screen.getByLabelText("qr text");
+    fireEvent.change(textArea, { target: { value: "A" } });
+
+    const stored = get().project.screens[0].children?.[0];
+    expect(stored?.props).toMatchObject({ text: "A", version: 1, ecc: "m", size: "m" });
+    expect(stored?.frame).toMatchObject({ width: 84, height: 84 });
+    expect(JSON.stringify(stored?.props)).not.toMatch(/modules|matrix|points/);
+  });
+
+  it("QR controls disable impossible ECC and version options", () => {
+    const project = withChildren(makeFixtureProject(), [makeQrCode("qr_1")]);
+    get().setProject(project);
+    selectAndRender("qr_1");
+
+    const ecc = screen.getByLabelText("qr ecc") as HTMLSelectElement;
+    expect([...ecc.options].find((option) => option.value === "q")?.disabled).toBe(true);
+    expect([...ecc.options].find((option) => option.value === "h")?.disabled).toBe(true);
+
+    const version = screen.getByLabelText("qr version") as HTMLSelectElement;
+    expect(version.options[0].disabled).toBe(true);
+    expect(version.options[1].disabled).toBe(true);
+    expect(version.options[2].disabled).toBe(false);
+  });
+
+  it("QR selects update ECC, version, size and frame", () => {
+    const project = withChildren(makeFixtureProject(), [makeQrCode("qr_1")]);
+    get().setProject(project);
+    selectAndRender("qr_1");
+
+    fireEvent.change(screen.getByLabelText("qr version"), { target: { value: "4" } });
+    fireEvent.change(screen.getByLabelText("qr ecc"), { target: { value: "q" } });
+    fireEvent.change(screen.getByLabelText("qr size"), { target: { value: "xs" } });
+
+    const stored = get().project.screens[0].children?.[0];
+    expect(stored?.props).toMatchObject({ version: 4, ecc: "q", size: "xs" });
+    expect(stored?.frame).toMatchObject({ width: 66, height: 66 });
+  });
+
+  it("QR background layer toggle removes fill", async () => {
+    const project = withChildren(makeFixtureProject(), [makeQrCode("qr_1")]);
+    get().setProject(project);
+    selectAndRender("qr_1");
+
+    const backgroundToggle = screen.getByText("Background").closest("label")!;
+    await userEvent.click(within(backgroundToggle).getByRole("checkbox"));
+
+    expect(get().project.screens[0].children?.[0].style?.drawBackground).toBe(false);
+  });
+
+  it("QR group warns when text cannot fit any version", () => {
+    const project = withChildren(makeFixtureProject(), [
+      makeQrCode("qr_1", "A".repeat(3000)),
+    ]);
+    get().setProject(project);
+    selectAndRender("qr_1");
+    expect(screen.getByText("Text is too large for QR v40 at this ECC.")).toBeInTheDocument();
+    expect(screen.getByText("Current version/ECC does not fit this text.")).toBeInTheDocument();
   });
 });

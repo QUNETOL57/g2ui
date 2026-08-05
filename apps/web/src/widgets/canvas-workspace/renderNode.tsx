@@ -9,12 +9,19 @@ import type {
   LabelProps,
   LineProps,
   PaletteEntry,
+  QrCodeProps,
   RectProps,
   TriangleProps,
   WidgetNode,
 } from "@entities/ui-project";
 import type { LayoutNode } from "@entities/ui-project/lib/layoutEngine";
 import { resolveColor } from "@entities/ui-project/lib/color";
+import {
+  buildQrMatrix,
+  normalizeQrProps,
+  QR_CODE_MODULE_SCALE,
+  qrRenderedSize,
+} from "@entities/ui-project/lib/qrcode";
 import { effectiveBorderRadius } from "@entities/ui-project/lib/style";
 import { BitmapText, type BitmapTextAlign } from "@entities/font/BitmapText";
 import type { BitmapFontFace } from "@entities/font/fontTypes";
@@ -201,6 +208,8 @@ function NodeVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; rec
       return <TriangleVisual node={node} ctx={ctx} rect={rect} />;
     case "freehand":
       return <FreehandVisual node={node} ctx={ctx} />;
+    case "qrcode":
+      return <QrCodeVisual node={node} ctx={ctx} />;
     case "label":
       return <LabelVisual node={node} ctx={ctx} rect={rect} />;
     case "button":
@@ -682,6 +691,79 @@ function FreehandVisual({ node, ctx }: { node: WidgetNode; ctx: RenderCtx }) {
         />
       ))}
     </div>
+  );
+}
+
+function QrCodeVisual({ node, ctx }: { node: WidgetNode; ctx: RenderCtx }) {
+  const props = normalizeQrProps((node.props ?? {}) as Partial<QrCodeProps>);
+  const matrix = buildQrMatrix(props);
+  const scale = QR_CODE_MODULE_SCALE[props.size];
+  const renderedSize = qrRenderedSize(props.version, props.size);
+  const fg = resolveColor(node.style?.textColor, ctx.palette, "#000000");
+  const bg = resolveColor(node.style?.background, ctx.palette, "#FFFFFF");
+  const borderWidth = node.style?.drawBorder ? Math.max(0, node.style.borderWidth ?? 1) : 0;
+  const borderColor = borderWidth > 0
+    ? resolveColor(node.style?.borderColor, ctx.palette, "#FFFFFF")
+    : "transparent";
+  const moduleCount = matrix?.moduleCount ?? renderedSize / scale;
+  const borderOffset = borderWidth / 2;
+  const borderSize = renderedSize + borderWidth;
+
+  return (
+    <svg
+      data-testid="qrcode-visual"
+      role="img"
+      aria-label="QR code"
+      width={renderedSize}
+      height={renderedSize}
+      viewBox={`0 0 ${renderedSize} ${renderedSize}`}
+      shapeRendering="crispEdges"
+      style={{ display: "block", overflow: "visible" }}
+    >
+      {node.style?.drawBackground !== false ? (
+        <rect x={0} y={0} width={renderedSize} height={renderedSize} fill={bg} />
+      ) : null}
+      {matrix ? (
+        matrix.modules.map((row, y) =>
+          row.map((dark, x) =>
+            dark ? (
+              <rect
+                key={`${x}:${y}`}
+                data-qr-module="dark"
+                x={x * scale}
+                y={y * scale}
+                width={scale}
+                height={scale}
+                fill={fg}
+              />
+            ) : null,
+          ),
+        )
+      ) : (
+        <rect
+          x={0}
+          y={0}
+          width={moduleCount * scale}
+          height={moduleCount * scale}
+          fill="none"
+          stroke={fg}
+          strokeWidth={1}
+          strokeDasharray="2 2"
+        />
+      )}
+      {borderWidth > 0 ? (
+        <rect
+          data-testid="qrcode-border"
+          x={-borderOffset}
+          y={-borderOffset}
+          width={borderSize}
+          height={borderSize}
+          fill="none"
+          stroke={borderColor}
+          strokeWidth={borderWidth}
+        />
+      ) : null}
+    </svg>
   );
 }
 

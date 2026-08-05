@@ -17,6 +17,7 @@ import {
   makeLabel,
   makeLine,
   makePanel,
+  makeQrCode,
   makeRect,
   makeTriangle,
   withChildren,
@@ -145,6 +146,51 @@ describe("PreviewNode: per-type rendering", () => {
   it("renders icon svg with role img", () => {
     const { container } = renderProject([makeIcon("ic_1", "earth")]);
     expect(container.querySelector("svg")).toBeTruthy();
+  });
+
+  it("renders QR code modules as crisp SVG rects", () => {
+    const { container } = renderProject([makeQrCode("qr_1")]);
+    const svg = container.querySelector('[data-widget-type="qrcode"] [data-testid="qrcode-visual"]') as SVGElement;
+    expect(svg).toBeTruthy();
+    expect(svg.getAttribute("width")).toBe("116");
+    expect(svg.getAttribute("height")).toBe("116");
+    expect(svg.getAttribute("viewBox")).toBe("0 0 116 116");
+    expect(svg.getAttribute("shape-rendering")).toBe("crispEdges");
+    expect(svg.querySelectorAll('[data-qr-module="dark"]').length).toBeGreaterThan(0);
+  });
+
+  it("renders QR code border when enabled", () => {
+    const qrcode = makeQrCode("qr_1");
+    qrcode.style = {
+      ...(qrcode.style ?? {}),
+      drawBorder: true,
+      borderColor: { kind: "hex", value: "#00FF00" },
+      borderWidth: 3,
+    };
+    const { container } = renderProject([qrcode]);
+    const border = container.querySelector('[data-widget-type="qrcode"] [data-testid="qrcode-border"]') as SVGRectElement;
+
+    expect(border).toBeTruthy();
+    expect(border.getAttribute("stroke")).toBe("#00FF00");
+    expect(border.getAttribute("stroke-width")).toBe("3");
+    expect(border.getAttribute("x")).toBe("-1.5");
+    expect(border.getAttribute("y")).toBe("-1.5");
+    expect(border.getAttribute("width")).toBe("119");
+    expect(border.getAttribute("height")).toBe("119");
+    expect(border.getAttribute("fill")).toBe("none");
+  });
+
+  it("keeps QR code modules visible when background layer is disabled", () => {
+    const qrcode = makeQrCode("qr_1");
+    qrcode.style = {
+      ...(qrcode.style ?? {}),
+      drawBackground: false,
+    };
+    const { container } = renderProject([qrcode]);
+    const svg = container.querySelector('[data-widget-type="qrcode"] [data-testid="qrcode-visual"]') as SVGElement;
+
+    expect(svg.querySelector('rect[fill="#FFFFFF"]')).toBeNull();
+    expect(svg.querySelectorAll('[data-qr-module="dark"]').length).toBeGreaterThan(0);
   });
 
   it("renders button corner radius", () => {

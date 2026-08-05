@@ -20,6 +20,7 @@ export const IR_WIDGET_TYPES = [
   "circle",
   "triangle",
   "freehand",
+  "qrcode",
 ] as const;
 
 export const IR_LAYOUT_MODES = ["absolute", "row", "column"] as const;

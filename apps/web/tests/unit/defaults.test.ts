@@ -66,6 +66,12 @@ describe("defaultProps", () => {
     expect(defaultProps("circle")).toEqual({ radius: 0 });
     expect(defaultProps("triangle")).toEqual({ direction: "up" });
     expect(defaultProps("freehand")).toEqual({ points: [], strokeWidth: 1 });
+    expect(defaultProps("qrcode")).toEqual({
+      text: "",
+      size: "m",
+      version: 1,
+      ecc: "m",
+    });
   });
 });
 
@@ -126,5 +132,10 @@ describe("makeWidget", () => {
     expect(freehand.props).toEqual({ points: [], strokeWidth: 1 });
     expect(freehand.style?.borderColor).toEqual({ kind: "hex", value: "#FFFFFF" });
     expect(freehand.style?.borderWidth).toBe(1);
+
+    const qrcode = makeWidget("qrc_1", "qrcode");
+    expect(qrcode.props).toMatchObject({ size: "m", version: 1, ecc: "m" });
+    expect(qrcode.style?.textColor).toEqual({ kind: "hex", value: "#FFFFFF" });
+    expect(qrcode.style?.drawBackground).toBe(false);
   });
 });

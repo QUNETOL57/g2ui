@@ -8,6 +8,7 @@ import type {
   LayoutSpec,
   LineProps,
   PanelProps,
+  QrCodeProps,
   RectProps,
   ScreenProps,
   TriangleProps,
@@ -63,6 +64,13 @@ export function defaultProps(type: WidgetType): Record<string, unknown> {
       return { direction: "up" } satisfies TriangleProps;
     case "freehand":
       return { points: [], strokeWidth: 1 } satisfies FreehandProps;
+    case "qrcode":
+      return {
+        text: "",
+        size: "m",
+        version: 1,
+        ecc: "m",
+      } satisfies QrCodeProps;
   }
 }
 
@@ -114,6 +122,12 @@ export function makeWidget(id: string, type: WidgetType): WidgetNode {
       ...(type === "label" ? { drawBackground: false } : {}),
       ...(type === "line" || type === "freehand"
         ? { borderColor: { kind: "hex", value: "#FFFFFF" }, borderWidth: 1 }
+        : {}),
+      ...(type === "qrcode"
+        ? {
+            textColor: { kind: "hex", value: "#FFFFFF" },
+            drawBackground: false,
+          }
         : {}),
     },
     props: defaultProps(type),

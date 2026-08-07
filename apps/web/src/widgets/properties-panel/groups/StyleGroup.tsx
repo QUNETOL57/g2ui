@@ -1,5 +1,8 @@
 import type { ColorRef, WidgetNode } from "@entities/ui-project";
 import { isCornersEnabled } from "@entities/ui-project/lib/style";
+import { qrBoxSize, qrRenderedSize, normalizeQrProps } from "@entities/ui-project/lib/qrcode";
+import type { QrCodeProps } from "@entities/ui-project/types";
+import type { Frame } from "@entities/ui-project/types";
 import { cn } from "@shared/lib/cn";
 import { RangeSlider } from "@shared/ui/RangeSlider";
 
@@ -12,12 +15,15 @@ export function StyleGroup({
   node,
   palette,
   updateStyle,
+  onFrameChange,
 }: {
   node: WidgetNode;
   palette: { token: string; hex: string }[] | undefined;
   updateStyle: (id: string, patch: Partial<NonNullable<WidgetNode["style"]>>) => void;
+  onFrameChange?: (id: string, frame: Frame) => void;
 }) {
   const s = node.style ?? {};
+  const isQrCode = node.type === "qrcode";
   const defaultFillColor = node.type === "button" ? "#333333" : "#FFFFFF";
   const fillColor = s.background ?? { kind: "hex", value: defaultFillColor } satisfies ColorRef;
   const defaultBorderColor = "#FFFFFF";
@@ -43,6 +49,7 @@ export function StyleGroup({
     node.type !== "circle" &&
     node.type !== "triangle" &&
     node.type !== "freehand";
+  const textTitle = isQrCode ? "Background" : "Text";
 
   if (node.type === "icon") {
     return (
@@ -77,6 +84,81 @@ export function StyleGroup({
             min={1}
             onChange={(v) => updateStyle(node.id, { borderWidth: Math.max(1, v) })}
           />
+        </InspectorCard>
+      </div>
+    );
+  }
+
+  if (node.type === "qrcode") {
+    const fillColor = s.textColor ?? { kind: "hex", value: "#FFFFFF" } satisfies ColorRef;
+    const bgEnabled = s.drawBackground !== false;
+    const bgColor = s.background ?? { kind: "hex", value: "#FFFFFF" } satisfies ColorRef;
+    const renderedSize = qrRenderedSize(
+      normalizeQrProps((node.props ?? {}) as Partial<QrCodeProps>).version,
+      normalizeQrProps((node.props ?? {}) as Partial<QrCodeProps>).size,
+    );
+    const setBorder = (nextWidth: number, checked: boolean) => {
+      updateStyle(node.id, {
+        drawBorder: checked,
+        borderColor: checked ? borderColor : s.borderColor,
+        borderWidth: checked ? Math.max(1, nextWidth) : s.borderWidth,
+      });
+      if (onFrameChange && node.frame) {
+        const total = checked ? qrBoxSize(renderedSize, Math.max(1, nextWidth)) : renderedSize;
+        onFrameChange(node.id, { ...node.frame, width: total, height: total });
+      }
+    };
+    return (
+      <div className={cn(styles.group, styles.appearanceGroup)}>
+        <h4>Appearance</h4>
+        <InspectorCard title="Fill">
+          <ColorField
+            label="color"
+            value={fillColor}
+            palette={palette}
+            onChange={(v) => updateStyle(node.id, { textColor: v })}
+          />
+        </InspectorCard>
+        <InspectorCard
+          title="Background"
+          checked={bgEnabled}
+          onToggle={(checked) =>
+            updateStyle(node.id, {
+              drawBackground: checked,
+              background: checked ? bgColor : s.background,
+            })
+          }
+        >
+          {bgEnabled ? (
+            <ColorField
+              label="color"
+              value={bgColor}
+              palette={palette}
+              onChange={(v) => updateStyle(node.id, { background: v, drawBackground: true })}
+            />
+          ) : null}
+        </InspectorCard>
+        <InspectorCard
+          title="Border"
+          checked={borderEnabled}
+          onToggle={(checked) => setBorder(s.borderWidth ?? 1, checked)}
+        >
+          {borderEnabled ? (
+            <>
+              <ColorField
+                label="color"
+                value={borderColor}
+                palette={palette}
+                onChange={(v) => updateStyle(node.id, { borderColor: v, drawBorder: true })}
+              />
+              <NumberField
+                label="width"
+                value={s.borderWidth ?? 1}
+                min={1}
+                onChange={(v) => setBorder(Math.max(1, v), true)}
+              />
+            </>
+          ) : null}
         </InspectorCard>
       </div>
     );
@@ -183,13 +265,29 @@ export function StyleGroup({
         ) : null}
       </InspectorCard>
       {showText ? (
-        <InspectorCard title="Text">
-          <ColorField
-            label="color"
-            value={s.textColor}
-            palette={palette}
-            onChange={(v) => updateStyle(node.id, { textColor: v })}
-          />
+        <InspectorCard
+          title={textTitle}
+          checked={isQrCode ? fillEnabled : undefined}
+          onToggle={
+            isQrCode
+              ? (checked) =>
+                  updateStyle(node.id, {
+                    drawBackground: checked,
+                    background: checked ? fillColor : s.background,
+                  })
+              : undefined
+          }
+        >
+          {!isQrCode || fillEnabled ? (
+            <ColorField
+              label="color"
+              value={isQrCode ? fillColor : s.textColor}
+              palette={palette}
+              onChange={(v) =>
+                updateStyle(node.id, isQrCode ? { background: v, drawBackground: true } : { textColor: v })
+              }
+            />
+          ) : null}
         </InspectorCard>
       ) : null}
     </div>

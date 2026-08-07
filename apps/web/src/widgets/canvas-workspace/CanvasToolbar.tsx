@@ -55,16 +55,17 @@ const TOOL_GROUPS: ToolGroup[] = [
     id: "text",
     label: "Text",
     icon: <WidgetTypeIcon type="label" />,
-    items: [
-      { type: "label", label: "Label", icon: <WidgetTypeIcon type="label" /> },
-      { type: "button", label: "Button", icon: <WidgetTypeIcon type="button" /> },
-    ],
+    items: [{ type: "label", label: "Label", icon: <WidgetTypeIcon type="label" /> }],
   },
   {
     id: "media",
     label: "Media",
     icon: <WidgetTypeIcon type="icon" />,
-    items: [{ type: "icon", label: "Icon", icon: <WidgetTypeIcon type="icon" /> }],
+    items: [
+      { type: "icon", label: "Icon", icon: <WidgetTypeIcon type="icon" /> },
+      { type: "qrcode", label: "QR code", icon: <WidgetTypeIcon type="qrcode" /> },
+      { type: "button", label: "Button", icon: <WidgetTypeIcon type="button" /> },
+    ],
   },
 ];
 

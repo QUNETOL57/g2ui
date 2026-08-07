@@ -10,6 +10,7 @@ import type {
 import { makeWidget, nextId } from "..";
 import { isValidId } from "../ids";
 import { defaultProps } from "../defaults";
+import { normalizeQrProps, qrRenderedSize } from "../lib/qrcode";
 import { findFontFace, measureTextWidth } from "@entities/font/fontLibrary";
 import { DEFAULT_ICON_ID, getResolvedIconDefinition } from "@entities/icon/iconSizing";
 
@@ -304,6 +305,11 @@ export function defaultFrameFor(type: WidgetType, parentId: string, p: UiProject
       return { x: 8, y: 8, width: 36, height: 32 };
     case "freehand":
       return { x: 8, y: 8, width: 1, height: 1 };
+    case "qrcode": {
+      const qrProps = normalizeQrProps(defaultProps("qrcode"));
+      const side = qrRenderedSize(qrProps.version, qrProps.size);
+      return { x: 8, y: 8, width: side, height: side };
+    }
     case "image":
       return { x: 8, y: 8, width: 32, height: 32 };
     default:

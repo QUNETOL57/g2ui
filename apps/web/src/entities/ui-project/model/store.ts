@@ -411,8 +411,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       }
 
       let markerStyle = state.markerStyle;
-      if (hasRemaps && markerStyle.color.kind === "token") {
-        const hit = remaps.find((remap) => remap.from === markerStyle.color.token);
+      const markerColor = markerStyle.color;
+      if (hasRemaps && markerColor.kind === "token") {
+        const hit = remaps.find((remap) => remap.from === markerColor.token);
         if (hit) {
           markerStyle = { ...markerStyle, color: { ...hit.to } };
         }

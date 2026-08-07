@@ -36,6 +36,11 @@
   justify-content: start;
 }
 
+.qrPayloadInput {
+  min-height: 90px;
+  max-height: 360px;
+}
+
 .inputText {
   box-sizing: border-box;
   width: 100%;

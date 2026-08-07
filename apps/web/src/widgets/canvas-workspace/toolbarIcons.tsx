@@ -121,6 +121,14 @@ export function ImageIcon({ size = 18 }: ToolbarIconProps) {
   );
 }
 
+export function QrIcon({ size = 18 }: ToolbarIconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="M4 4h6v6H4zM6.5 6.5v1h1v-1M14 4h6v6h-6zM16.5 6.5v1h1v-1M4 14h6v6H4zM6.5 16.5v1h1v-1M14 14h2v2h-2zM18 14h2v2h-2zM16 16h2v2h-2zM14 18h2v2h-2zM18 18h2v2h-2z" />
+    </svg>
+  );
+}
+
 export function ChevronIcon({ size = 12 }: ToolbarIconProps) {
   return (
     <svg {...base(size)}>
@@ -180,5 +188,7 @@ export function WidgetTypeIcon({
       return <TriangleIcon size={size} />;
     case "freehand":
       return <MarkerIcon size={size} />;
+    case "qrcode":
+      return <QrIcon size={size} />;
   }
 }

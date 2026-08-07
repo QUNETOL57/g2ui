@@ -90,11 +90,40 @@ describe("CanvasToolbar: create tools", () => {
     get().setProject(project);
     get().selectNode("pn_1");
     render(<CanvasToolbar />);
-    await userEvent.click(screen.getByRole("button", { name: "Text" }));
-    await userEvent.click(screen.getByRole("menuitem", { name: "Label" }));
+    await userEvent.click(screen.getByRole("button", { name: "Add label" }));
     const panel = findNode(get().project, "pn_1");
     expect(panel?.children?.length).toBe(1);
     expect(panel?.children?.[0].type).toBe("label");
+  });
+
+  it("adds a label with a single text tool click", async () => {
+    render(<CanvasToolbar />);
+    await userEvent.click(screen.getByRole("button", { name: "Add label" }));
+    expect(get().project.screens[0].children?.[0].type).toBe("label");
+  });
+
+  it("adds a button from the media tools menu", async () => {
+    render(<CanvasToolbar />);
+    await userEvent.click(screen.getByRole("button", { name: "Media" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Button" }));
+    expect(get().project.screens[0].children?.[0].type).toBe("button");
+  });
+
+  it("adds an icon from the media tools menu", async () => {
+    render(<CanvasToolbar />);
+    await userEvent.click(screen.getByRole("button", { name: "Media tools" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Icon" }));
+    expect(get().project.screens[0].children?.[0].type).toBe("icon");
+  });
+
+  it("adds a QR code from the media tools menu", async () => {
+    render(<CanvasToolbar />);
+    await userEvent.click(screen.getByRole("button", { name: "Media tools" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "QR code" }));
+    const node = get().project.screens[0].children?.[0];
+    expect(node?.type).toBe("qrcode");
+    expect(node?.props).toMatchObject({ text: "", version: 1, ecc: "m", size: "m" });
+    expect(node?.frame).toMatchObject({ width: 84, height: 84 });
   });
 });
 

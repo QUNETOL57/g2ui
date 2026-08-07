@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { StyleGroup } from "@widgets/properties-panel/groups/StyleGroup";
 
-import { makeButton, makeFreehand, makeIcon, makeLine, makePanel } from "../fixtures/projects";
+import { makeButton, makeFreehand, makeIcon, makeLine, makePanel, makeQrCode } from "../fixtures/projects";
 
 const palette = [
   { token: "bg", hex: "#000000" },
@@ -121,6 +121,43 @@ describe("StyleGroup: panel variant", () => {
     expect(handler).toHaveBeenCalledWith(
       "pn_1",
       expect.objectContaining({ drawBackground: false }),
+    );
+  });
+});
+
+describe("StyleGroup: qrcode variant", () => {
+  it("Fill edits textColor (modules) while Background edits background", async () => {
+    const user = userEvent.setup();
+    const handler = vi.fn();
+    const node = makeQrCode("qr_1");
+    render(<StyleGroup node={node} palette={palette} updateStyle={handler} />);
+    expect(screen.getByText("Fill")).toBeInTheDocument();
+    expect(screen.getByText("Background")).toBeInTheDocument();
+    expect(screen.getAllByText("Background")).toHaveLength(1);
+
+    const swatches = screen.getAllByRole("button", { name: "color hex picker" });
+    expect(swatches).toHaveLength(2);
+    expect(swatches[0]).toHaveAttribute("title", "#000000");
+    expect(swatches[1]).toHaveAttribute("title", "#FFFFFF");
+
+    await user.click(swatches[0]);
+    const fillInput = screen.getByRole("textbox", { name: "color hex" });
+    await user.clear(fillInput);
+    await user.type(fillInput, "#112233");
+    await user.tab();
+    expect(handler).toHaveBeenLastCalledWith(
+      "qr_1",
+      expect.objectContaining({ textColor: { kind: "hex", value: "#112233" } }),
+    );
+
+    await user.click(swatches[1]);
+    const bgInput = screen.getByRole("textbox", { name: "color hex" });
+    await user.clear(bgInput);
+    await user.type(bgInput, "#445566");
+    await user.tab();
+    expect(handler).toHaveBeenLastCalledWith(
+      "qr_1",
+      expect.objectContaining({ background: { kind: "hex", value: "#445566" }, drawBackground: true }),
     );
   });
 });

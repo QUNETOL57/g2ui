@@ -167,6 +167,23 @@ export function makeFreehand(id: string): WidgetNode {
   };
 }
 
+export function makeQrCode(id: string, text = "WIFI:T:WPA;S:WizardPod-AB12;P:x7k9m2pQ;;"): WidgetNode {
+  return {
+    id,
+    type: "qrcode",
+    visible: true,
+    enabled: true,
+    layout: { mode: "absolute" },
+    style: {
+      background: { kind: "hex", value: "#FFFFFF" },
+      textColor: { kind: "hex", value: "#000000" },
+      drawBackground: true,
+    },
+    props: { text, size: "m", version: 3, ecc: "m" },
+    frame: { x: 4, y: 4, width: 116, height: 116 },
+  };
+}
+
 export function withChildren(project: UiProject, children: WidgetNode[]): UiProject {
   const next = JSON.parse(JSON.stringify(project)) as UiProject;
   next.screens[0].children = children;

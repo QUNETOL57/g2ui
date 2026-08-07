@@ -216,6 +216,12 @@ describe("defaultFrameFor", () => {
       width: 32,
       height: 32,
     });
+    expect(defaultFrameFor("qrcode", "screen_main", project)).toEqual({
+      x: 8,
+      y: 8,
+      width: 84,
+      height: 84,
+    });
   });
 
   it("panel takes parent width but capped to 60 height", () => {

@@ -122,7 +122,8 @@ describe("CanvasToolbar: create tools", () => {
     await userEvent.click(screen.getByRole("menuitem", { name: "QR code" }));
     const node = get().project.screens[0].children?.[0];
     expect(node?.type).toBe("qrcode");
-    expect(node?.props).toMatchObject({ version: 3, ecc: "m", size: "m" });
+    expect(node?.props).toMatchObject({ text: "", version: 1, ecc: "m", size: "m" });
+    expect(node?.frame).toMatchObject({ width: 84, height: 84 });
   });
 });
 

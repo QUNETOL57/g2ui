@@ -66,9 +66,9 @@ export function defaultProps(type: WidgetType): Record<string, unknown> {
       return { points: [], strokeWidth: 1 } satisfies FreehandProps;
     case "qrcode":
       return {
-        text: "WIFI:T:WPA;S:WizardPod-AB12;P:x7k9m2pQ;;",
+        text: "",
         size: "m",
-        version: 3,
+        version: 1,
         ecc: "m",
       } satisfies QrCodeProps;
   }

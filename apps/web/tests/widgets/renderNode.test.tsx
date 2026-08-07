@@ -171,13 +171,15 @@ describe("PreviewNode: per-type rendering", () => {
     const border = container.querySelector('[data-widget-type="qrcode"] [data-testid="qrcode-border"]') as SVGRectElement;
 
     expect(border).toBeTruthy();
-    expect(border.getAttribute("stroke")).toBe("#00FF00");
-    expect(border.getAttribute("stroke-width")).toBe("3");
-    expect(border.getAttribute("x")).toBe("-1.5");
-    expect(border.getAttribute("y")).toBe("-1.5");
-    expect(border.getAttribute("width")).toBe("119");
-    expect(border.getAttribute("height")).toBe("119");
-    expect(border.getAttribute("fill")).toBe("none");
+    expect(border.getAttribute("fill")).toBe("#00FF00");
+    expect(border.getAttribute("fill-rule")).toBe("evenodd");
+    expect(border.getAttribute("d")).toBe(
+      "M0 0 H122 V122 H0 Z M3 3 H119 V119 H3 Z",
+    );
+
+    const svg = container.querySelector('[data-widget-type="qrcode"] [data-testid="qrcode-visual"]') as SVGElement;
+    expect(svg.getAttribute("width")).toBe("122");
+    expect(svg.getAttribute("height")).toBe("122");
   });
 
   it("keeps QR code modules visible when background layer is disabled", () => {

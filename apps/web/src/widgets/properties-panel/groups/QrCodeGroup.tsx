@@ -13,10 +13,12 @@ import {
   qrEccOptions,
   qrModuleCount,
   qrRenderedSize,
+  qrBoxSize,
   qrVersionOptions,
   normalizeQrProps,
 } from "@entities/ui-project/lib/qrcode";
 import { Textarea } from "@shared/ui/Textarea";
+import { cn } from "@shared/lib/cn";
 
 import styles from "../PropertiesPanel.module.css";
 import { InspectorCard } from "../ui/InspectorCard";
@@ -43,7 +45,8 @@ export function QrCodeGroup({
     const next = nextValidQrProps(props, patch);
     onChange(next);
     if (node.frame) {
-      const nextSize = qrRenderedSize(next.version, next.size);
+      const borderWidth = node.style?.drawBorder ? Math.max(0, node.style.borderWidth ?? 1) : 0;
+      const nextSize = qrBoxSize(qrRenderedSize(next.version, next.size), borderWidth);
       if (node.frame.width !== nextSize || node.frame.height !== nextSize) {
         onFrameChange({ ...node.frame, width: nextSize, height: nextSize });
       }
@@ -51,7 +54,7 @@ export function QrCodeGroup({
   };
 
   return (
-    <div className={styles.group}>
+    <div className={cn(styles.group, styles.appearanceGroup)}>
       <h4>QR Code</h4>
       <InspectorCard title="Payload">
         <Textarea

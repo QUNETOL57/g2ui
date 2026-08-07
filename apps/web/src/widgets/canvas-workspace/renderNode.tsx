@@ -20,6 +20,7 @@ import {
   buildQrMatrix,
   normalizeQrProps,
   QR_CODE_MODULE_SCALE,
+  qrBoxSize,
   qrRenderedSize,
 } from "@entities/ui-project/lib/qrcode";
 import { effectiveBorderRadius } from "@entities/ui-project/lib/style";
@@ -706,63 +707,60 @@ function QrCodeVisual({ node, ctx }: { node: WidgetNode; ctx: RenderCtx }) {
     ? resolveColor(node.style?.borderColor, ctx.palette, "#FFFFFF")
     : "transparent";
   const moduleCount = matrix?.moduleCount ?? renderedSize / scale;
-  const borderOffset = borderWidth / 2;
-  const borderSize = renderedSize + borderWidth;
+  const totalSize = qrBoxSize(renderedSize, borderWidth);
 
   return (
     <svg
       data-testid="qrcode-visual"
       role="img"
       aria-label="QR code"
-      width={renderedSize}
-      height={renderedSize}
-      viewBox={`0 0 ${renderedSize} ${renderedSize}`}
+      width={totalSize}
+      height={totalSize}
+      viewBox={`0 0 ${totalSize} ${totalSize}`}
       shapeRendering="crispEdges"
       style={{ display: "block", overflow: "visible" }}
     >
-      {node.style?.drawBackground !== false ? (
-        <rect x={0} y={0} width={renderedSize} height={renderedSize} fill={bg} />
-      ) : null}
-      {matrix ? (
-        matrix.modules.map((row, y) =>
-          row.map((dark, x) =>
-            dark ? (
-              <rect
-                key={`${x}:${y}`}
-                data-qr-module="dark"
-                x={x * scale}
-                y={y * scale}
-                width={scale}
-                height={scale}
-                fill={fg}
-              />
-            ) : null,
-          ),
-        )
-      ) : (
-        <rect
-          x={0}
-          y={0}
-          width={moduleCount * scale}
-          height={moduleCount * scale}
-          fill="none"
-          stroke={fg}
-          strokeWidth={1}
-          strokeDasharray="2 2"
-        />
-      )}
       {borderWidth > 0 ? (
-        <rect
+        <path
           data-testid="qrcode-border"
-          x={-borderOffset}
-          y={-borderOffset}
-          width={borderSize}
-          height={borderSize}
-          fill="none"
-          stroke={borderColor}
-          strokeWidth={borderWidth}
+          fill={borderColor}
+          fillRule="evenodd"
+          d={`M0 0 H${totalSize} V${totalSize} H0 Z M${borderWidth} ${borderWidth} H${borderWidth + renderedSize} V${borderWidth + renderedSize} H${borderWidth} Z`}
         />
       ) : null}
+      <g transform={`translate(${borderWidth} ${borderWidth})`}>
+        {node.style?.drawBackground !== false ? (
+          <rect x={0} y={0} width={renderedSize} height={renderedSize} fill={bg} />
+        ) : null}
+        {matrix ? (
+          matrix.modules.map((row, y) =>
+            row.map((dark, x) =>
+              dark ? (
+                <rect
+                  key={`${x}:${y}`}
+                  data-qr-module="dark"
+                  x={x * scale}
+                  y={y * scale}
+                  width={scale}
+                  height={scale}
+                  fill={fg}
+                />
+              ) : null,
+            ),
+          )
+        ) : (
+          <rect
+            x={0}
+            y={0}
+            width={moduleCount * scale}
+            height={moduleCount * scale}
+            fill="none"
+            stroke={fg}
+            strokeWidth={1}
+            strokeDasharray="2 2"
+          />
+        )}
+      </g>
     </svg>
   );
 }

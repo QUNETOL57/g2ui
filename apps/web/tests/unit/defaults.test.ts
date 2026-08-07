@@ -134,8 +134,8 @@ describe("makeWidget", () => {
     expect(freehand.style?.borderWidth).toBe(1);
 
     const qrcode = makeWidget("qrc_1", "qrcode");
-    expect(qrcode.props).toMatchObject({ size: "m", version: 3, ecc: "m" });
-    expect(qrcode.style?.background).toEqual({ kind: "hex", value: "#FFFFFF" });
-    expect(qrcode.style?.textColor).toEqual({ kind: "hex", value: "#000000" });
+    expect(qrcode.props).toMatchObject({ size: "m", version: 1, ecc: "m" });
+    expect(qrcode.style?.textColor).toEqual({ kind: "hex", value: "#FFFFFF" });
+    expect(qrcode.style?.drawBackground).toBe(false);
   });
 });

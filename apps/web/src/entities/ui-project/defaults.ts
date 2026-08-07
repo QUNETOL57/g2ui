@@ -125,9 +125,8 @@ export function makeWidget(id: string, type: WidgetType): WidgetNode {
         : {}),
       ...(type === "qrcode"
         ? {
-            background: { kind: "hex", value: "#FFFFFF" },
-            textColor: { kind: "hex", value: "#000000" },
-            drawBackground: true,
+            textColor: { kind: "hex", value: "#FFFFFF" },
+            drawBackground: false,
           }
         : {}),
     },

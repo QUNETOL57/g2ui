@@ -64,6 +64,11 @@ export function qrRenderedSize(version: number, size: QrCodeSize): number {
   return qrModuleCount(version) * QR_CODE_MODULE_SCALE[size];
 }
 
+/** Total pixel box including the border drawn around the QR content. */
+export function qrBoxSize(renderedSize: number, borderWidth: number): number {
+  return renderedSize + borderWidth * 2;
+}
+
 export function normalizeQrProps(props: Partial<QrCodeProps> | undefined): QrCodeProps {
   const text = typeof props?.text === "string" ? props.text : "";
   const ecc = isQrEcc(props?.ecc) ? props.ecc : "m";

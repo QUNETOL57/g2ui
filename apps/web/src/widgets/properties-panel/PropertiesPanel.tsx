@@ -137,7 +137,12 @@ export function PropertiesPanel() {
         )}
 
         {node.type !== "icon" && node.type !== "label" ? (
-          <StyleGroup node={node} palette={project.palette} updateStyle={updateStyle} />
+          <StyleGroup
+            node={node}
+            palette={project.palette}
+            updateStyle={updateStyle}
+            onFrameChange={(id, frame) => updateFrame(id, frame)}
+          />
         ) : null}
       </div>
     </>

@@ -1,12 +1,250 @@
-import { useEffect, useMemo, useState } from "react";
+import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
+import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 
-import type { ButtonProps, WidgetNode } from "@entities/ui-project";
+import type {
+  ButtonIconPosition,
+  ButtonIconSlot,
+  ButtonProps,
+  ColorRef,
+  WidgetNode,
+} from "@entities/ui-project";
+import {
+  buttonIconsWritePatch,
+  createDefaultButtonIconSlot,
+  resolveButtonIcons,
+} from "@entities/ui-project/lib/buttonIcons";
 import { getIconDefinition, ICON_GROUPS, IconGlyph } from "@entities/icon/iconLibrary";
 import { cn } from "@shared/lib/cn";
+import { IconButton } from "@shared/ui/IconButton";
 import { ChevronIcon } from "@widgets/canvas-workspace/toolbarIcons";
 
 import styles from "../PropertiesPanel.module.css";
+import { ColorField } from "../ui/ColorField";
+import { InspectorCard } from "../ui/InspectorCard";
+import { NumberField } from "../ui/NumberField";
 import { TypographyCard } from "../ui/TypographyCard";
+
+function IconBrowser({
+  selectedIconId,
+  search,
+  onSearchChange,
+  onSelect,
+}: {
+  selectedIconId: string;
+  search: string;
+  onSearchChange: (value: string) => void;
+  onSelect: (iconId: string) => void;
+}) {
+  const normalizedSearch = search.trim().toLowerCase();
+  const deferredSearch = useDeferredValue(normalizedSearch);
+  const filteredIconGroups = useMemo(
+    () =>
+      deferredSearch
+        ? ICON_GROUPS.map(
+            ([group, icons]) =>
+              [
+                group,
+                icons.filter((icon) => icon.id.toLowerCase().includes(deferredSearch)),
+              ] as const,
+          ).filter(([, icons]) => icons.length > 0)
+        : ICON_GROUPS,
+    [deferredSearch],
+  );
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (deferredSearch) return;
+    setOpenGroups({});
+  }, [deferredSearch]);
+
+  return (
+    <>
+      <div className={styles.row}>
+        <label>iconId</label>
+        <input
+          type="search"
+          className={styles.inputSearch}
+          placeholder="search icons"
+          aria-label="iconId"
+          value={search}
+          onChange={(e) => {
+            const nextSearch = e.target.value;
+            onSearchChange(nextSearch);
+            if (getIconDefinition(nextSearch)) {
+              onSelect(nextSearch);
+            }
+          }}
+        />
+      </div>
+      <div className={styles.iconBrowser}>
+        {filteredIconGroups.length > 0 ? (
+          filteredIconGroups.map(([group, icons]) => {
+            const isOpen = Boolean(openGroups[group]) || Boolean(deferredSearch);
+            return (
+              <details
+                key={group}
+                className={styles.iconAccordion}
+                open={isOpen}
+                onToggle={(event) => {
+                  const nextOpen = event.currentTarget.open;
+                  setOpenGroups((current) =>
+                    current[group] === nextOpen ? current : { ...current, [group]: nextOpen },
+                  );
+                }}
+              >
+                <summary>
+                  <span className={styles.iconAccordionTwistie}>
+                    <ChevronIcon size={12} />
+                  </span>
+                  <span>
+                    {group} ({icons.length})
+                  </span>
+                </summary>
+                {isOpen ? (
+                  <div className={styles.iconGrid}>
+                    {icons.map((icon) => {
+                      const isSelected = selectedIconId === icon.id;
+                      return (
+                        <button
+                          key={icon.id}
+                          type="button"
+                          onClick={() => {
+                            onSearchChange(icon.id);
+                            onSelect(icon.id);
+                          }}
+                          title={icon.id}
+                          className={cn(styles.iconTile, isSelected && styles.iconTileSelected)}
+                        >
+                          <div className={styles.iconTilePreview}>
+                            <IconGlyph iconId={icon.id} />
+                          </div>
+                          <span className={styles.iconTileName}>{icon.id}</span>
+                          <span className={styles.iconTileSize}>
+                            {icon.width}x{icon.height}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </details>
+            );
+          })
+        ) : (
+          <p className={styles.fieldHint}>No icons found for "{search}".</p>
+        )}
+      </div>
+    </>
+  );
+}
+
+function ButtonIconSlotCard({
+  index,
+  slot,
+  fallbackColor,
+  palette,
+  onChangeSlot,
+  onRemove,
+}: {
+  index: number;
+  slot: ButtonIconSlot;
+  fallbackColor: ColorRef | undefined;
+  palette: { token: string; hex: string }[] | undefined;
+  onChangeSlot: (next: ButtonIconSlot) => void;
+  onRemove: () => void;
+}) {
+  const [search, setSearch] = useState(slot.iconId);
+
+  useEffect(() => {
+    setSearch(slot.iconId);
+  }, [slot.iconId]);
+
+  const position = slot.position ?? "left";
+  const padTop = slot.paddingTop ?? 0;
+  const padRight = slot.paddingRight ?? 0;
+  const padBottom = slot.paddingBottom ?? 0;
+  const padLeft = slot.paddingLeft ?? 0;
+
+  return (
+    <div className={styles.inspectorCard} data-testid={`button-icon-card-${index}`}>
+      <div className={styles.inspectorCardHead}>
+        <div className={styles.typographyCardTitle}>Icon {index + 1}</div>
+        <IconButton
+          variant="ghost"
+          className={styles.iconButtonDanger}
+          aria-label={`Remove icon ${index + 1}`}
+          title={`Remove icon ${index + 1}`}
+          tooltip="Remove"
+          onClick={onRemove}
+        >
+          <DeleteOutlineOutlinedIcon sx={{ fontSize: 16 }} />
+        </IconButton>
+      </div>
+      <IconBrowser
+        selectedIconId={slot.iconId}
+        search={search}
+        onSearchChange={setSearch}
+        onSelect={(iconId) => onChangeSlot({ ...slot, iconId })}
+      />
+      <label className={styles.textFieldStack}>
+        <span>Position</span>
+        <select
+          className={styles.inputText}
+          aria-label={`Icon ${index + 1} position`}
+          value={position}
+          onChange={(event) =>
+            onChangeSlot({
+              ...slot,
+              position: event.target.value as ButtonIconPosition,
+            })
+          }
+        >
+          <option value="left">Left</option>
+          <option value="right">Right</option>
+          <option value="top">Top</option>
+          <option value="bottom">Bottom</option>
+        </select>
+      </label>
+      <InspectorCard title="Padding">
+        <div className={styles.paddingGrid4}>
+          <NumberField
+            label="top"
+            value={padTop}
+            min={0}
+            onChange={(v) => onChangeSlot({ ...slot, paddingTop: Math.max(0, v) })}
+          />
+          <NumberField
+            label="right"
+            value={padRight}
+            min={0}
+            onChange={(v) => onChangeSlot({ ...slot, paddingRight: Math.max(0, v) })}
+          />
+          <NumberField
+            label="bottom"
+            value={padBottom}
+            min={0}
+            onChange={(v) => onChangeSlot({ ...slot, paddingBottom: Math.max(0, v) })}
+          />
+          <NumberField
+            label="left"
+            value={padLeft}
+            min={0}
+            onChange={(v) => onChangeSlot({ ...slot, paddingLeft: Math.max(0, v) })}
+          />
+        </div>
+      </InspectorCard>
+      <InspectorCard title="Color">
+        <ColorField
+          label="color"
+          value={slot.color ?? fallbackColor}
+          palette={palette}
+          onChange={(color) => onChangeSlot({ ...slot, color })}
+        />
+      </InspectorCard>
+    </div>
+  );
+}
 
 export function ButtonGroup({
   node,
@@ -24,139 +262,94 @@ export function ButtonGroup({
   const paddingRight = p.paddingRight ?? p.paddingX ?? 0;
   const paddingBottom = p.paddingBottom ?? p.paddingY ?? 0;
   const paddingLeft = p.paddingLeft ?? p.paddingX ?? 0;
-  const hasIcon = p.iconId !== undefined;
+  const icons = resolveButtonIcons(p);
   const hasText = p.text !== undefined;
-  const [iconSearch, setIconSearch] = useState(p.iconId ?? "");
   const [lastText, setLastText] = useState(p.text ?? "Button");
-  const normalizedIconSearch = iconSearch.trim().toLowerCase();
-  const filteredIconGroups = useMemo(
-    () =>
-      normalizedIconSearch
-        ? ICON_GROUPS.map(
-            ([group, icons]) =>
-              [
-                group,
-                icons.filter((icon) => icon.id.toLowerCase().includes(normalizedIconSearch)),
-              ] as const,
-          ).filter(([, icons]) => icons.length > 0)
-        : ICON_GROUPS,
-    [normalizedIconSearch],
-  );
-
-  useEffect(() => {
-    setIconSearch(p.iconId ?? "");
-  }, [node.id, p.iconId]);
+  const [lastIcons, setLastIcons] = useState<ButtonIconSlot[]>(icons);
+  const [showIcons, setShowIcons] = useState(true);
 
   useEffect(() => {
     if (p.text !== undefined) setLastText(p.text || "Button");
   }, [node.id, p.text]);
 
+  useEffect(() => {
+    const resolved = resolveButtonIcons((node.props ?? {}) as ButtonProps);
+    if (resolved.length > 0) {
+      setLastIcons(resolved);
+      setShowIcons(true);
+    }
+  }, [node.id]);
+
+  const writeIcons = (next: ButtonIconSlot[]) => {
+    if (next.length > 0) setLastIcons(next);
+    onChange(buttonIconsWritePatch(next));
+  };
+
   return (
     <div className={cn(styles.group, styles.textGroup)}>
       <h4>Content</h4>
-      <div className={styles.typographyCard}>
+      <div className={styles.typographyCard} data-testid="icons-card">
         <div className={styles.inspectorCardHead}>
-          <div className={styles.typographyCardTitle}>Icon</div>
+          <div className={styles.typographyCardTitle}>Icons</div>
           <label className={styles.visibilityToggle}>
             <input
               type="checkbox"
-              aria-label="Show icon"
-              title="Show icon"
-              checked={hasIcon}
-              onChange={(event) => onChange({ iconId: event.target.checked ? "earth" : undefined })}
+              aria-label="Show icons"
+              title="Show icons"
+              checked={showIcons}
+              onChange={(event) => {
+                const checked = event.target.checked;
+                setShowIcons(checked);
+                if (checked) {
+                  if (icons.length === 0 && lastIcons.length > 0) {
+                    writeIcons(lastIcons);
+                  }
+                  return;
+                }
+                if (icons.length > 0) setLastIcons(icons);
+                writeIcons([]);
+              }}
             />
           </label>
         </div>
-        {hasIcon ? (
+        {showIcons ? (
           <>
-            <div className={styles.row}>
-              <label htmlFor={`${node.id}-button-icon-id`}>iconId</label>
-              <input
-                id={`${node.id}-button-icon-id`}
-                type="search"
-                className={styles.inputSearch}
-                placeholder="search icons"
-                value={iconSearch}
-                onChange={(e) => {
-                  const nextSearch = e.target.value;
-                  setIconSearch(nextSearch);
-                  if (getIconDefinition(nextSearch)) {
-                    onChange({ iconId: nextSearch });
-                  }
+            {icons.map((slot, index) => (
+              <ButtonIconSlotCard
+                key={`${node.id}-icon-${index}`}
+                index={index}
+                slot={slot}
+                fallbackColor={node.style?.textColor}
+                palette={palette}
+                onChangeSlot={(nextSlot) => {
+                  const next = icons.map((item, i) => (i === index ? nextSlot : item));
+                  writeIcons(next);
+                }}
+                onRemove={() => {
+                  writeIcons(icons.filter((_, i) => i !== index));
                 }}
               />
-            </div>
-            <div className={styles.inlineGrid2}>
-              <label className={styles.textFieldStack}>
-                <span>Position</span>
-                <select
-                  className={styles.inputText}
-                  value={p.iconPosition ?? "left"}
-                  onChange={(event) =>
-                    onChange({ iconPosition: event.target.value as NonNullable<ButtonProps["iconPosition"]> })
-                  }
-                >
-                  <option value="left">Left</option>
-                  <option value="right">Right</option>
-                  <option value="top">Top</option>
-                  <option value="bottom">Bottom</option>
-                </select>
-              </label>
-              <label className={styles.textFieldStack}>
-                <span>Gap</span>
-                <input
-                  className={styles.inputText}
-                  type="number"
-                  min={0}
-                  value={p.iconGap ?? 2}
-                  onChange={(event) => onChange({ iconGap: Number(event.target.value) || 0 })}
-                />
-              </label>
-            </div>
-            <div className={styles.iconBrowser}>
-              {filteredIconGroups.length > 0 ? (
-                filteredIconGroups.map(([group, icons]) => (
-                  <details key={group} className={styles.iconAccordion} open={Boolean(normalizedIconSearch)}>
-                    <summary>
-                      <span className={styles.iconAccordionTwistie}>
-                        <ChevronIcon size={12} />
-                      </span>
-                      <span>{group}</span>
-                    </summary>
-                    <div className={styles.iconGrid}>
-                      {icons.map((icon) => {
-                        const isSelected = p.iconId === icon.id;
-                        return (
-                          <button
-                            key={icon.id}
-                            type="button"
-                            onClick={() => {
-                              setIconSearch(icon.id);
-                              onChange({ iconId: icon.id });
-                            }}
-                            title={icon.id}
-                            className={cn(styles.iconTile, isSelected && styles.iconTileSelected)}
-                          >
-                            <div className={styles.iconTilePreview}>
-                              <IconGlyph iconId={icon.id} />
-                            </div>
-                            <span className={styles.iconTileName}>{icon.id}</span>
-                            <span className={styles.iconTileSize}>
-                              {icon.width}x{icon.height}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </details>
-                ))
-              ) : (
-                <p className={styles.fieldHint}>No icons found for "{iconSearch}".</p>
-              )}
-            </div>
+            ))}
+            <button
+              type="button"
+              className={styles.addItemButton}
+              aria-label="Add icon"
+              onClick={() =>
+                writeIcons([
+                  ...icons,
+                  createDefaultButtonIconSlot(icons.length === 0 ? "left" : "right"),
+                ])
+              }
+            >
+              <AddOutlinedIcon fontSize="small" aria-hidden />
+              <span>Add icon</span>
+            </button>
+            {icons.length === 0 ? (
+              <p className={styles.fieldHint}>Add icons before, after, above, or below the text.</p>
+            ) : null}
           </>
         ) : (
-          <p className={styles.fieldHint}>Enable an icon to show it before, after, above, or below the text.</p>
+          <p className={styles.fieldHint}>Enable icons to add them before, after, above, or below the text.</p>
         )}
       </div>
       <TypographyCard
@@ -179,7 +372,6 @@ export function ButtonGroup({
         palette={palette}
         backgroundDefaultEnabled
         showBackground={false}
-        colorsOutside
         onPropsChange={(patch) => onChange(patch as Partial<ButtonProps>)}
         onStyleChange={onStyleChange}
         paddingControls={{

@@ -398,6 +398,35 @@
   flex: 0 0 auto;
 }
 
+.iconButtonDanger:hover:not(:disabled) {
+  color: var(--color-danger, #e35d6a);
+}
+
+.addItemButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  min-height: 22px;
+  padding: 2px 6px;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    color 120ms ease,
+    background 120ms ease;
+}
+
+.addItemButton:hover {
+  border-color: var(--hover-border);
+  color: var(--hover-text);
+}
+
 .inspectorCardTitleStack {
   display: grid;
   gap: 2px;

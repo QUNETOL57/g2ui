@@ -31,5 +31,14 @@ playwright/.cache/
 .vscode/
 *.swp
 
+# AI agents / tooling
+.ai-factory/
+.ai-factory.json
+.agents/
+.cursor/
+.opencode/
+opencode.json
+skills-lock.json
+
 # Logs
 *.log

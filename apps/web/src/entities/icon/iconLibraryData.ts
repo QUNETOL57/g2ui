@@ -1,3 +1,5 @@
+import { PIXELARTICONS_LIBRARY } from "./pixelarticonsLibraryData";
+
 export interface IconDefinition {
   id: string;
   group: string;
@@ -6,7 +8,8 @@ export interface IconDefinition {
   rows: number[];
 }
 
-export const ICON_LIBRARY: IconDefinition[] = [
+/** Built-in G2UI icon set (pre-pixelarticons). */
+const BUILTIN_ICON_LIBRARY: IconDefinition[] = [
   { id: "arrow_curved_down_left", group: "Arrows", width: 5, height: 8, rows: [0x0004, 0x0002, 0x0002, 0x0003, 0x0017, 0x001E, 0x001C, 0x001E] },
   { id: "arrow_curved_down_right", group: "Arrows", width: 5, height: 8, rows: [0x0004, 0x0008, 0x0008, 0x0018, 0x001D, 0x000F, 0x0007, 0x000F] },
   { id: "arrow_curved_left_down_5x7", group: "Arrows", width: 5, height: 7, rows: [0x0001, 0x0002, 0x0006, 0x0004, 0x001F, 0x000E, 0x0004] },
@@ -277,6 +280,15 @@ export const ICON_LIBRARY: IconDefinition[] = [
   { id: "bolt", group: "Status", width: 8, height: 8, rows: [0x0018, 0x0038, 0x0078, 0x0018, 0x0030, 0x0038, 0x0030, 0x0000] },
 ];
 
+/** Full catalog: built-in icons + free Pixelarticons Base (MIT, `pa_*`). */
+export const ICON_LIBRARY: IconDefinition[] = [
+  ...BUILTIN_ICON_LIBRARY,
+  ...PIXELARTICONS_LIBRARY.map((icon) => ({
+    ...(icon as IconDefinition),
+    group: icon.id.endsWith("_sharp") ? "Pixelarticons Sharp" : "Pixelarticons",
+  })),
+];
+
 const ICON_CATEGORY_ORDER = [
   "Navigation",
   "Status & System",
@@ -286,9 +298,13 @@ const ICON_CATEGORY_ORDER = [
   "Time & Weather",
   "Transport & Places",
   "Objects & Misc",
+  "Pixelarticons",
+  "Pixelarticons Sharp",
 ];
 
 const ICON_CATEGORY_BY_GROUP: Record<string, string> = {
+  Pixelarticons: "Pixelarticons",
+  "Pixelarticons Sharp": "Pixelarticons Sharp",
   Arrows: "Navigation",
   Check: "Navigation",
   Checked: "Navigation",

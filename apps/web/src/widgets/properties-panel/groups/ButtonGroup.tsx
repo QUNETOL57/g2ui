@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 
 import type { ButtonProps, WidgetNode } from "@entities/ui-project";
 import { getIconDefinition, ICON_GROUPS, IconGlyph } from "@entities/icon/iconLibrary";
@@ -29,19 +29,26 @@ export function ButtonGroup({
   const [iconSearch, setIconSearch] = useState(p.iconId ?? "");
   const [lastText, setLastText] = useState(p.text ?? "Button");
   const normalizedIconSearch = iconSearch.trim().toLowerCase();
+  const deferredSearch = useDeferredValue(normalizedIconSearch);
   const filteredIconGroups = useMemo(
     () =>
-      normalizedIconSearch
+      deferredSearch
         ? ICON_GROUPS.map(
             ([group, icons]) =>
               [
                 group,
-                icons.filter((icon) => icon.id.toLowerCase().includes(normalizedIconSearch)),
+                icons.filter((icon) => icon.id.toLowerCase().includes(deferredSearch)),
               ] as const,
           ).filter(([, icons]) => icons.length > 0)
         : ICON_GROUPS,
-    [normalizedIconSearch],
+    [deferredSearch],
   );
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (deferredSearch) return;
+    setOpenGroups({});
+  }, [deferredSearch]);
 
   useEffect(() => {
     setIconSearch(p.iconId ?? "");
@@ -115,41 +122,58 @@ export function ButtonGroup({
             </div>
             <div className={styles.iconBrowser}>
               {filteredIconGroups.length > 0 ? (
-                filteredIconGroups.map(([group, icons]) => (
-                  <details key={group} className={styles.iconAccordion} open={Boolean(normalizedIconSearch)}>
-                    <summary>
-                      <span className={styles.iconAccordionTwistie}>
-                        <ChevronIcon size={12} />
-                      </span>
-                      <span>{group}</span>
-                    </summary>
-                    <div className={styles.iconGrid}>
-                      {icons.map((icon) => {
-                        const isSelected = p.iconId === icon.id;
-                        return (
-                          <button
-                            key={icon.id}
-                            type="button"
-                            onClick={() => {
-                              setIconSearch(icon.id);
-                              onChange({ iconId: icon.id });
-                            }}
-                            title={icon.id}
-                            className={cn(styles.iconTile, isSelected && styles.iconTileSelected)}
-                          >
-                            <div className={styles.iconTilePreview}>
-                              <IconGlyph iconId={icon.id} />
-                            </div>
-                            <span className={styles.iconTileName}>{icon.id}</span>
-                            <span className={styles.iconTileSize}>
-                              {icon.width}x{icon.height}
-                            </span>
-                          </button>
+                filteredIconGroups.map(([group, icons]) => {
+                  const isOpen = Boolean(openGroups[group]) || Boolean(deferredSearch);
+                  return (
+                    <details
+                      key={group}
+                      className={styles.iconAccordion}
+                      open={isOpen}
+                      onToggle={(event) => {
+                        const nextOpen = event.currentTarget.open;
+                        setOpenGroups((current) =>
+                          current[group] === nextOpen ? current : { ...current, [group]: nextOpen },
                         );
-                      })}
-                    </div>
-                  </details>
-                ))
+                      }}
+                    >
+                      <summary>
+                        <span className={styles.iconAccordionTwistie}>
+                          <ChevronIcon size={12} />
+                        </span>
+                        <span>
+                          {group} ({icons.length})
+                        </span>
+                      </summary>
+                      {isOpen ? (
+                        <div className={styles.iconGrid}>
+                          {icons.map((icon) => {
+                            const isSelected = p.iconId === icon.id;
+                            return (
+                              <button
+                                key={icon.id}
+                                type="button"
+                                onClick={() => {
+                                  setIconSearch(icon.id);
+                                  onChange({ iconId: icon.id });
+                                }}
+                                title={icon.id}
+                                className={cn(styles.iconTile, isSelected && styles.iconTileSelected)}
+                              >
+                                <div className={styles.iconTilePreview}>
+                                  <IconGlyph iconId={icon.id} />
+                                </div>
+                                <span className={styles.iconTileName}>{icon.id}</span>
+                                <span className={styles.iconTileSize}>
+                                  {icon.width}x{icon.height}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : null}
+                    </details>
+                  );
+                })
               ) : (
                 <p className={styles.fieldHint}>No icons found for "{iconSearch}".</p>
               )}

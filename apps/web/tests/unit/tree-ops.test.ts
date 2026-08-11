@@ -491,6 +491,24 @@ describe("remapColorTokenRefs", () => {
     });
   });
 
+  it("remaps color tokens inside button icons[] slots", () => {
+    const button = makeButton("btn_icons");
+    button.props = {
+      ...(button.props as object),
+      icons: [
+        { iconId: "earth", position: "left", color: { kind: "token", token: "accent" } },
+        { iconId: "chart", position: "right", color: { kind: "hex", value: "#FFFFFF" } },
+      ],
+    } as typeof button.props;
+    const project = withChildren(makeFixtureProject(), [button]);
+
+    const changed = remapColorTokenRefs(project, "accent", { kind: "hex", value: "#112233" });
+    expect(changed).toBeGreaterThanOrEqual(1);
+    const icons = (button.props as { icons: Array<{ color?: unknown }> }).icons;
+    expect(icons[0].color).toEqual({ kind: "hex", value: "#112233" });
+    expect(icons[1].color).toEqual({ kind: "hex", value: "#FFFFFF" });
+  });
+
   it("remaps tokens inside nested panel children", () => {
     const nested = makeLabel("lbl_nested");
     nested.style = {

@@ -100,11 +100,33 @@ export interface LabelProps {
   textAutoSize?: boolean;
 }
 
+export type ButtonIconPosition = "left" | "right" | "top" | "bottom";
+
+/** One icon slot inside a button (position + per-side padding around the glyph). */
+export interface ButtonIconSlot {
+  iconId: string;
+  position?: ButtonIconPosition;
+  /** Icon fill color; falls back to widget `style.textColor` when omitted. */
+  color?: ColorRef;
+  paddingTop?: number;
+  paddingRight?: number;
+  paddingBottom?: number;
+  paddingLeft?: number;
+}
+
 export interface ButtonProps {
   /** When omitted, the button renders without a text label. */
   text?: string;
+  /** Preferred multi-icon API. Empty array = no icons. */
+  icons?: ButtonIconSlot[];
+  /**
+   * @deprecated Read-compat for single-icon buttons. Prefer `icons`.
+   * Still resolved by `resolveButtonIcons` when `icons` is absent.
+   */
   iconId?: string;
-  iconPosition?: "left" | "right" | "top" | "bottom";
+  /** @deprecated Read-compat — use `icons[].position`. */
+  iconPosition?: ButtonIconPosition;
+  /** @deprecated Read-compat — mapped into padding toward the text. */
   iconGap?: number;
   fontFamily?: string;
   fontSize?: number;

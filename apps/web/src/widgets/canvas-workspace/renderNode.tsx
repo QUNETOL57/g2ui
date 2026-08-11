@@ -1,6 +1,8 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 
 import type {
+  ButtonIconPosition,
+  ButtonIconSlot,
   ButtonProps,
   CircleProps,
   Frame,
@@ -14,6 +16,7 @@ import type {
   TriangleProps,
   WidgetNode,
 } from "@entities/ui-project";
+import { resolveButtonIcons } from "@entities/ui-project/lib/buttonIcons";
 import type { LayoutNode } from "@entities/ui-project/lib/layoutEngine";
 import { resolveColor } from "@entities/ui-project/lib/color";
 import {
@@ -1222,6 +1225,78 @@ function verticalOffset(
   return 0;
 }
 
+type ButtonIconMetrics = {
+  slot: ButtonIconSlot;
+  iconId: string;
+  padL: number;
+  padR: number;
+  padT: number;
+  padB: number;
+  iw: number;
+  ih: number;
+  outerW: number;
+  outerH: number;
+};
+
+type PlacedButtonIcon = {
+  iconId: string;
+  color: string;
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+};
+
+function buttonIconMetrics(slot: ButtonIconSlot): ButtonIconMetrics {
+  const def = getResolvedIconDefinition(slot.iconId);
+  const padL = Math.max(0, slot.paddingLeft ?? 0);
+  const padR = Math.max(0, slot.paddingRight ?? 0);
+  const padT = Math.max(0, slot.paddingTop ?? 0);
+  const padB = Math.max(0, slot.paddingBottom ?? 0);
+  return {
+    slot,
+    iconId: def.id,
+    padL,
+    padR,
+    padT,
+    padB,
+    iw: def.width,
+    ih: def.height,
+    outerW: padL + def.width + padR,
+    outerH: padT + def.height + padB,
+  };
+}
+
+function sumOuter(metrics: ButtonIconMetrics[], axis: "w" | "h"): number {
+  return metrics.reduce((sum, m) => sum + (axis === "w" ? m.outerW : m.outerH), 0);
+}
+
+function maxOuter(metrics: ButtonIconMetrics[], axis: "w" | "h"): number {
+  return metrics.reduce((max, m) => Math.max(max, axis === "w" ? m.outerW : m.outerH), 0);
+}
+
+function placeIconRow(
+  metrics: ButtonIconMetrics[],
+  startX: number,
+  rowTop: number,
+  rowHeight: number,
+  resolveIconColor: (slot: ButtonIconSlot) => string,
+  into: PlacedButtonIcon[],
+) {
+  let x = startX;
+  for (const m of metrics) {
+    into.push({
+      iconId: m.iconId,
+      color: resolveIconColor(m.slot),
+      left: x + m.padL,
+      top: rowTop + Math.max(0, Math.floor((rowHeight - m.outerH) / 2)) + m.padT,
+      width: m.iw,
+      height: m.ih,
+    });
+    x += m.outerW;
+  }
+}
+
 function ButtonVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; rect: Frame }) {
   const props = (node.props ?? {}) as ButtonProps;
   const bg = node.style?.drawBackground === false
@@ -1243,42 +1318,79 @@ function ButtonVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; r
   const isEditing = ctx.editingLabelId === node.id;
   const showText = props.text !== undefined;
   const text = showText ? (props.text ?? "") : "";
-  const icon = props.iconId !== undefined ? getResolvedIconDefinition(props.iconId) : null;
-  const iconPosition = props.iconPosition ?? "left";
-  const iconGap = showText && text && icon ? Math.max(0, props.iconGap ?? 2) : 0;
-  const isIconVertical = iconPosition === "top" || iconPosition === "bottom";
+  const iconSlots = resolveButtonIcons(props);
+  const bySide: Record<ButtonIconPosition, ButtonIconMetrics[]> = {
+    left: [],
+    right: [],
+    top: [],
+    bottom: [],
+  };
+  for (const slot of iconSlots) {
+    bySide[slot.position ?? "left"].push(buttonIconMetrics(slot));
+  }
   const textWidth = text ? measureTextWidth(face, text) : 0;
   const textHeight = text ? face.lineHeight : 0;
-  const iconPixelSize = 1;
-  const iconWidth = icon ? icon.width * iconPixelSize : 0;
-  const iconHeight = icon ? icon.height * iconPixelSize : 0;
-  const groupWidth = isIconVertical
-    ? Math.max(iconWidth, textWidth)
-    : iconWidth + (icon ? iconGap : 0) + textWidth;
-  const groupHeight = isIconVertical
-    ? iconHeight + (icon ? iconGap : 0) + textHeight
-    : Math.max(iconHeight, textHeight);
+  const hasIcons = iconSlots.length > 0;
+
+  const leftW = sumOuter(bySide.left, "w");
+  const rightW = sumOuter(bySide.right, "w");
+  const topW = sumOuter(bySide.top, "w");
+  const bottomW = sumOuter(bySide.bottom, "w");
+  const leftH = maxOuter(bySide.left, "h");
+  const rightH = maxOuter(bySide.right, "h");
+  const topH = maxOuter(bySide.top, "h");
+  const bottomH = maxOuter(bySide.bottom, "h");
+
+  const midW = leftW + textWidth + rightW;
+  const midH = Math.max(leftH, textHeight, rightH);
+  const groupWidth = Math.max(topW, midW, bottomW, textWidth);
+  const groupHeight = topH + Math.max(midH, textHeight) + bottomH;
   const groupLeft = Math.max(0, alignedOffset(horizontalAlign, contentWidth, groupWidth));
   const groupTop = Math.max(0, verticalOffset(verticalAlign, contentHeight, groupHeight));
-  const iconLeft = isIconVertical
-    ? groupLeft + Math.max(0, Math.floor((groupWidth - iconWidth) / 2))
-    : groupLeft + (iconPosition === "right" ? textWidth + iconGap : 0);
-  const iconTop = isIconVertical
-    ? groupTop + (iconPosition === "bottom" ? textHeight + iconGap : 0)
-    : groupTop + Math.max(0, Math.floor((groupHeight - iconHeight) / 2));
-  const textLeft = isIconVertical
-    ? groupLeft + Math.max(0, Math.floor((groupWidth - textWidth) / 2))
-    : groupLeft + (iconPosition === "left" && icon ? iconWidth + iconGap : 0);
-  const textTop = isIconVertical
-    ? groupTop + (iconPosition === "top" && icon ? iconHeight + iconGap : 0)
-    : groupTop + Math.max(0, Math.floor((groupHeight - textHeight) / 2));
-  const textBoxWidth = isIconVertical || iconPosition === "left"
-    ? Math.max(0, contentWidth - textLeft)
-    : Math.max(0, iconLeft - iconGap - textLeft);
-  const textBoxHeight = !isIconVertical || iconPosition === "top"
-    ? Math.max(0, contentHeight - textTop)
-    : Math.max(0, iconTop - iconGap - textTop);
+
+  const placedIcons: PlacedButtonIcon[] = [];
+  const resolveIconColor = (slot: ButtonIconSlot) =>
+    resolveColor(slot.color ?? node.style?.textColor, ctx.palette, "#FFF");
+  placeIconRow(
+    bySide.top,
+    groupLeft + Math.max(0, Math.floor((groupWidth - topW) / 2)),
+    groupTop,
+    topH || 0,
+    resolveIconColor,
+    placedIcons,
+  );
+
+  const midTop = groupTop + topH;
+  const midHeight = Math.max(midH, textHeight);
+  const midLeft = groupLeft + Math.max(0, Math.floor((groupWidth - midW) / 2));
+  placeIconRow(bySide.left, midLeft, midTop, midHeight, resolveIconColor, placedIcons);
+
+  const textLeft = midLeft + leftW;
+  const textTop = midTop + Math.max(0, Math.floor((midHeight - textHeight) / 2));
+  placeIconRow(bySide.right, textLeft + textWidth, midTop, midHeight, resolveIconColor, placedIcons);
+
+  const bottomTop = midTop + midHeight;
+  placeIconRow(
+    bySide.bottom,
+    groupLeft + Math.max(0, Math.floor((groupWidth - bottomW) / 2)),
+    bottomTop,
+    bottomH || 0,
+    resolveIconColor,
+    placedIcons,
+  );
+
+  const rightIconsStart = textLeft + textWidth;
+  const bottomIconsStart = bottomTop;
+  const textBoxWidth =
+    bySide.right.length > 0
+      ? Math.max(0, rightIconsStart - textLeft)
+      : Math.max(0, contentWidth - textLeft);
+  const textBoxHeight =
+    bySide.bottom.length > 0
+      ? Math.max(0, bottomIconsStart - textTop)
+      : Math.max(0, contentHeight - textTop);
   const borderRadius = effectiveBorderRadius(node.style);
+  const useGroupedLayout = hasIcons;
 
   return (
     <div
@@ -1320,7 +1432,7 @@ function ButtonVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; r
           overflow: "hidden",
         }}
       >
-        {!icon ? (
+        {!useGroupedLayout ? (
           showText ? (
             isEditing && ctx.onLabelTextCommit ? (
               <LabelInlineEditor
@@ -1350,17 +1462,20 @@ function ButtonVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; r
           ) : null
         ) : (
           <>
-            <div
-              style={{
-                position: "absolute",
-                left: iconLeft,
-                top: iconTop,
-                width: iconWidth,
-                height: iconHeight,
-              }}
-            >
-              <IconGlyph iconId={icon.id} color={fg} pixelSize={iconPixelSize} />
-            </div>
+            {placedIcons.map((icon, index) => (
+              <div
+                key={`${icon.iconId}-${index}`}
+                style={{
+                  position: "absolute",
+                  left: icon.left,
+                  top: icon.top,
+                  width: icon.width,
+                  height: icon.height,
+                }}
+              >
+                <IconGlyph iconId={icon.iconId} color={icon.color} pixelSize={1} />
+              </div>
+            ))}
             {showText && isEditing && ctx.onLabelTextCommit ? (
               <div
                 style={{

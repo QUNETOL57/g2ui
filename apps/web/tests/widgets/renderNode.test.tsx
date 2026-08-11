@@ -101,6 +101,100 @@ describe("PreviewNode: per-type rendering", () => {
     expect(screen.getByLabelText("Save")).toBeInTheDocument();
   });
 
+  it("renders multiple button icons from icons[]", () => {
+    const button = makeButton("bt_1", "Save");
+    button.props = {
+      ...(button.props ?? {}),
+      icons: [
+        { iconId: "earth", position: "left", paddingRight: 2 },
+        {
+          iconId: "chart",
+          position: "right",
+          paddingLeft: 2,
+          color: { kind: "hex", value: "#FF0000" },
+        },
+      ],
+    };
+    renderProject([button]);
+    expect(screen.getByLabelText("earth")).toBeInTheDocument();
+    expect(screen.getByLabelText("chart")).toBeInTheDocument();
+    expect(screen.getByLabelText("Save")).toBeInTheDocument();
+    const chart = document.querySelector('svg[aria-label="chart"] path') as SVGPathElement | null;
+    expect(chart?.getAttribute("fill")).toBe("#FF0000");
+  });
+
+  it("falls back to style.textColor when icon color is omitted", () => {
+    const button = makeButton("bt_1", "Save");
+    button.style = { ...(button.style ?? {}), textColor: { kind: "hex", value: "#00AAFF" } };
+    button.props = {
+      ...(button.props ?? {}),
+      icons: [{ iconId: "earth", position: "left" }],
+    };
+    renderProject([button]);
+    const earth = document.querySelector('svg[aria-label="earth"] path') as SVGPathElement | null;
+    expect(earth?.getAttribute("fill")).toBe("#00AAFF");
+  });
+
+  it("renders icons above and below the text", () => {
+    const button = makeButton("bt_1", "Save");
+    button.props = {
+      ...(button.props ?? {}),
+      icons: [
+        { iconId: "earth", position: "top", paddingBottom: 2 },
+        { iconId: "chart", position: "bottom", paddingTop: 2 },
+      ],
+    };
+    renderProject([button]);
+    expect(screen.getByLabelText("earth")).toBeInTheDocument();
+    expect(screen.getByLabelText("chart")).toBeInTheDocument();
+    expect(screen.getByLabelText("Save")).toBeInTheDocument();
+
+    const topIcon = screen.getByLabelText("earth").closest("div") as HTMLElement;
+    const bottomIcon = screen.getByLabelText("chart").closest("div") as HTMLElement;
+    const textLayer = screen.getByLabelText("Save").parentElement as HTMLElement;
+    expect(Number.parseFloat(topIcon.style.top)).toBeLessThan(Number.parseFloat(textLayer.style.top));
+    expect(Number.parseFloat(bottomIcon.style.top)).toBeGreaterThan(Number.parseFloat(textLayer.style.top));
+  });
+
+  it("renders several icons on the same side in order", () => {
+    const button = makeButton("bt_1", "Go");
+    button.props = {
+      ...(button.props ?? {}),
+      icons: [
+        { iconId: "earth", position: "left", paddingRight: 1 },
+        { iconId: "chart", position: "left", paddingRight: 1 },
+      ],
+    };
+    renderProject([button]);
+    const earth = screen.getByLabelText("earth").closest("div") as HTMLElement;
+    const chart = screen.getByLabelText("chart").closest("div") as HTMLElement;
+    expect(Number.parseFloat(earth.style.left)).toBeLessThan(Number.parseFloat(chart.style.left));
+  });
+
+  it("ignores legacy iconId when icons[] is present", () => {
+    const button = makeButton("bt_1", "Save");
+    button.props = {
+      ...(button.props ?? {}),
+      iconId: "earth",
+      icons: [{ iconId: "chart", position: "left" }],
+    };
+    renderProject([button]);
+    expect(screen.getByLabelText("chart")).toBeInTheDocument();
+    expect(screen.queryByLabelText("earth")).toBeNull();
+  });
+
+  it("renders icon-only buttons from icons[]", () => {
+    const button = makeButton("bt_1", "");
+    button.props = {
+      ...(button.props ?? {}),
+      text: undefined,
+      icons: [{ iconId: "earth", position: "left" }],
+    };
+    renderProject([button]);
+    expect(screen.getByLabelText("earth")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Press")).toBeNull();
+  });
+
   it("clips long button text to the available slot next to the icon", () => {
     const button = makeButton("bt_1", "A very long button label");
     button.props = { ...(button.props ?? {}), iconId: "earth" };
@@ -109,6 +203,24 @@ describe("PreviewNode: per-type rendering", () => {
     const textLayer = screen.getByLabelText("A very long button label").parentElement as HTMLElement;
     expect(textLayer.style.width).toBe("47px");
     expect(textLayer.style.overflow).toBe("hidden");
+  });
+
+  it("places a right-side icon after the text label", () => {
+    const button = makeButton("bt_1", "Save");
+    button.props = {
+      ...(button.props ?? {}),
+      icons: [
+        { iconId: "earth", position: "left", paddingRight: 2 },
+        { iconId: "chart", position: "right", paddingLeft: 2 },
+      ],
+    };
+    renderProject([button]);
+
+    const textLayer = screen.getByLabelText("Save").parentElement as HTMLElement;
+    const rightIcon = screen.getByLabelText("chart").closest("div") as HTMLElement;
+    expect(Number.parseFloat(rightIcon.style.left)).toBeGreaterThanOrEqual(
+      Number.parseFloat(textLayer.style.left) + Number.parseFloat(textLayer.style.width),
+    );
   });
 
   it("renders an icon-only button", () => {

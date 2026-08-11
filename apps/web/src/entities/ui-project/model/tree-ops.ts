@@ -243,6 +243,12 @@ export function remapColorTokenRefs(p: UiProject, fromToken: string, to: ColorRe
       if ("pressedBackground" in props) {
         props.pressedBackground = apply(props.pressedBackground as ColorRef | undefined);
       }
+      if (Array.isArray(props.icons)) {
+        props.icons = (props.icons as Array<Record<string, unknown>>).map((slot) => {
+          if (!slot || typeof slot !== "object") return slot;
+          return { ...slot, color: apply(slot.color as ColorRef | undefined) };
+        });
+      }
     }
     (n.children ?? []).forEach(walk);
   };

@@ -108,7 +108,7 @@ describe("PropertiesPanel: per-type groups", () => {
     get().setProject(project);
     selectAndRender("ic_1");
 
-    const summary = screen.getByText("Transport & Places").closest("summary");
+    const summary = screen.getByText(/Transport & Places/).closest("summary");
     const chevron = summary?.querySelector("svg");
     expect(chevron).toHaveAttribute("width", "12");
     expect(chevron).toHaveAttribute("height", "12");

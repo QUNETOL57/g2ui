@@ -39,9 +39,11 @@ describe("EditorMenu", () => {
         onBackToLibrary={() => undefined}
         viewSettings={{
           showGrid: true,
+          showGridOverlay: false,
           showRulers: false,
           showGuides: true,
           onToggleGrid: vi.fn(),
+          onToggleGridOverlay: vi.fn(),
           onToggleRulers: vi.fn(),
           onToggleGuides: vi.fn(),
         }}
@@ -50,12 +52,17 @@ describe("EditorMenu", () => {
 
     await userEvent.click(screen.getByRole("menuitem", { name: "View" }));
     expect(screen.getByRole("menuitemcheckbox", { name: "Grid" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("menuitemcheckbox", { name: "Grid overlay" })).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
     expect(screen.getByRole("menuitemcheckbox", { name: "Rulers" })).toHaveAttribute("aria-checked", "false");
     expect(screen.getByRole("menuitemcheckbox", { name: "Guides" })).toHaveAttribute("aria-checked", "true");
   });
 
   it("toggles display settings from View menu", async () => {
     const onToggleGrid = vi.fn();
+    const onToggleGridOverlay = vi.fn();
     const onToggleRulers = vi.fn();
     const onToggleGuides = vi.fn();
     render(
@@ -63,9 +70,11 @@ describe("EditorMenu", () => {
         onBackToLibrary={() => undefined}
         viewSettings={{
           showGrid: true,
+          showGridOverlay: false,
           showRulers: true,
           showGuides: true,
           onToggleGrid,
+          onToggleGridOverlay,
           onToggleRulers,
           onToggleGuides,
         }}
@@ -74,12 +83,39 @@ describe("EditorMenu", () => {
 
     await userEvent.click(screen.getByRole("menuitem", { name: "View" }));
     await userEvent.click(screen.getByRole("menuitemcheckbox", { name: "Grid" }));
+    await userEvent.click(screen.getByRole("menuitemcheckbox", { name: "Grid overlay" }));
     await userEvent.click(screen.getByRole("menuitemcheckbox", { name: "Rulers" }));
     await userEvent.click(screen.getByRole("menuitemcheckbox", { name: "Guides" }));
 
     expect(onToggleGrid).toHaveBeenCalledTimes(1);
+    expect(onToggleGridOverlay).toHaveBeenCalledTimes(1);
     expect(onToggleRulers).toHaveBeenCalledTimes(1);
     expect(onToggleGuides).toHaveBeenCalledTimes(1);
+  });
+
+  it("disables Grid overlay when Grid is off", async () => {
+    const onToggleGridOverlay = vi.fn();
+    render(
+      <EditorMenu
+        onBackToLibrary={() => undefined}
+        viewSettings={{
+          showGrid: false,
+          showGridOverlay: false,
+          showRulers: true,
+          showGuides: true,
+          onToggleGrid: vi.fn(),
+          onToggleGridOverlay,
+          onToggleRulers: vi.fn(),
+          onToggleGuides: vi.fn(),
+        }}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("menuitem", { name: "View" }));
+    const overlayItem = screen.getByRole("menuitemcheckbox", { name: "Grid overlay" });
+    expect(overlayItem).toBeDisabled();
+    await userEvent.click(overlayItem);
+    expect(onToggleGridOverlay).not.toHaveBeenCalled();
   });
 
   it("shows a side preview when hovering View settings", async () => {
@@ -88,9 +124,11 @@ describe("EditorMenu", () => {
         onBackToLibrary={() => undefined}
         viewSettings={{
           showGrid: true,
+          showGridOverlay: false,
           showRulers: true,
           showGuides: true,
           onToggleGrid: vi.fn(),
+          onToggleGridOverlay: vi.fn(),
           onToggleRulers: vi.fn(),
           onToggleGuides: vi.fn(),
         }}
@@ -111,9 +149,11 @@ describe("EditorMenu", () => {
         onBackToLibrary={() => undefined}
         viewSettings={{
           showGrid: true,
+          showGridOverlay: false,
           showRulers: true,
           showGuides: true,
           onToggleGrid: vi.fn(),
+          onToggleGridOverlay: vi.fn(),
           onToggleRulers: vi.fn(),
           onToggleGuides: vi.fn(),
         }}
@@ -128,15 +168,43 @@ describe("EditorMenu", () => {
     expect(preview).toHaveTextContent("Grid");
   });
 
+  it("renders grid overlay preview with widgets under the grid", async () => {
+    render(
+      <EditorMenu
+        onBackToLibrary={() => undefined}
+        viewSettings={{
+          showGrid: true,
+          showGridOverlay: true,
+          showRulers: true,
+          showGuides: true,
+          onToggleGrid: vi.fn(),
+          onToggleGridOverlay: vi.fn(),
+          onToggleRulers: vi.fn(),
+          onToggleGuides: vi.fn(),
+        }}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("menuitem", { name: "View" }));
+    await userEvent.hover(screen.getByRole("menuitemcheckbox", { name: "Grid overlay" }));
+
+    const preview = screen.getByTestId("view-setting-preview");
+    expect(preview.querySelector('[class*="previewGridOverlay"]')).toBeTruthy();
+    expect(preview.querySelector('[class*="previewOverlayWidgets"]')).toBeTruthy();
+    expect(preview).toHaveTextContent("Grid overlay");
+  });
+
   it("renders rulers preview with a canvas-like grid area", async () => {
     render(
       <EditorMenu
         onBackToLibrary={() => undefined}
         viewSettings={{
           showGrid: true,
+          showGridOverlay: false,
           showRulers: true,
           showGuides: true,
           onToggleGrid: vi.fn(),
+          onToggleGridOverlay: vi.fn(),
           onToggleRulers: vi.fn(),
           onToggleGuides: vi.fn(),
         }}

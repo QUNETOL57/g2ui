@@ -16,15 +16,17 @@ import { PaletteModal } from "@widgets/palette-panel/PaletteModal";
 import styles from "./EditorMenu.module.css";
 
 type OpenMenuId = "project" | "edit" | "view" | null;
-type ViewSettingId = "grid" | "rulers" | "guides";
+type ViewSettingId = "grid" | "gridOverlay" | "rulers" | "guides";
 
 interface EditorMenuProps {
   onBackToLibrary: () => void;
   viewSettings?: {
     showGrid: boolean;
+    showGridOverlay: boolean;
     showRulers: boolean;
     showGuides: boolean;
     onToggleGrid: () => void;
+    onToggleGridOverlay: () => void;
     onToggleRulers: () => void;
     onToggleGuides: () => void;
   };
@@ -38,6 +40,11 @@ const viewSettingPreviews: Record<
     title: "Grid",
     description: "Shows the pixel grid on high zoom for precise drawing and placement.",
     kind: "grid",
+  },
+  gridOverlay: {
+    title: "Grid overlay",
+    description: "Draws the pixel grid on top of widgets so you can align against filled content.",
+    kind: "gridOverlay",
   },
   rulers: {
     title: "Rulers",
@@ -193,6 +200,21 @@ export function EditorMenu({ onBackToLibrary, viewSettings }: EditorMenuProps) {
               <button
                 type="button"
                 role="menuitemcheckbox"
+                aria-checked={viewSettings?.showGridOverlay ?? false}
+                className={styles.menuItem}
+                disabled={!(viewSettings?.showGrid ?? true)}
+                onMouseEnter={() => setHoveredViewSetting("gridOverlay")}
+                onFocus={() => setHoveredViewSetting("gridOverlay")}
+                onClick={viewSettings?.onToggleGridOverlay}
+              >
+                <span className={styles.menuItemCheck} aria-hidden>
+                  {viewSettings?.showGridOverlay ?? false ? "✓" : ""}
+                </span>
+                <span className={styles.menuItemLabel}>Grid overlay</span>
+              </button>
+              <button
+                type="button"
+                role="menuitemcheckbox"
                 aria-checked={viewSettings?.showRulers ?? true}
                 className={styles.menuItem}
                 onMouseEnter={() => setHoveredViewSetting("rulers")}
@@ -227,6 +249,15 @@ export function EditorMenu({ onBackToLibrary, viewSettings }: EditorMenuProps) {
                   <div className={styles.previewTitle}>{viewPreview.title}</div>
                   <div className={styles.previewCanvas} aria-hidden>
                     {viewPreview.kind === "grid" ? <div className={styles.previewGrid} /> : null}
+                    {viewPreview.kind === "gridOverlay" ? (
+                      <>
+                        <div className={styles.previewOverlayWidgets} aria-hidden>
+                          <span className={styles.previewOverlayPanel} />
+                          <span className={styles.previewOverlayButton} />
+                        </div>
+                        <div className={styles.previewGridOverlay} />
+                      </>
+                    ) : null}
                     {viewPreview.kind === "rulers" ? (
                       <>
                         <div className={styles.previewRulerGrid} />

@@ -130,6 +130,7 @@ describe("EditorPage", () => {
     fireEvent.change(screen.getByRole("slider"), { target: { value: "5" } });
     expect(screen.getAllByTestId("canvas-pixel-grid")).toHaveLength(1);
     expect(screen.getByTestId("canvas-pixel-grid")).toBeInTheDocument();
+    expect(screen.getByTestId("canvas-pixel-grid")).not.toHaveAttribute("data-overlay");
     expect(screen.getByTestId("canvas-rulers")).toBeInTheDocument();
     expect(screen.getAllByTestId("selection-guide")).toHaveLength(8);
     expect(screen.getAllByTestId("selection-frame")).toHaveLength(4);
@@ -137,12 +138,33 @@ describe("EditorPage", () => {
 
     await userEvent.click(screen.getByRole("menuitem", { name: "View" }));
     expect(screen.getByRole("menuitemcheckbox", { name: "Grid" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("menuitemcheckbox", { name: "Grid overlay" })).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
     expect(screen.getByRole("menuitemcheckbox", { name: "Rulers" })).toHaveAttribute("aria-checked", "true");
     expect(screen.getByRole("menuitemcheckbox", { name: "Guides" })).toHaveAttribute("aria-checked", "true");
+
+    await userEvent.click(screen.getByRole("menuitemcheckbox", { name: "Grid overlay" }));
+    expect(screen.getByTestId("canvas-pixel-grid")).toHaveAttribute("data-overlay", "true");
+    expect(screen.getByRole("menuitemcheckbox", { name: "Grid overlay" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    expect(screen.getByRole("menuitemcheckbox", { name: "Grid overlay" })).toBeEnabled();
+    expect(screen.getAllByTestId("selection-guide")).toHaveLength(8);
+    expect(
+      Number(getComputedStyle(screen.getByTestId("canvas-selection-layer")).zIndex),
+    ).toBeGreaterThan(Number(getComputedStyle(screen.getByTestId("canvas-pixel-grid")).zIndex));
 
     await userEvent.click(screen.getByRole("menuitemcheckbox", { name: "Grid" }));
     expect(screen.queryByTestId("canvas-pixel-grid")).not.toBeInTheDocument();
     expect(screen.getByRole("menuitemcheckbox", { name: "Grid" })).toHaveAttribute("aria-checked", "false");
+    expect(screen.getByRole("menuitemcheckbox", { name: "Grid overlay" })).toBeDisabled();
+    expect(screen.getByRole("menuitemcheckbox", { name: "Grid overlay" })).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
 
     await userEvent.click(screen.getByRole("menuitemcheckbox", { name: "Rulers" }));
     expect(screen.queryByTestId("canvas-rulers")).not.toBeInTheDocument();

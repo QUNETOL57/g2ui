@@ -112,7 +112,7 @@
   position: absolute;
   top: 0;
   left: calc(100% + 8px);
-  width: 220px;
+  width: 216px;
   padding: 10px;
   border: 1px solid var(--color-border-soft);
   border-radius: var(--radius-md);
@@ -145,9 +145,52 @@
   background-image:
     linear-gradient(#171717 1px, transparent 1px),
     linear-gradient(90deg, #171717 1px, transparent 1px);
-  background-position: 0 0;
+  /* Offset by one cell so the first lines don't stack on the canvas border. */
+  background-position: 12px 12px;
   background-size: 12px 12px;
   image-rendering: pixelated;
+}
+
+.previewOverlayWidgets {
+  position: absolute;
+  /* Keep demo widgets inside complete 12px grid cells (canvas is 200×84). */
+  left: 12px;
+  top: 12px;
+  width: 168px;
+  height: 60px;
+  overflow: hidden;
+}
+
+.previewOverlayPanel {
+  position: absolute;
+  left: 0;
+  top: 0;
+  box-sizing: border-box;
+  width: 60px;
+  height: 36px;
+  background: #2a2a2a;
+}
+
+.previewOverlayButton {
+  position: absolute;
+  left: 72px;
+  top: 12px;
+  box-sizing: border-box;
+  width: 48px;
+  height: 24px;
+  background: #f74f9e;
+}
+
+.previewGridOverlay {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(#171717 1px, transparent 1px),
+    linear-gradient(90deg, #171717 1px, transparent 1px);
+  background-position: 12px 12px;
+  background-size: 12px 12px;
+  image-rendering: pixelated;
+  pointer-events: none;
 }
 
 .previewRulerGrid,

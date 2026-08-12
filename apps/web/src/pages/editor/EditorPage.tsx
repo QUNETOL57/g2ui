@@ -50,6 +50,7 @@ export function EditorPage({
   const [leftPanelOpen, setLeftPanelOpen] = useState(true);
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
   const [showGrid, setShowGrid] = useState(true);
+  const [showGridOverlay, setShowGridOverlay] = useState(false);
   const [showRulers, setShowRulers] = useState(true);
   const [showGuides, setShowGuides] = useState(true);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
@@ -176,9 +177,15 @@ export function EditorPage({
             onBackToLibrary={onBackToLibrary}
             viewSettings={{
               showGrid,
+              showGridOverlay,
               showRulers,
               showGuides,
-              onToggleGrid: () => setShowGrid((visible) => !visible),
+              onToggleGrid: () =>
+                setShowGrid((visible) => {
+                  if (visible) setShowGridOverlay(false);
+                  return !visible;
+                }),
+              onToggleGridOverlay: () => setShowGridOverlay((visible) => !visible),
               onToggleRulers: () => setShowRulers((visible) => !visible),
               onToggleGuides: () => setShowGuides((visible) => !visible),
             }}
@@ -206,6 +213,7 @@ export function EditorPage({
           leftPanelOpen={leftPanelOpen}
           rightPanelOpen={rightPanelOpen}
           showGrid={showGrid}
+          showGridOverlay={showGridOverlay}
           showRulers={showRulers}
           showGuides={showGuides}
           onToggleLeftPanel={() => setLeftPanelOpen((open) => !open)}

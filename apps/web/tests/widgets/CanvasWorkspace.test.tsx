@@ -472,3 +472,43 @@ describe("CanvasWorkspace: move without jump", () => {
     expect(get().draftFrame).toBeNull();
   });
 });
+
+describe("CanvasWorkspace: grid overlay stacking", () => {
+  function zIndexOf(element: HTMLElement): number {
+    return Number(getComputedStyle(element).zIndex);
+  }
+
+  it("raises the pixel grid above widgets when overlay is enabled", () => {
+    render(<CanvasWorkspace showGrid showGridOverlay />);
+    fireEvent.change(screen.getByRole("slider"), { target: { value: "5" } });
+
+    const grid = screen.getByTestId("canvas-pixel-grid");
+    const content = screen.getByTestId("canvas-scaled-content");
+    expect(grid).toHaveAttribute("data-overlay", "true");
+    expect(zIndexOf(grid)).toBeGreaterThan(zIndexOf(content));
+  });
+
+  it("keeps the pixel grid below widgets when overlay is disabled", () => {
+    render(<CanvasWorkspace showGrid showGridOverlay={false} />);
+    fireEvent.change(screen.getByRole("slider"), { target: { value: "5" } });
+
+    const grid = screen.getByTestId("canvas-pixel-grid");
+    const content = screen.getByTestId("canvas-scaled-content");
+    expect(grid).not.toHaveAttribute("data-overlay");
+    expect(zIndexOf(grid)).toBeLessThan(zIndexOf(content));
+  });
+
+  it("keeps selection guides above the pixel grid when overlay is enabled", () => {
+    const project = withChildren(makeFixtureProject(), [makeLabel("lbl_1")]);
+    get().setProject(project);
+    get().selectNode("lbl_1");
+    render(<CanvasWorkspace showGrid showGridOverlay showGuides />);
+    fireEvent.change(screen.getByRole("slider"), { target: { value: "5" } });
+
+    const grid = screen.getByTestId("canvas-pixel-grid");
+    const selectionLayer = screen.getByTestId("canvas-selection-layer");
+    expect(grid).toHaveAttribute("data-overlay", "true");
+    expect(screen.getAllByTestId("selection-guide").length).toBeGreaterThan(0);
+    expect(zIndexOf(selectionLayer)).toBeGreaterThan(zIndexOf(grid));
+  });
+});

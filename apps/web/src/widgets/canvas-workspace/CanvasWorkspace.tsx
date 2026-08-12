@@ -7,6 +7,7 @@ import { layoutTree } from "@entities/ui-project/lib/layoutEngine";
 import type { LayoutNode } from "@entities/ui-project/lib/layoutEngine";
 import { resolveColor, resolveScreenBackground } from "@entities/ui-project/lib/color";
 import { normalizeIconFrame } from "@entities/icon/iconSizing";
+import { cn } from "@shared/lib/cn";
 import { IconButton } from "@shared/ui/IconButton";
 import { SidebarPanelIcon } from "@shared/ui/SidebarPanelIcon";
 
@@ -69,6 +70,7 @@ interface CanvasWorkspaceProps {
   leftPanelOpen?: boolean;
   rightPanelOpen?: boolean;
   showGrid?: boolean;
+  showGridOverlay?: boolean;
   showRulers?: boolean;
   showGuides?: boolean;
   onToggleLeftPanel?: () => void;
@@ -79,6 +81,7 @@ export function CanvasWorkspace({
   leftPanelOpen = true,
   rightPanelOpen = true,
   showGrid = true,
+  showGridOverlay = false,
   showRulers = true,
   showGuides = true,
   onToggleLeftPanel,
@@ -962,8 +965,9 @@ export function CanvasWorkspace({
             >
               {showPixelGrid ? (
                 <div
-                  className={styles.pixelGrid}
+                  className={cn(styles.pixelGrid, showGridOverlay && styles.pixelGridOverlay)}
                   data-testid="canvas-pixel-grid"
+                  data-overlay={showGridOverlay ? "true" : undefined}
                   style={{
                     backgroundImage:
                       "linear-gradient(#171717 1px, transparent 1px), linear-gradient(90deg, #171717 1px, transparent 1px)",
@@ -976,6 +980,7 @@ export function CanvasWorkspace({
               ) : null}
               <div
                 className={styles.scaledContent}
+                data-testid="canvas-scaled-content"
                 style={{
                   width: w,
                   height: h,
@@ -1004,7 +1009,7 @@ export function CanvasWorkspace({
                 ))}
               </div>
               {showSelectionOverlay && displayedSelectedRect ? (
-                <div className={styles.selectionLayer}>
+                <div className={styles.selectionLayer} data-testid="canvas-selection-layer">
                   <SelectionOverlay
                     rect={displayedSelectedRect}
                     renderZoom={renderZoom}

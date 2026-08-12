@@ -94,6 +94,11 @@
   pointer-events: none;
 }
 
+.pixelGridOverlay {
+  /* Above widgets, below selection chrome and guides. */
+  z-index: 5;
+}
+
 .pixelGridFrame {
   position: absolute;
   inset: 0;

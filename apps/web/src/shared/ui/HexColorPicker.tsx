@@ -8,6 +8,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { createPortal } from "react-dom";
+import ColorizeOutlinedIcon from "@mui/icons-material/ColorizeOutlined";
 
 import { normalizeHex } from "@entities/ui-project/lib/palette";
 import { cn } from "@shared/lib/cn";
@@ -30,6 +31,17 @@ function clamp01(n: number): number {
 
 const PANEL_WIDTH = 220;
 const PANEL_GAP = 6;
+const VIEWPORT_MARGIN = 8;
+/** Approximate panel height before first measure (sv + hue + hex row + padding/gaps). */
+const PANEL_FALLBACK_HEIGHT = 220;
+
+function clamp(n: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, n));
+}
+
+function isEyeDropperSupported(): boolean {
+  return typeof window !== "undefined" && typeof window.EyeDropper === "function";
+}
 
 export function HexColorPicker({
   value,
@@ -47,9 +59,13 @@ export function HexColorPicker({
   const [panelStyle, setPanelStyle] = useState<CSSProperties>({});
   const [draft, setDraft] = useState(value);
   const [hsv, setHsv] = useState<Hsv>(() => hexToHsv(value) ?? { h: 0, s: 0, v: 1 });
+  const [eyeDropperSupported] = useState(isEyeDropperSupported);
+  const [eyeDropperActive, setEyeDropperActive] = useState(false);
   const hsvRef = useRef(hsv);
   hsvRef.current = hsv;
   const draggingRef = useRef(false);
+  const eyeDropperActiveRef = useRef(false);
+  const eyeDropperAbortRef = useRef<AbortController | null>(null);
   const lastEmittedHexRef = useRef((normalizeHex(value) ?? value).toUpperCase());
 
   const preview = normalizeHex(draft) ?? normalizeHex(value) ?? "#FFFFFF";
@@ -73,17 +89,28 @@ export function HexColorPicker({
     if (!open || !rootRef.current) return;
 
     const updatePosition = () => {
-      const rect = rootRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      const left =
-        align === "start"
-          ? Math.min(rect.left, window.innerWidth - PANEL_WIDTH - 8)
-          : Math.min(Math.max(8, rect.right - PANEL_WIDTH), window.innerWidth - PANEL_WIDTH - 8);
-      const top = Math.min(rect.bottom + PANEL_GAP, window.innerHeight - 8);
+      const anchor = rootRef.current?.getBoundingClientRect();
+      if (!anchor) return;
+
+      const panelHeight = panelRef.current?.offsetHeight || PANEL_FALLBACK_HEIGHT;
+      const maxLeft = Math.max(VIEWPORT_MARGIN, window.innerWidth - PANEL_WIDTH - VIEWPORT_MARGIN);
+      const preferredLeft = align === "start" ? anchor.left : anchor.right - PANEL_WIDTH;
+      const left = clamp(preferredLeft, VIEWPORT_MARGIN, maxLeft);
+
+      const spaceBelow = window.innerHeight - anchor.bottom - PANEL_GAP - VIEWPORT_MARGIN;
+      const spaceAbove = anchor.top - PANEL_GAP - VIEWPORT_MARGIN;
+      const placeBelow = spaceBelow >= panelHeight || spaceBelow >= spaceAbove;
+
+      let top = placeBelow
+        ? anchor.bottom + PANEL_GAP
+        : anchor.top - PANEL_GAP - panelHeight;
+      const maxTop = Math.max(VIEWPORT_MARGIN, window.innerHeight - panelHeight - VIEWPORT_MARGIN);
+      top = clamp(top, VIEWPORT_MARGIN, maxTop);
+
       setPanelStyle({
         position: "fixed",
         top,
-        left: Math.max(8, left),
+        left,
         width: PANEL_WIDTH,
         zIndex: 400,
       });
@@ -99,14 +126,22 @@ export function HexColorPicker({
   }, [open, align]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      eyeDropperAbortRef.current?.abort();
+      eyeDropperAbortRef.current = null;
+      eyeDropperActiveRef.current = false;
+      setEyeDropperActive(false);
+      return;
+    }
     const handlePointerDown = (event: PointerEvent) => {
+      if (eyeDropperActiveRef.current) return;
       const target = event.target as Node;
       if (rootRef.current?.contains(target) || panelRef.current?.contains(target)) return;
       setOpen(false);
     };
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
+      if (eyeDropperActiveRef.current) return;
       event.preventDefault();
       event.stopPropagation();
       setOpen(false);
@@ -118,6 +153,12 @@ export function HexColorPicker({
       window.removeEventListener("keydown", handleKeyDown, true);
     };
   }, [open]);
+
+  useEffect(() => {
+    return () => {
+      eyeDropperAbortRef.current?.abort();
+    };
+  }, []);
 
   const emitHsv = (next: Hsv) => {
     hsvRef.current = next;
@@ -186,6 +227,28 @@ export function HexColorPicker({
     }
   };
 
+  const pickFromScreen = async () => {
+    const EyeDropperCtor = window.EyeDropper;
+    if (!EyeDropperCtor || eyeDropperActiveRef.current) return;
+
+    const controller = new AbortController();
+    eyeDropperAbortRef.current = controller;
+    eyeDropperActiveRef.current = true;
+    setEyeDropperActive(true);
+    try {
+      const result = await new EyeDropperCtor().open({ signal: controller.signal });
+      applyHexText(result.sRGBHex, true);
+    } catch {
+      // User cancelled or browser aborted the eyedropper session.
+    } finally {
+      if (eyeDropperAbortRef.current === controller) {
+        eyeDropperAbortRef.current = null;
+      }
+      eyeDropperActiveRef.current = false;
+      setEyeDropperActive(false);
+    }
+  };
+
   const hueColor = hsvToHex({ h: hsv.h, s: 1, v: 1 });
 
   const panel = open ? (
@@ -239,6 +302,21 @@ export function HexColorPicker({
             }
           }}
         />
+        {eyeDropperSupported ? (
+          <button
+            type="button"
+            className={styles.eyeDropperButton}
+            aria-label={`${ariaLabel} eyedropper`}
+            title="Pick color from screen"
+            aria-pressed={eyeDropperActive}
+            disabled={eyeDropperActive}
+            onClick={() => {
+              void pickFromScreen();
+            }}
+          >
+            <ColorizeOutlinedIcon sx={{ fontSize: 16 }} />
+          </button>
+        ) : null}
       </div>
     </div>
   ) : null;

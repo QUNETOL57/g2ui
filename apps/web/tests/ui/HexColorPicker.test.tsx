@@ -226,4 +226,81 @@ describe("HexColorPicker", () => {
     expect(dialog.style.left).toBe("40px");
     expect(dialog.style.top).toBe("111px");
   });
+
+  it("flips the panel above the swatch when there is no room below", async () => {
+    const innerHeight = window.innerHeight;
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 400 });
+    try {
+      render(
+        <HexColorPicker value="#FF0000" onChange={() => undefined} ariaLabel="fill hex" />,
+      );
+      const swatch = screen.getByRole("button", { name: "fill hex picker" });
+      const root = swatch.parentElement!;
+      mockRect(root, { left: 500, top: 320, width: 25, height: 25 });
+      await userEvent.click(swatch);
+      const dialog = screen.getByRole("dialog", { name: "fill hex color picker" });
+      Object.defineProperty(dialog, "offsetHeight", { configurable: true, value: 220 });
+      // Re-run position with measured height.
+      fireEvent(window, new Event("resize"));
+      const top = Number.parseFloat(dialog.style.top);
+      expect(top).toBe(94); // 320 - 6 - 220
+      expect(top + 220).toBeLessThanOrEqual(392);
+    } finally {
+      Object.defineProperty(window, "innerHeight", { configurable: true, value: innerHeight });
+    }
+  });
+
+  it("hides the eyedropper when EyeDropper API is unavailable", async () => {
+    const previous = window.EyeDropper;
+    Object.defineProperty(window, "EyeDropper", {
+      configurable: true,
+      writable: true,
+      value: undefined,
+    });
+    try {
+      await openPicker();
+      expect(screen.queryByRole("button", { name: "fill hex eyedropper" })).not.toBeInTheDocument();
+    } finally {
+      Object.defineProperty(window, "EyeDropper", {
+        configurable: true,
+        writable: true,
+        value: previous,
+      });
+    }
+  });
+
+  it("applies a color picked with the eyedropper", async () => {
+    const open = vi.fn().mockResolvedValue({ sRGBHex: "#12ab34" });
+    Object.defineProperty(window, "EyeDropper", {
+      configurable: true,
+      writable: true,
+      value: vi.fn(function EyeDropper() {
+        return { open };
+      }),
+    });
+
+    const { onChange } = await openPicker("#FFFFFF");
+    await userEvent.click(screen.getByRole("button", { name: "fill hex eyedropper" }));
+    expect(open).toHaveBeenCalled();
+    expect(onChange).toHaveBeenCalledWith("#12AB34");
+    expect(screen.getByLabelText("fill hex")).toHaveValue("#12AB34");
+  });
+
+  it("keeps the current color when eyedropper is cancelled", async () => {
+    const open = vi.fn().mockRejectedValue(new DOMException("Aborted", "AbortError"));
+    Object.defineProperty(window, "EyeDropper", {
+      configurable: true,
+      writable: true,
+      value: vi.fn(function EyeDropper() {
+        return { open };
+      }),
+    });
+
+    const { onChange } = await openPicker("#ABCDEF");
+    onChange.mockClear();
+    await userEvent.click(screen.getByRole("button", { name: "fill hex eyedropper" }));
+    expect(open).toHaveBeenCalled();
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("fill hex")).toHaveValue("#ABCDEF");
+  });
 });

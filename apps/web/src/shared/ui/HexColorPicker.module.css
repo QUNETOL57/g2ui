@@ -108,7 +108,7 @@
 
 .hexRow {
   display: grid;
-  grid-template-columns: 36px minmax(0, 1fr);
+  grid-template-columns: 36px minmax(0, 1fr) auto;
   gap: 8px;
   align-items: center;
 }
@@ -126,7 +126,7 @@
   height: 25px;
   min-height: 25px;
   padding: 4px 6px;
-  background: var(--color-surface-3);
+  background: var(--color-surface-2);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   color: var(--color-text);
@@ -144,4 +144,38 @@
 .panelHexInput:focus {
   outline: 1px solid var(--color-accent);
   border-color: var(--color-accent);
+}
+
+.eyeDropperButton {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 25px;
+  height: 25px;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    color 120ms ease,
+    background-color 120ms ease;
+}
+
+.eyeDropperButton:hover:not(:disabled) {
+  border-color: var(--hover-border);
+  color: var(--color-text);
+}
+
+.eyeDropperButton:focus-visible {
+  outline: 1px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+.eyeDropperButton:disabled {
+  opacity: 0.6;
+  cursor: progress;
 }

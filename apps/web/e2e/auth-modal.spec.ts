@@ -246,7 +246,7 @@ test.describe("guest project auth modal flow", () => {
     expect(editorGuestBox!.y).toBe(libraryGuestBox!.y);
   });
 
-  test("guest can work on one local project without saving to API", async ({ page }) => {
+  test("guest can work on a local project without saving to API", async ({ page }) => {
     const api = await mockApi(page);
 
     await openGuestEditorAndChangeProject(page);
@@ -256,7 +256,7 @@ test.describe("guest project auth modal flow", () => {
     await expect(page.locator("footer").filter({ hasText: "Guest" })).toBeVisible();
   });
 
-  test("guest can delete the local project and return to only create action", async ({ page }) => {
+  test("guest can delete a local project and return to create action", async ({ page }) => {
     const api = await mockApi(page);
 
     await openGuestEditorAndChangeProject(page);

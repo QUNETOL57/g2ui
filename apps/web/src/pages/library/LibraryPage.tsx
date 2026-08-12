@@ -56,7 +56,6 @@ interface LibraryPageProps {
   onCopyProject: (card: ProjectCard) => void;
   onDeleteProject: (projectId: string) => void;
   onUpdateProject: (card: ProjectCard) => void;
-  singleProjectMode?: boolean;
   projectLimitReached?: boolean;
   onOpenAuth?: (mode: AuthMode) => void;
   onLogout?: () => void;
@@ -72,7 +71,6 @@ export function LibraryPage({
   onCopyProject,
   onDeleteProject,
   onUpdateProject,
-  singleProjectMode = false,
   projectLimitReached = false,
   onOpenAuth,
   onLogout,
@@ -190,7 +188,7 @@ export function LibraryPage({
     setIsLogoutConfirmOpen(false);
     onLogout?.();
   };
-  const canCreateProject = (!singleProjectMode && !projectLimitReached) || (singleProjectMode && projects.length === 0);
+  const canCreateProject = !projectLimitReached;
   const showCreateCard = canCreateProject || projectLimitReached;
 
   return (
@@ -239,7 +237,7 @@ export function LibraryPage({
             ) : null}
             {projects.map((item) => (
               <article className={styles.card} key={item.id}>
-                {!singleProjectMode && !projectLimitReached ? (
+                {!projectLimitReached ? (
                   <IconButton
                     className={styles.copyButton}
                     title={`Copy ${item.name}`}

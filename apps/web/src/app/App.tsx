@@ -56,7 +56,6 @@ export function App() {
   const skipNextRemoteLoadRef = useRef(false);
   const canSyncRemote = isCanvasApiConfigured() && sessionStatus === "authenticated";
   const isSignedIn = sessionStatus === "authenticated";
-  const isHostedGuest = isApiConfigured() && sessionStatus !== "authenticated";
   const projectLimitReached = isProjectLimitReached(projects, canSyncRemote);
   const persistCallbacks: PersistCallbacks = {
     onSaving: () => setLibraryStatus("saving"),
@@ -153,9 +152,7 @@ export function App() {
       const isSavedRemotely = canSyncRemote && isPersistedCanvasId(saved.id);
       if (canSyncRemote && !isSavedRemotely) return;
 
-      setProjects((items) =>
-        isHostedGuest ? [saved] : [saved, ...items.filter((item) => item.id !== saved.id)],
-      );
+      setProjects((items) => [saved, ...items.filter((item) => item.id !== saved.id)]);
       setActiveProjectMeta({ id: saved.id, template: saved.template });
       lastAutosavedSnapshotRef.current = isSavedRemotely ? JSON.stringify(saved.project) : null;
       suppressNextAutosaveRef.current = isSavedRemotely;
@@ -368,11 +365,10 @@ export function App() {
     return (
       <>
         <LibraryPage
-          projects={isHostedGuest ? projects.slice(0, 1) : projects}
+          projects={projects}
           status={libraryStatus}
           error={libraryError}
           userEmail={sessionUser?.email ?? null}
-          singleProjectMode={isHostedGuest}
           projectLimitReached={projectLimitReached}
           onOpenProject={openProject}
           onCreateProject={createProject}

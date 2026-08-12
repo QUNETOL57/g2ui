@@ -1,5 +1,7 @@
 import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
+import ExpandLessOutlinedIcon from "@mui/icons-material/ExpandLessOutlined";
+import ExpandMoreOutlinedIcon from "@mui/icons-material/ExpandMoreOutlined";
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 
 import type {
@@ -17,6 +19,7 @@ import {
 import { getIconDefinition, ICON_GROUPS, IconGlyph } from "@entities/icon/iconLibrary";
 import { cn } from "@shared/lib/cn";
 import { IconButton } from "@shared/ui/IconButton";
+import { SectionTitle } from "@shared/ui/SectionTitle";
 import { ChevronIcon } from "@widgets/canvas-workspace/toolbarIcons";
 
 import styles from "../PropertiesPanel.module.css";
@@ -267,6 +270,7 @@ export function ButtonGroup({
   const [lastText, setLastText] = useState(p.text ?? "Button");
   const [lastIcons, setLastIcons] = useState<ButtonIconSlot[]>(icons);
   const [showIcons, setShowIcons] = useState(true);
+  const [contentCollapsed, setContentCollapsed] = useState(false);
 
   useEffect(() => {
     if (p.text !== undefined) setLastText(p.text || "Button");
@@ -285,9 +289,27 @@ export function ButtonGroup({
     onChange(buttonIconsWritePatch(next));
   };
 
+  const contentCollapseAction = (
+    <IconButton
+      className={styles.sectionCollapseButton}
+      onClick={() => setContentCollapsed((current) => !current)}
+      aria-label={contentCollapsed ? "Expand content section" : "Collapse content section"}
+      title={contentCollapsed ? "Expand content" : "Collapse content"}
+      data-testid="button-content-collapse"
+    >
+      {contentCollapsed ? (
+        <ExpandLessOutlinedIcon fontSize="inherit" />
+      ) : (
+        <ExpandMoreOutlinedIcon fontSize="inherit" />
+      )}
+    </IconButton>
+  );
+
   return (
-    <div className={cn(styles.group, styles.textGroup)}>
-      <h4>Content</h4>
+    <div className={cn(styles.group, styles.textGroup, styles.textGroupCollapsible)}>
+      <SectionTitle actions={contentCollapseAction}>Content</SectionTitle>
+      {!contentCollapsed ? (
+        <div className={styles.textGroupBody}>
       <div className={styles.typographyCard} data-testid="icons-card">
         <div className={styles.inspectorCardHead}>
           <div className={styles.typographyCardTitle}>Icons</div>
@@ -384,6 +406,8 @@ export function ButtonGroup({
           onChange,
         }}
       />
+        </div>
+      ) : null}
     </div>
   );
 }

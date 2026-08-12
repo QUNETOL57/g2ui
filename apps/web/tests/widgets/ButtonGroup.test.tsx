@@ -26,6 +26,20 @@ describe("ButtonGroup", () => {
     expect(screen.queryByLabelText("button text")).toBeNull();
   });
 
+  it("collapses and expands the Content section", async () => {
+    const node = makeButton("bt_1", "Save");
+    render(
+      <ButtonGroup node={node} palette={[]} onChange={() => undefined} onStyleChange={() => undefined} />,
+    );
+    expect(screen.getByTestId("icons-card")).toBeInTheDocument();
+    await userEvent.click(screen.getByTestId("button-content-collapse"));
+    expect(screen.queryByTestId("icons-card")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("typography-card")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByTestId("button-content-collapse"));
+    expect(screen.getByTestId("icons-card")).toBeInTheDocument();
+    expect(screen.getByTestId("typography-card")).toBeInTheDocument();
+  });
+
   it("can hide button text with the show-text checkbox", async () => {
     const handler = vi.fn();
     const node = makeButton("bt_1", "Save");

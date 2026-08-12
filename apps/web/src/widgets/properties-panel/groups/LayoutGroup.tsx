@@ -1,6 +1,11 @@
 import type { LayoutMode, WidgetNode } from "@entities/ui-project";
+import ExpandLessOutlinedIcon from "@mui/icons-material/ExpandLessOutlined";
+import ExpandMoreOutlinedIcon from "@mui/icons-material/ExpandMoreOutlined";
+import { useState } from "react";
 import { cn } from "@shared/lib/cn";
 import { CustomSelect } from "@shared/ui/CustomSelect";
+import { IconButton } from "@shared/ui/IconButton";
+import { SectionTitle } from "@shared/ui/SectionTitle";
 import styles from "../PropertiesPanel.module.css";
 import { InspectorCard } from "../ui/InspectorCard";
 import { NumberField } from "../ui/NumberField";
@@ -13,9 +18,29 @@ export function LayoutGroup({
   updateLayout: (id: string, patch: Partial<NonNullable<WidgetNode["layout"]>>) => void;
 }) {
   const l = node.layout ?? { mode: "absolute" as LayoutMode };
+  const [collapsed, setCollapsed] = useState(false);
+
+  const collapseAction = (
+    <IconButton
+      className={styles.sectionCollapseButton}
+      onClick={() => setCollapsed((c) => !c)}
+      aria-label={collapsed ? "Expand layout section" : "Collapse layout section"}
+      title={collapsed ? "Expand layout" : "Collapse layout"}
+      data-testid="layout-collapse"
+    >
+      {collapsed ? (
+        <ExpandLessOutlinedIcon fontSize="inherit" />
+      ) : (
+        <ExpandMoreOutlinedIcon fontSize="inherit" />
+      )}
+    </IconButton>
+  );
+
   return (
-    <div className={cn(styles.group)}>
-      <h4>Layout</h4>
+    <div className={cn(styles.group, styles.layoutGroupCollapsible)}>
+      <SectionTitle actions={collapseAction}>Layout</SectionTitle>
+      {!collapsed ? (
+        <div className={styles.layoutGroupBody}>
       <InspectorCard title="Flow">
         <div className={styles.row}>
           <label>mode</label>
@@ -64,6 +89,8 @@ export function LayoutGroup({
         </div>
         <p className={styles.fieldHint}>Controls how children are arranged inside this container.</p>
       </InspectorCard>
+        </div>
+      ) : null}
     </div>
   );
 }

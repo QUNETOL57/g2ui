@@ -46,7 +46,7 @@
   width: 100%;
   height: 25px;
   min-height: 25px;
-  background: var(--color-surface-3);
+  background: var(--color-surface-2);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   color: var(--color-text);
@@ -71,7 +71,7 @@
   grid-auto-rows: auto;
   gap: 8px;
   align-items: center;
-  background: var(--color-bg-deep);
+  background: var(--color-surface);
 }
 
 .typeIcon {
@@ -104,18 +104,17 @@
   grid-column: 2;
   grid-row: 1;
   min-width: 0;
-  color: var(--color-text);
+  margin: 0;
+  padding: 0;
+  color: var(--color-text-soft);
   font-size: var(--font-size-sm);
-  font-weight: 500;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
   line-height: 20px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.idInput {
-  font-family: var(--font-family-mono);
-  font-size: var(--font-size-sm);
 }
 
 .summaryActions {
@@ -208,7 +207,7 @@
   padding: 0;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  background: var(--color-surface-3);
+  background: var(--color-surface-2);
   color: #d8d8d8;
   font-size: 16px;
   line-height: 0;
@@ -245,7 +244,7 @@
   padding: 0 6px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  background: var(--color-surface-3);
+  background: var(--color-surface-2);
   transition: border-color 120ms ease;
 }
 
@@ -268,6 +267,32 @@
 .textGroup {
   display: grid;
   gap: 10px;
+}
+
+.textGroupCollapsible {
+  gap: 0;
+  padding: 0;
+  border-bottom: none;
+}
+
+.textGroupBody {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-bottom: 1px solid var(--color-border-soft);
+  background: var(--color-surface);
+}
+
+.sectionCollapseButton {
+  min-width: 28px;
+  width: 28px;
+  height: 24px;
+  border: 0;
+  background: transparent;
+}
+
+.sectionCollapseButton:hover:not(:disabled) {
+  background: transparent;
 }
 
 .textFieldStack {
@@ -448,7 +473,7 @@
   overflow: hidden;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  background: var(--color-surface-3);
+  background: var(--color-surface-2);
 }
 
 .iconToggle {
@@ -478,7 +503,7 @@
 }
 
 .iconToggleActive {
-  background: var(--color-surface-3);
+  background: var(--color-surface-2);
   color: var(--color-accent);
   box-shadow: 0 0 0 1px var(--color-accent);
   z-index: 1;
@@ -550,6 +575,32 @@
 .appearanceGroup {
   display: grid;
   gap: 8px;
+}
+
+.appearanceGroupCollapsible {
+  gap: 0;
+  padding: 0;
+  border-bottom: none;
+}
+
+.appearanceGroupBody {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-bottom: 1px solid var(--color-border-soft);
+}
+
+.layoutGroupCollapsible {
+  gap: 0;
+  padding: 0;
+  border-bottom: none;
+}
+
+.layoutGroupBody {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-bottom: 1px solid var(--color-border-soft);
 }
 
 .radiusControl {
@@ -680,7 +731,7 @@
   width: 100%;
   height: 25px;
   min-height: 25px;
-  background: var(--color-surface-3);
+  background: var(--color-surface-2);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   color: var(--color-text);

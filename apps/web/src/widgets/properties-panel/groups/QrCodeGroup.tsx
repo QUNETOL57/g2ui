@@ -17,8 +17,13 @@ import {
   qrVersionOptions,
   normalizeQrProps,
 } from "@entities/ui-project/lib/qrcode";
+import ExpandLessOutlinedIcon from "@mui/icons-material/ExpandLessOutlined";
+import ExpandMoreOutlinedIcon from "@mui/icons-material/ExpandMoreOutlined";
+import { useState } from "react";
 import { Textarea } from "@shared/ui/Textarea";
 import { cn } from "@shared/lib/cn";
+import { IconButton } from "@shared/ui/IconButton";
+import { SectionTitle } from "@shared/ui/SectionTitle";
 
 import styles from "../PropertiesPanel.module.css";
 import { InspectorCard } from "../ui/InspectorCard";
@@ -53,9 +58,29 @@ export function QrCodeGroup({
     }
   };
 
+  const [collapsed, setCollapsed] = useState(false);
+
+  const collapseAction = (
+    <IconButton
+      className={styles.sectionCollapseButton}
+      onClick={() => setCollapsed((c) => !c)}
+      aria-label={collapsed ? "Expand QR code section" : "Collapse QR code section"}
+      title={collapsed ? "Expand QR code" : "Collapse QR code"}
+      data-testid="qrcode-collapse"
+    >
+      {collapsed ? (
+        <ExpandLessOutlinedIcon fontSize="inherit" />
+      ) : (
+        <ExpandMoreOutlinedIcon fontSize="inherit" />
+      )}
+    </IconButton>
+  );
+
   return (
-    <div className={cn(styles.group, styles.appearanceGroup)}>
-      <h4>QR Code</h4>
+    <div className={cn(styles.group, styles.appearanceGroup, styles.appearanceGroupCollapsible)}>
+      <SectionTitle actions={collapseAction}>QR Code</SectionTitle>
+      {!collapsed ? (
+        <div className={styles.appearanceGroupBody}>
       <InspectorCard title="Payload">
         <Textarea
           aria-label="qr text"
@@ -143,6 +168,8 @@ export function QrCodeGroup({
           <p className={styles.fieldHint}>Current version/ECC does not fit this text.</p>
         ) : null}
       </InspectorCard>
+        </div>
+      ) : null}
     </div>
   );
 }

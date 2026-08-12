@@ -127,7 +127,7 @@ export function SelectedGroup({
         <input
           id={idInputId}
           type="text"
-          className={cn(styles.inputText, styles.idInput, liveIdError && styles.inputInvalid)}
+          className={cn(styles.inputText, liveIdError && styles.inputInvalid)}
           value={idDraft}
           aria-invalid={liveIdError ? true : undefined}
           disabled={isLocked}

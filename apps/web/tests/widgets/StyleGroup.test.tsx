@@ -17,6 +17,16 @@ describe("StyleGroup: icon variant", () => {
     render(<StyleGroup node={node} palette={palette} updateStyle={() => undefined} />);
     expect(screen.getByText("Icon color")).toBeInTheDocument();
   });
+
+  it("collapses and expands the Appearance section", async () => {
+    const node = makeIcon("ic_1");
+    render(<StyleGroup node={node} palette={palette} updateStyle={() => undefined} />);
+    expect(screen.getByText("Icon color")).toBeInTheDocument();
+    await userEvent.click(screen.getByTestId("appearance-collapse"));
+    expect(screen.queryByText("Icon color")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByTestId("appearance-collapse"));
+    expect(screen.getByText("Icon color")).toBeInTheDocument();
+  });
 });
 
 describe("StyleGroup: line variant", () => {

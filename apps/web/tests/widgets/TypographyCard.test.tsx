@@ -235,6 +235,40 @@ describe("TypographyCard: background toggle", () => {
     expect(screen.getByTestId("color-card")).toBeInTheDocument();
   });
 
+  it("collapses Text content while keeping the enable toggle", async () => {
+    render(
+      <TypographyCard
+        title="Text"
+        headerToggle={{ label: "Show text", checked: true, onChange: () => undefined }}
+        props={defaultProps}
+        style={{}}
+        palette={palette}
+        backgroundDefaultEnabled
+        showBackground={false}
+        colorsOutside
+        onPropsChange={() => undefined}
+        onStyleChange={() => undefined}
+        paddingControls={{
+          horizontalAlign: "center",
+          verticalAlign: "center",
+          top: 1,
+          right: 2,
+          bottom: 3,
+          left: 4,
+          onChange: () => undefined,
+        }}
+      />,
+    );
+
+    expect(screen.getByText("Typography")).toBeInTheDocument();
+    await userEvent.click(screen.getByTestId("typography-card-collapse"));
+    expect(screen.getByTestId("typography-card")).toHaveAttribute("data-collapsed", "true");
+    expect(screen.queryByText("Typography")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Show text")).toBeChecked();
+    await userEvent.click(screen.getByTestId("typography-card-collapse"));
+    expect(screen.getByText("Typography")).toBeInTheDocument();
+  });
+
   it("keeps Color visible when text is disabled", () => {
     render(
       <TypographyCard

@@ -24,6 +24,7 @@ import { ChevronIcon } from "@widgets/canvas-workspace/toolbarIcons";
 
 import styles from "../PropertiesPanel.module.css";
 import { ColorField } from "../ui/ColorField";
+import { CollapsiblePanelCard } from "../ui/CollapsiblePanelCard";
 import { InspectorCard } from "../ui/InspectorCard";
 import { NumberField } from "../ui/NumberField";
 import { TypographyCard } from "../ui/TypographyCard";
@@ -310,70 +311,64 @@ export function ButtonGroup({
       <SectionTitle actions={contentCollapseAction}>Content</SectionTitle>
       {!contentCollapsed ? (
         <div className={styles.textGroupBody}>
-      <div className={styles.typographyCard} data-testid="icons-card">
-        <div className={styles.inspectorCardHead}>
-          <div className={styles.typographyCardTitle}>Icons</div>
-          <label className={styles.visibilityToggle}>
-            <input
-              type="checkbox"
-              aria-label="Show icons"
-              title="Show icons"
-              checked={showIcons}
-              onChange={(event) => {
-                const checked = event.target.checked;
-                setShowIcons(checked);
-                if (checked) {
-                  if (icons.length === 0 && lastIcons.length > 0) {
-                    writeIcons(lastIcons);
-                  }
-                  return;
-                }
-                if (icons.length > 0) setLastIcons(icons);
-                writeIcons([]);
-              }}
-            />
-          </label>
-        </div>
-        {showIcons ? (
-          <>
-            {icons.map((slot, index) => (
-              <ButtonIconSlotCard
-                key={`${node.id}-icon-${index}`}
-                index={index}
-                slot={slot}
-                fallbackColor={node.style?.textColor}
-                palette={palette}
-                onChangeSlot={(nextSlot) => {
-                  const next = icons.map((item, i) => (i === index ? nextSlot : item));
-                  writeIcons(next);
-                }}
-                onRemove={() => {
-                  writeIcons(icons.filter((_, i) => i !== index));
-                }}
-              />
-            ))}
-            <button
-              type="button"
-              className={styles.addItemButton}
-              aria-label="Add icon"
-              onClick={() =>
-                writeIcons([
-                  ...icons,
-                  createDefaultButtonIconSlot(icons.length === 0 ? "left" : "right"),
-                ])
+      <CollapsiblePanelCard
+        title="Icons"
+        testId="icons-card"
+        headerToggle={{
+          label: "Show icons",
+          checked: showIcons,
+          onChange: (checked) => {
+            setShowIcons(checked);
+            if (checked) {
+              if (icons.length === 0 && lastIcons.length > 0) {
+                writeIcons(lastIcons);
               }
-            >
-              <AddOutlinedIcon fontSize="small" aria-hidden />
-              <span>Add icon</span>
-            </button>
-            {icons.length === 0 ? (
-              <p className={styles.fieldHint}>Add icons before, after, above, or below the text.</p>
-            ) : null}
-          </>
-        ) : (
-          <p className={styles.fieldHint}>Enable icons to add them before, after, above, or below the text.</p>
-        )}
-      </div>
+              return;
+            }
+            if (icons.length > 0) setLastIcons(icons);
+            writeIcons([]);
+          },
+        }}
+        disabledContent={
+          <p className={styles.fieldHint}>
+            Enable icons to add them before, after, above, or below the text.
+          </p>
+        }
+      >
+        {icons.map((slot, index) => (
+          <ButtonIconSlotCard
+            key={`${node.id}-icon-${index}`}
+            index={index}
+            slot={slot}
+            fallbackColor={node.style?.textColor}
+            palette={palette}
+            onChangeSlot={(nextSlot) => {
+              const next = icons.map((item, i) => (i === index ? nextSlot : item));
+              writeIcons(next);
+            }}
+            onRemove={() => {
+              writeIcons(icons.filter((_, i) => i !== index));
+            }}
+          />
+        ))}
+        <button
+          type="button"
+          className={styles.addItemButton}
+          aria-label="Add icon"
+          onClick={() =>
+            writeIcons([
+              ...icons,
+              createDefaultButtonIconSlot(icons.length === 0 ? "left" : "right"),
+            ])
+          }
+        >
+          <AddOutlinedIcon fontSize="small" aria-hidden />
+          <span>Add icon</span>
+        </button>
+        {icons.length === 0 ? (
+          <p className={styles.fieldHint}>Add icons before, after, above, or below the text.</p>
+        ) : null}
+      </CollapsiblePanelCard>
       <TypographyCard
         title="Text"
         headerToggle={{

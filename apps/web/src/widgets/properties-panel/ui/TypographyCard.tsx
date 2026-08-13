@@ -21,6 +21,7 @@ import { CustomSelect } from "@shared/ui/CustomSelect";
 import styles from "../PropertiesPanel.module.css";
 
 import { ColorField } from "./ColorField";
+import { CollapsiblePanelCard } from "./CollapsiblePanelCard";
 import { InspectorCard } from "./InspectorCard";
 import { NumberField } from "./NumberField";
 
@@ -190,57 +191,44 @@ export function TypographyCard({
 
   return (
     <>
-      <div className={styles.typographyCard} data-testid="typography-card">
-        {headerToggle ? (
-          <div className={styles.inspectorCardHead}>
-            <div className={styles.typographyCardTitle}>{title}</div>
-            <label className={styles.visibilityToggle}>
-              <input
-                type="checkbox"
-                aria-label={headerToggle.label}
-                title={headerToggle.label}
-                checked={headerToggle.checked}
-                onChange={(event) => headerToggle.onChange(event.target.checked)}
-              />
-            </label>
-          </div>
-        ) : (
-          <div className={styles.typographyCardTitle}>{title}</div>
-        )}
-        {contentEnabled ? (
-          nestedSections ? (
-            <>
-              <InspectorCard title="Typography">
-                {fontBlock}
-                {paddingAlignFields}
-              </InspectorCard>
-              <InspectorCard title="Padding">{paddingFields}</InspectorCard>
-              {colorsOutside ? null : (
-                <>
-                  <InspectorCard title="Color">{textColorField}</InspectorCard>
-                  {backgroundCard}
-                </>
-              )}
-            </>
-          ) : (
-            <>
-              {fontBlock}
-              {paddingAlignFields}
-              {paddingOutside ? null : paddingFields}
-              {colorsOutside ? null : (
-                <>
-                  {textColorField}
-                  {backgroundCard}
-                </>
-              )}
-            </>
-          )
-        ) : (
+      <CollapsiblePanelCard
+        title={title}
+        testId="typography-card"
+        headerToggle={headerToggle}
+        disabledContent={
           <p className={styles.fieldHint}>
             {disabledHint ?? "Enable text to edit typography and layout."}
           </p>
+        }
+      >
+        {nestedSections ? (
+          <>
+            <InspectorCard title="Typography">
+              {fontBlock}
+              {paddingAlignFields}
+            </InspectorCard>
+            <InspectorCard title="Padding">{paddingFields}</InspectorCard>
+            {colorsOutside ? null : (
+              <>
+                <InspectorCard title="Color">{textColorField}</InspectorCard>
+                {backgroundCard}
+              </>
+            )}
+          </>
+        ) : (
+          <>
+            {fontBlock}
+            {paddingAlignFields}
+            {paddingOutside ? null : paddingFields}
+            {colorsOutside ? null : (
+              <>
+                {textColorField}
+                {backgroundCard}
+              </>
+            )}
+          </>
         )}
-      </div>
+      </CollapsiblePanelCard>
       {contentEnabled && paddingOutside ? (
         <InspectorCard title="Padding">{paddingFields}</InspectorCard>
       ) : null}

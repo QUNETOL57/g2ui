@@ -40,6 +40,24 @@ describe("ButtonGroup", () => {
     expect(screen.getByTestId("typography-card")).toBeInTheDocument();
   });
 
+  it("collapses Icons and Text nested cards independently", async () => {
+    const node = makeButton("bt_1", "Save");
+    render(
+      <ButtonGroup node={node} palette={[]} onChange={() => undefined} onStyleChange={() => undefined} />,
+    );
+
+    await userEvent.click(screen.getByTestId("icons-card-collapse"));
+    expect(screen.getByTestId("icons-card")).toHaveAttribute("data-collapsed", "true");
+    expect(screen.queryByLabelText("Add icon")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Show icons")).toBeChecked();
+    expect(screen.getByTestId("typography-card")).toHaveTextContent("Typography");
+
+    await userEvent.click(screen.getByTestId("typography-card-collapse"));
+    expect(screen.getByTestId("typography-card")).toHaveAttribute("data-collapsed", "true");
+    expect(screen.queryByText("Typography")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Show text")).toBeChecked();
+  });
+
   it("can hide button text with the show-text checkbox", async () => {
     const handler = vi.fn();
     const node = makeButton("bt_1", "Save");

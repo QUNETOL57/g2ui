@@ -1,4 +1,5 @@
-import { useMemo, type ReactNode } from "react";
+import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import RotateLeftIcon from "@mui/icons-material/RotateLeft";
 import RotateRightIcon from "@mui/icons-material/RotateRight";
 
@@ -19,6 +20,7 @@ import { getResolvedIconDefinition } from "@entities/icon/iconSizing";
 import { findParent } from "@entities/ui-project/model/tree-ops";
 import { DraftNumberInput } from "@shared/ui/DraftNumberInput";
 import { IconButton } from "@shared/ui/IconButton";
+import iconButtonStyles from "@shared/ui/IconButton.module.css";
 
 import styles from "../PropertiesPanel.module.css";
 import { ParentAlignControls } from "../ui/ParentAlignControls";
@@ -75,18 +77,21 @@ export function FrameGroup({
       <div className={styles.transformGrid}>
         <TransformField
           label="X"
+          tooltip="Horizontal position"
           value={f.x}
           disabled={disabled}
           onChange={(v) => updateFrame(node.id, { x: v })}
         />
         <TransformField
           label="Y"
+          tooltip="Vertical position"
           value={f.y}
           disabled={disabled}
           onChange={(v) => updateFrame(node.id, { y: v })}
         />
         <TransformField
           label="W"
+          tooltip="Width"
           value={f.width}
           min={icon?.width}
           disabled={disabled}
@@ -94,6 +99,7 @@ export function FrameGroup({
         />
         <TransformField
           label="H"
+          tooltip="Height"
           value={f.height}
           min={icon?.height}
           disabled={disabled}
@@ -190,20 +196,48 @@ function RotateButton({
 
 function TransformField({
   label,
+  tooltip,
   value,
   onChange,
   min,
   disabled = false,
 }: {
   label: string;
+  tooltip: string;
   value: number;
   onChange: (v: number) => void;
   min?: number;
   disabled?: boolean;
 }) {
+  const labelRef = useRef<HTMLSpanElement>(null);
+  const [tooltipVisible, setTooltipVisible] = useState(false);
+  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+
+  const revealTooltip = useCallback(() => {
+    const el = labelRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    setTooltipPos({
+      x: rect.left + rect.width / 2,
+      y: rect.top,
+    });
+    setTooltipVisible(true);
+  }, []);
+
+  const hideTooltip = useCallback(() => {
+    setTooltipVisible(false);
+  }, []);
+
   return (
     <label className={styles.transformField}>
-      <span>{label}</span>
+      <span
+        ref={labelRef}
+        className={styles.transformFieldLabel}
+        onMouseEnter={revealTooltip}
+        onMouseLeave={hideTooltip}
+      >
+        {label}
+      </span>
       <DraftNumberInput
         value={value}
         min={min}
@@ -211,6 +245,18 @@ function TransformField({
         onChange={onChange}
         variant="bare"
       />
+      {tooltipVisible
+        ? createPortal(
+            <span
+              role="tooltip"
+              className={iconButtonStyles.tooltipPortal}
+              style={{ left: tooltipPos.x, top: tooltipPos.y }}
+            >
+              {tooltip}
+            </span>,
+            document.body,
+          )
+        : null}
     </label>
   );
 }

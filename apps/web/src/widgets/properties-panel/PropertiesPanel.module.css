@@ -264,6 +264,10 @@
   letter-spacing: 0.08em;
 }
 
+.transformFieldLabel {
+  cursor: help;
+}
+
 .textGroup {
   display: grid;
   gap: 10px;

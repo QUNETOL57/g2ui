@@ -31,6 +31,23 @@ describe("FrameGroup", () => {
     expect(screen.getByText("H")).toBeInTheDocument();
   });
 
+  it("shows a tooltip when hovering a transform field label", async () => {
+    const node = makeButton("b_1");
+    render(
+      <FrameGroup node={node} project={project} draftFrame={null} updateFrame={() => undefined} />,
+    );
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+
+    await userEvent.hover(screen.getByText("X"));
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Horizontal position");
+
+    await userEvent.unhover(screen.getByText("X"));
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+
+    await userEvent.hover(screen.getByText("W"));
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Width");
+  });
+
   it("uses draftFrame when provided", () => {
     const node = makeButton("b_1");
     render(

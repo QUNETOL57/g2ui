@@ -63,6 +63,34 @@ describe("EditorPage", () => {
     expect(screen.getByText("R")).toBeInTheDocument();
   });
 
+  it("shows a canvas Template badge when the project is marked as a template", () => {
+    render(<EditorPage onBackToLibrary={() => undefined} isTemplate />);
+    expect(
+      screen.getByTestId("canvas-project-meta").querySelector("[aria-label='Template']"),
+    ).toBeInTheDocument();
+  });
+
+  it("hides the canvas Template badge after the flag is turned off", () => {
+    const { rerender } = render(<EditorPage onBackToLibrary={() => undefined} isTemplate />);
+    expect(screen.getByLabelText("Template")).toBeInTheDocument();
+    rerender(<EditorPage onBackToLibrary={() => undefined} isTemplate={false} />);
+    expect(screen.queryByLabelText("Template")).not.toBeInTheDocument();
+  });
+
+  it("forwards Use as template toggles from the Project menu", async () => {
+    const onToggleTemplate = vi.fn();
+    render(
+      <EditorPage
+        onBackToLibrary={() => undefined}
+        isTemplate={false}
+        onToggleTemplate={onToggleTemplate}
+      />,
+    );
+    await userEvent.click(screen.getByRole("menuitem", { name: "Project" }));
+    await userEvent.click(screen.getByRole("menuitemcheckbox", { name: "Use as template" }));
+    expect(onToggleTemplate).toHaveBeenCalledTimes(1);
+  });
+
   it("renders the error banner when lastError is set", () => {
     useEditorStore.setState({ lastError: "Oops" });
     render(<EditorPage onBackToLibrary={() => undefined} />);

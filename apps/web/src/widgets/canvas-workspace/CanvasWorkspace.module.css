@@ -46,6 +46,13 @@
   font-weight: 700;
 }
 
+.templateBadge {
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-accent);
+  font-weight: 700;
+}
+
 .panelToggle {
   width: 26px;
   min-width: 26px;

@@ -73,6 +73,7 @@ interface CanvasWorkspaceProps {
   showGridOverlay?: boolean;
   showRulers?: boolean;
   showGuides?: boolean;
+  isTemplate?: boolean;
   onToggleLeftPanel?: () => void;
   onToggleRightPanel?: () => void;
 }
@@ -84,6 +85,7 @@ export function CanvasWorkspace({
   showGridOverlay = false,
   showRulers = true,
   showGuides = true,
+  isTemplate = false,
   onToggleLeftPanel,
   onToggleRightPanel,
 }: CanvasWorkspaceProps) {
@@ -890,6 +892,15 @@ export function CanvasWorkspace({
           ) : null}
           <span className={styles.projectMeta} data-testid="canvas-project-meta">
             <strong>{project.name}</strong> · {project.display.width} × {project.display.height}
+            {isTemplate ? (
+              <>
+                {" "}
+                ·{" "}
+                <span className={styles.templateBadge} aria-label="Template">
+                  Template
+                </span>
+              </>
+            ) : null}
           </span>
         </div>
         <div className={styles.overlayEnd}>

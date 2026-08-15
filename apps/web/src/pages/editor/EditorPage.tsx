@@ -23,6 +23,8 @@ interface EditorPageProps {
   autosaveStatus?: AutosaveStatus;
   autosaveError?: string | null;
   userEmail?: string | null;
+  isTemplate?: boolean;
+  onToggleTemplate?: () => void;
   onOpenAuth?: (mode: AuthMode) => void;
   onLogout?: () => void;
   onBackToLibrary: () => void;
@@ -32,6 +34,8 @@ export function EditorPage({
   autosaveStatus = "local",
   autosaveError = null,
   userEmail = null,
+  isTemplate = false,
+  onToggleTemplate,
   onOpenAuth,
   onLogout,
   onBackToLibrary,
@@ -189,6 +193,10 @@ export function EditorPage({
               onToggleRulers: () => setShowRulers((visible) => !visible),
               onToggleGuides: () => setShowGuides((visible) => !visible),
             }}
+            templateSettings={{
+              isTemplate,
+              onToggleTemplate: () => onToggleTemplate?.(),
+            }}
           />
         </div>
         <TopBar.Controls>
@@ -216,6 +224,7 @@ export function EditorPage({
           showGridOverlay={showGridOverlay}
           showRulers={showRulers}
           showGuides={showGuides}
+          isTemplate={isTemplate}
           onToggleLeftPanel={() => setLeftPanelOpen((open) => !open)}
           onToggleRightPanel={() => setRightPanelOpen((open) => !open)}
         />

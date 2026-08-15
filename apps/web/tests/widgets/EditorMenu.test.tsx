@@ -311,4 +311,41 @@ describe("EditorMenu", () => {
     await userEvent.keyboard("{Escape}");
     expect(screen.queryByRole("menuitem", { name: "Back to library" })).not.toBeInTheDocument();
   });
+
+  it("toggles Use as template without closing the Project menu", async () => {
+    const onToggleTemplate = vi.fn();
+    render(
+      <EditorMenu
+        onBackToLibrary={() => undefined}
+        templateSettings={{ isTemplate: false, onToggleTemplate }}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("menuitem", { name: "Project" }));
+    const item = screen.getByRole("menuitemcheckbox", { name: "Use as template" });
+    expect(item).toHaveAttribute("aria-checked", "false");
+    await userEvent.click(item);
+
+    expect(onToggleTemplate).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("menuitemcheckbox", { name: "Use as template" })).toBeInTheDocument();
+  });
+
+  it("shows a side preview when hovering Use as template", async () => {
+    render(
+      <EditorMenu
+        onBackToLibrary={() => undefined}
+        templateSettings={{ isTemplate: true, onToggleTemplate: vi.fn() }}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("menuitem", { name: "Project" }));
+    expect(screen.getByRole("menuitemcheckbox", { name: "Use as template" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    await userEvent.hover(screen.getByRole("menuitemcheckbox", { name: "Use as template" }));
+
+    expect(screen.getByTestId("project-setting-preview")).toHaveTextContent("Use as template");
+    expect(screen.getByText(/appear in the template list/i)).toBeInTheDocument();
+  });
 });

@@ -88,13 +88,26 @@
 
 .copyButton,
 .editButton,
-.deleteButton {
+.deleteButton,
+.templateBadge {
   position: absolute;
   z-index: 8;
   top: 8px;
   min-width: 24px;
   width: 24px;
   height: 24px;
+}
+
+.templateBadge.templateBadge,
+.templateBadge.templateBadge:hover:not(:disabled),
+.templateBadge.templateBadge:focus-visible {
+  left: 8px;
+  cursor: default;
+  border: 0;
+  background: transparent;
+  color: var(--hover-text);
+  box-shadow: none;
+  outline: none;
 }
 
 .copyButton {

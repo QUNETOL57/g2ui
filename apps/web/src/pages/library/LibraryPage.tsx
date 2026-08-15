@@ -4,6 +4,7 @@ import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import CloudDoneOutlinedIcon from "@mui/icons-material/CloudDoneOutlined";
 import CloudOffOutlinedIcon from "@mui/icons-material/CloudOffOutlined";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
+import ExtensionIcon from "@mui/icons-material/Extension";
 import ControlPointDuplicateOutlinedIcon from "@mui/icons-material/ControlPointDuplicateOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
@@ -11,11 +12,7 @@ import ErrorOutlineOutlinedIcon from "@mui/icons-material/ErrorOutlineOutlined";
 import SyncOutlinedIcon from "@mui/icons-material/SyncOutlined";
 
 import { cloneProject } from "@entities/ui-project/model/tree-ops";
-import type { TemplateId } from "@entities/ui-project/lib/projectTemplates";
-import {
-  makeProjectFromTemplate,
-  resizeProject,
-} from "@entities/ui-project/lib/projectTemplates";
+import { resizeProject } from "@entities/ui-project/lib/projectTemplates";
 import { DEFAULT_PRESET_ID, DISPLAY_PRESETS } from "@shared/config/displayPresets";
 import { MAX_PROJECTS_PER_USER } from "@shared/config/project-limits";
 import {
@@ -39,7 +36,10 @@ import { ProjectPreview } from "./ProjectPreview";
 import {
   findPresetIdForSize,
   copyProjectCard,
+  createProjectCardFromSelection,
+  draftProjectFromSelection,
   formatEditedAt,
+  listCustomTemplates,
   orientSize,
   templateLabel,
   type Orientation,
@@ -77,13 +77,13 @@ export function LibraryPage({
 }: LibraryPageProps) {
   const [selectedPresetId, setSelectedPresetId] = useState(DEFAULT_PRESET_ID);
   const [orientation, setOrientation] = useState<Orientation>("landscape");
-  const [template, setTemplate] = useState<TemplateId>("blank");
+  const [template, setTemplate] = useState("blank");
   const [projectName, setProjectName] = useState("Untitled");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [projectEditing, setProjectEditing] = useState<ProjectCard | null>(null);
   const [editPresetId, setEditPresetId] = useState(DEFAULT_PRESET_ID);
   const [editOrientation, setEditOrientation] = useState<Orientation>("landscape");
-  const [editTemplate, setEditTemplate] = useState<TemplateId>("blank");
+  const [editTemplate, setEditTemplate] = useState("blank");
   const [editProjectName, setEditProjectName] = useState("Untitled");
   const [projectPendingDelete, setProjectPendingDelete] = useState<ProjectCard | null>(null);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
@@ -96,16 +96,18 @@ export function LibraryPage({
     () => orientSize(selectedPreset.width, selectedPreset.height, orientation),
     [orientation, selectedPreset.height, selectedPreset.width],
   );
+  const customTemplates = useMemo(() => listCustomTemplates(projects), [projects]);
   const draftProject = useMemo(
     () =>
-      makeProjectFromTemplate({
+      draftProjectFromSelection({
+        selection: template,
+        projects,
         id: "draft",
         name: projectName.trim() || "Untitled",
         width: createSize.width,
         height: createSize.height,
-        template,
       }),
-    [createSize.height, createSize.width, projectName, template],
+    [createSize.height, createSize.width, projectName, projects, template],
   );
 
   const editPreset = useMemo(
@@ -131,24 +133,13 @@ export function LibraryPage({
   };
 
   const handleCreate = () => {
-    const createdAt = new Date();
-    const nextName = projectName.trim() || "Untitled";
-    const newProject = makeProjectFromTemplate({
-      id: `project-${createdAt.getTime()}`,
-      name: nextName,
+    const card = createProjectCardFromSelection({
+      selection: template,
+      projects,
+      name: projectName,
       width: createSize.width,
       height: createSize.height,
-      template,
     });
-    const card: ProjectCard = {
-      id: newProject.id,
-      name: newProject.name,
-      width: newProject.display.width,
-      height: newProject.display.height,
-      template,
-      updatedAt: createdAt,
-      project: cloneProject(newProject),
-    };
     onCreateProject(card);
     closeCreateModal();
   };
@@ -171,7 +162,7 @@ export function LibraryPage({
       name: updatedProject.name,
       width: editSize.width,
       height: editSize.height,
-      template: editTemplate,
+      template: projectEditing.template,
       updatedAt: new Date(),
       project: updatedProject,
     });
@@ -237,6 +228,21 @@ export function LibraryPage({
             ) : null}
             {projects.map((item) => (
               <article className={styles.card} key={item.id}>
+                {item.isTemplate ? (
+                  <IconButton
+                    className={styles.templateBadge}
+                    variant="ghost"
+                    aria-label="Template"
+                    aria-disabled="true"
+                    tooltip="This project is a template"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                    }}
+                  >
+                    <ExtensionIcon fontSize="inherit" />
+                  </IconButton>
+                ) : null}
                 {!projectLimitReached ? (
                   <IconButton
                     className={styles.copyButton}
@@ -282,8 +288,14 @@ export function LibraryPage({
                     <div>
                       <strong>{item.name}</strong>
                       <span>
-                        {item.width} × {item.height} · {templateLabel(item.template)} · Edited{" "}
-                        {formatEditedAt(item.updatedAt)}
+                        {item.width} × {item.height} ·{" "}
+                        {templateLabel(
+                          item.template,
+                          item.sourceTemplateId
+                            ? projects.find((entry) => entry.id === item.sourceTemplateId)?.name
+                            : undefined,
+                        )}{" "}
+                        · Edited {formatEditedAt(item.updatedAt)}
                       </span>
                     </div>
                   </div>
@@ -315,6 +327,7 @@ export function LibraryPage({
             projectName={projectName}
             createSize={createSize}
             draftProject={draftProject}
+            customTemplates={customTemplates}
             onPresetChange={setSelectedPresetId}
             onOrientationChange={setOrientation}
             onTemplateChange={setTemplate}

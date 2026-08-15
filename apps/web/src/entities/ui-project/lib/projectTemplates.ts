@@ -1,8 +1,26 @@
 import type { UiProject, WidgetNode } from "..";
 import { emptyProject } from "..";
+import { cloneProject } from "../model/tree-ops";
 import { helloSample } from "../samples/hello";
 
-export type TemplateId = "hello" | "blank";
+export type BuiltinTemplateId = "hello" | "blank";
+export type TemplateId = BuiltinTemplateId | "custom";
+
+export const CUSTOM_TEMPLATE_PREFIX = "custom:";
+
+export function customTemplateSelection(projectId: string): string {
+  return `${CUSTOM_TEMPLATE_PREFIX}${projectId}`;
+}
+
+export function parseCustomTemplateId(selection: string): string | null {
+  if (!selection.startsWith(CUSTOM_TEMPLATE_PREFIX)) return null;
+  const id = selection.slice(CUSTOM_TEMPLATE_PREFIX.length);
+  return id || null;
+}
+
+export function isBuiltinTemplateId(value: string): value is BuiltinTemplateId {
+  return value === "blank" || value === "hello";
+}
 
 export interface ProjectTemplateArgs {
   id: string;
@@ -27,6 +45,19 @@ export function makeProjectFromTemplate(args: ProjectTemplateArgs): UiProject {
   return args.template === "hello"
     ? resizeProject(nextProject, args.width, args.height)
     : nextProject;
+}
+
+export function makeProjectFromCustomTemplate(args: {
+  source: UiProject;
+  id: string;
+  name: string;
+  width: number;
+  height: number;
+}): UiProject {
+  const nextProject = cloneProject(args.source);
+  nextProject.id = args.id;
+  nextProject.name = args.name;
+  return resizeProject(nextProject, args.width, args.height);
 }
 
 export function resizeProject(project: UiProject, width: number, height: number): UiProject {

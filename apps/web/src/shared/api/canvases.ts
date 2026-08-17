@@ -9,6 +9,8 @@ const CANVAS_SCHEMA_VERSION = 1;
 
 interface CanvasSettings {
   template?: TemplateId;
+  isTemplate?: boolean;
+  sourceTemplateId?: string;
   [key: string]: unknown;
 }
 
@@ -75,13 +77,18 @@ export function canvasToProjectCard(canvas: CanvasRecord): ProjectCard | null {
     name: canvas.title,
     width: project.display.width,
     height: project.display.height,
-    template: normalizeTemplate(canvas.settings.template),
+    template: normalizeTemplate(canvas.settings.template, canvas.settings.sourceTemplateId),
+    isTemplate: Boolean(canvas.settings.isTemplate),
+    sourceTemplateId:
+      typeof canvas.settings.sourceTemplateId === "string"
+        ? canvas.settings.sourceTemplateId
+        : undefined,
     updatedAt: new Date(canvas.updated_at),
     project,
   };
 }
 
-function projectCardToPayload(card: ProjectCard): CanvasPayload {
+export function projectCardToPayload(card: ProjectCard): CanvasPayload {
   const content = cloneProject(card.project);
   if (isPersistedCanvasId(card.id)) {
     content.id = canvasIdToProjectId(card.id);
@@ -93,13 +100,17 @@ function projectCardToPayload(card: ProjectCard): CanvasPayload {
     content,
     settings: {
       template: card.template,
+      isTemplate: Boolean(card.isTemplate),
+      sourceTemplateId: card.sourceTemplateId,
     },
     schema_version: CANVAS_SCHEMA_VERSION,
   };
 }
 
-function normalizeTemplate(template: unknown): TemplateId {
-  return template === "hello" ? "hello" : "blank";
+export function normalizeTemplate(template: unknown, sourceTemplateId?: unknown): TemplateId {
+  if (template === "hello" || template === "blank" || template === "custom") return template;
+  if (typeof sourceTemplateId === "string" && sourceTemplateId.length > 0) return "custom";
+  return "blank";
 }
 
 function canvasIdToProjectId(canvasId: string): string {

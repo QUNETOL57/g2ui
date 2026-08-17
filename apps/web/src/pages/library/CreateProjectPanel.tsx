@@ -2,7 +2,7 @@ import StayCurrentLandscapeOutlinedIcon from "@mui/icons-material/StayCurrentLan
 import StayCurrentPortraitOutlinedIcon from "@mui/icons-material/StayCurrentPortraitOutlined";
 
 import type { UiProject } from "@entities/ui-project";
-import type { TemplateId } from "@entities/ui-project/lib/projectTemplates";
+import { customTemplateSelection, parseCustomTemplateId } from "@entities/ui-project/lib/projectTemplates";
 import { DISPLAY_PRESETS } from "@shared/config/displayPresets";
 import { cn } from "@shared/lib/cn";
 import { Button } from "@shared/ui/Button";
@@ -18,13 +18,14 @@ interface CreateProjectPanelProps {
   mode: "create" | "edit";
   selectedPresetId: string;
   orientation: Orientation;
-  template: TemplateId;
+  template: string;
   projectName: string;
   createSize: { width: number; height: number };
   draftProject: UiProject;
+  customTemplates?: { id: string; name: string }[];
   onPresetChange: (presetId: string) => void;
   onOrientationChange: (orientation: Orientation) => void;
-  onTemplateChange: (template: TemplateId) => void;
+  onTemplateChange: (template: string) => void;
   onProjectNameChange: (name: string) => void;
   onSubmit: () => void;
 }
@@ -37,6 +38,7 @@ export function CreateProjectPanel({
   projectName,
   createSize,
   draftProject,
+  customTemplates = [],
   onPresetChange,
   onOrientationChange,
   onTemplateChange,
@@ -44,6 +46,9 @@ export function CreateProjectPanel({
   onSubmit,
 }: CreateProjectPanelProps) {
   const isEditing = mode === "edit";
+  const customId = parseCustomTemplateId(template);
+  const customName = customTemplates.find((item) => item.id === customId)?.name;
+  const summaryTemplate = customId ? "custom" : template === "hello" ? "hello" : "blank";
 
   return (
     <aside className={styles.panel}>
@@ -110,6 +115,7 @@ export function CreateProjectPanel({
         </div>
       </div>
 
+      {isEditing ? null : (
       <div className={styles.field}>
         <div>Template</div>
         <CustomSelect
@@ -118,11 +124,16 @@ export function CreateProjectPanel({
           options={[
             { value: "blank", label: "Blank" },
             { value: "hello", label: "Hello" },
+            ...customTemplates.map((item) => ({
+              value: customTemplateSelection(item.id),
+              label: item.name,
+            })),
           ]}
-          onChange={(nextTemplate) => onTemplateChange(nextTemplate as TemplateId)}
+          onChange={(nextTemplate) => onTemplateChange(nextTemplate)}
           triggerClassName={styles.triggerLg}
         />
       </div>
+      )}
 
       <div className={styles.summary}>
         <ProjectPreview project={draftProject} compact />
@@ -130,7 +141,7 @@ export function CreateProjectPanel({
           <strong>
             {createSize.width} × {createSize.height}
           </strong>
-          <span>{templateLabel(template)} template</span>
+          <span>{templateLabel(summaryTemplate, customName)} template</span>
         </div>
       </div>
 

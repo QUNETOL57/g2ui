@@ -512,3 +512,16 @@ describe("CanvasWorkspace: grid overlay stacking", () => {
     expect(zIndexOf(selectionLayer)).toBeGreaterThan(zIndexOf(grid));
   });
 });
+
+describe("CanvasWorkspace: template badge", () => {
+  it("shows a Template label next to project meta when isTemplate is set", () => {
+    render(<CanvasWorkspace isTemplate />);
+    expect(screen.getByTestId("canvas-project-meta")).toHaveTextContent("Template");
+    expect(screen.getByLabelText("Template")).toBeInTheDocument();
+  });
+
+  it("does not show a Template label for regular projects", () => {
+    render(<CanvasWorkspace />);
+    expect(screen.queryByLabelText("Template")).not.toBeInTheDocument();
+  });
+});

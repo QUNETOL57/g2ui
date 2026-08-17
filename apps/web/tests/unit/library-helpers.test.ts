@@ -2,14 +2,22 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   copyProjectCard,
+  createProjectCardFromSelection,
   findPresetIdForSize,
   formatEditedAt,
+  listCustomTemplates,
+  markProjectAsTemplate,
   orientSize,
   templateLabel,
   type ProjectCard,
 } from "@pages/library/lib/library-helpers";
-import { makeProjectFromTemplate } from "@entities/ui-project/lib/projectTemplates";
+import {
+  customTemplateSelection,
+  makeProjectFromTemplate,
+} from "@entities/ui-project/lib/projectTemplates";
 import { DEFAULT_PRESET_ID, DISPLAY_PRESETS } from "@shared/config/displayPresets";
+
+import { makeLabel, withChildren } from "../fixtures/projects";
 
 describe("orientSize", () => {
   it("returns landscape (max, min) when orientation is landscape", () => {
@@ -68,6 +76,8 @@ describe("templateLabel", () => {
   it("returns human-readable labels", () => {
     expect(templateLabel("hello")).toBe("Hello");
     expect(templateLabel("blank")).toBe("Blank");
+    expect(templateLabel("custom")).toBe("Custom");
+    expect(templateLabel("custom", "Home")).toBe("Home");
   });
 });
 
@@ -108,5 +118,107 @@ describe("copyProjectCard", () => {
     expect(copied.project).not.toBe(source.project);
     expect(copied.project.screens).toEqual(source.project.screens);
     vi.useRealTimers();
+  });
+
+  it("does not copy isTemplate onto the duplicate", () => {
+    const source = makeCard("p1", "Original");
+    source.isTemplate = true;
+    source.template = "custom";
+    source.sourceTemplateId = "tpl_1";
+    const copied = copyProjectCard(source);
+    expect(copied.isTemplate).toBe(false);
+    expect(copied.template).toBe("custom");
+    expect(copied.sourceTemplateId).toBe("tpl_1");
+  });
+});
+
+describe("custom template helpers", () => {
+  function makeCard(id: string, name = "Demo", extras: Partial<ProjectCard> = {}): ProjectCard {
+    const project = makeProjectFromTemplate({
+      id,
+      name,
+      width: 160,
+      height: 128,
+      template: extras.template ?? "blank",
+    });
+    return {
+      id,
+      name,
+      width: 160,
+      height: 128,
+      template: "blank",
+      updatedAt: new Date("2024-01-01"),
+      project,
+      ...extras,
+    };
+  }
+
+  it("lists only cards marked as templates", () => {
+    const plain = makeCard("p1", "Plain");
+    const marked = makeCard("p2", "Tpl", { isTemplate: true });
+    expect(listCustomTemplates([plain, marked])).toEqual([marked]);
+  });
+
+  it("toggles isTemplate without changing project JSON", () => {
+    const card = makeCard("p1", "Tpl", { isTemplate: true });
+    const before = JSON.stringify(card.project);
+    const unmarked = markProjectAsTemplate(card, false);
+    expect(unmarked.isTemplate).toBe(false);
+    expect(JSON.stringify(unmarked.project)).toBe(before);
+  });
+
+  it("creates a snapshot copy from a custom template and ignores later source edits", () => {
+    const sourceProject = withChildren(
+      makeProjectFromTemplate({
+        id: "src",
+        name: "SourceTpl",
+        width: 160,
+        height: 128,
+        template: "blank",
+      }),
+      [makeLabel("l_src", "KeepMe")],
+    );
+    const source = makeCard("src", "SourceTpl", {
+      isTemplate: true,
+      project: sourceProject,
+    });
+    const child = createProjectCardFromSelection({
+      selection: customTemplateSelection(source.id),
+      projects: [source],
+      name: "Child",
+      width: 160,
+      height: 128,
+      createdAt: new Date("2026-06-12T10:00:00Z"),
+    });
+
+    expect(child.isTemplate).toBe(false);
+    expect(child.template).toBe("custom");
+    expect(child.sourceTemplateId).toBe("src");
+    expect(child.project).not.toBe(source.project);
+
+    const sourceLabel = source.project.screens[0].children?.[0];
+    if (sourceLabel?.type === "label") {
+      sourceLabel.props = { ...sourceLabel.props, text: "Mutated" };
+    }
+    markProjectAsTemplate(source, false);
+
+    const childLabel = child.project.screens[0].children?.[0];
+    expect(childLabel?.type === "label" ? childLabel.props.text : null).toBe("KeepMe");
+    expect(JSON.stringify(child.project.screens)).not.toBe(JSON.stringify(source.project.screens));
+  });
+
+  it("falls back to blank when the custom source is missing", () => {
+    const child = createProjectCardFromSelection({
+      selection: customTemplateSelection("gone"),
+      projects: [],
+      name: "Orphan",
+      width: 160,
+      height: 128,
+      createdAt: new Date("2026-06-12T10:00:00Z"),
+    });
+    expect(child.template).toBe("blank");
+    expect(child.sourceTemplateId).toBeUndefined();
+    expect(child.isTemplate).toBe(false);
+    expect(child.project.screens[0].children).toEqual([]);
   });
 });

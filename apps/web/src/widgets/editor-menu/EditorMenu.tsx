@@ -9,6 +9,7 @@ import {
   getUndoShortcut,
 } from "@shared/config/editorShortcuts";
 import { cn } from "@shared/lib/cn";
+import ExtensionIcon from "@mui/icons-material/Extension";
 import { ExportProjectModal } from "@widgets/export-panel/ExportProjectModal";
 import { ImportProjectModal } from "@widgets/export-panel/ImportProjectModal";
 import { PaletteModal } from "@widgets/palette-panel/PaletteModal";
@@ -17,6 +18,7 @@ import styles from "./EditorMenu.module.css";
 
 type OpenMenuId = "project" | "edit" | "view" | null;
 type ViewSettingId = "grid" | "gridOverlay" | "rulers" | "guides";
+type ProjectSettingId = "template";
 
 interface EditorMenuProps {
   onBackToLibrary: () => void;
@@ -29,6 +31,10 @@ interface EditorMenuProps {
     onToggleGridOverlay: () => void;
     onToggleRulers: () => void;
     onToggleGuides: () => void;
+  };
+  templateSettings?: {
+    isTemplate: boolean;
+    onToggleTemplate: () => void;
   };
 }
 
@@ -58,7 +64,15 @@ const viewSettingPreviews: Record<
   },
 };
 
-export function EditorMenu({ onBackToLibrary, viewSettings }: EditorMenuProps) {
+const projectSettingPreview = {
+  template: {
+    title: "Use as template",
+    description:
+      "Marks this project as a template. It will appear in the template list when creating a new project.",
+  },
+};
+
+export function EditorMenu({ onBackToLibrary, viewSettings, templateSettings }: EditorMenuProps) {
   const undo = useEditorStore((s) => s.undo);
   const redo = useEditorStore((s) => s.redo);
   const copySelectedNodes = useEditorStore((s) => s.copySelectedNodes);
@@ -77,6 +91,7 @@ export function EditorMenu({ onBackToLibrary, viewSettings }: EditorMenuProps) {
   const [importOpen, setImportOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [hoveredViewSetting, setHoveredViewSetting] = useState<ViewSettingId | null>(null);
+  const [hoveredProjectSetting, setHoveredProjectSetting] = useState<ProjectSettingId | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const menuBaseId = useId();
 
@@ -111,6 +126,8 @@ export function EditorMenu({ onBackToLibrary, viewSettings }: EditorMenuProps) {
   const editMenuId = `${menuBaseId}-edit`;
   const viewMenuId = `${menuBaseId}-view`;
   const viewPreview = hoveredViewSetting ? viewSettingPreviews[hoveredViewSetting] : null;
+  const projectPreview = hoveredProjectSetting ? projectSettingPreview[hoveredProjectSetting] : null;
+  const isTemplate = templateSettings?.isTemplate ?? false;
 
   return (
     <>
@@ -165,6 +182,38 @@ export function EditorMenu({ onBackToLibrary, viewSettings }: EditorMenuProps) {
               >
                 <span className={styles.menuItemLabel}>Edit palette…</span>
               </button>
+              <div className={styles.menuSeparator} role="separator" />
+              <button
+                type="button"
+                role="menuitemcheckbox"
+                aria-checked={isTemplate}
+                className={styles.menuItem}
+                onMouseEnter={() => setHoveredProjectSetting("template")}
+                onFocus={() => setHoveredProjectSetting("template")}
+                onClick={templateSettings?.onToggleTemplate}
+              >
+                <span className={styles.menuItemCheck} aria-hidden>
+                  {isTemplate ? "✓" : ""}
+                </span>
+                <span className={styles.menuItemLabel}>Use as template</span>
+              </button>
+              {projectPreview ? (
+                <aside
+                  className={styles.menuPreview}
+                  data-testid="project-setting-preview"
+                  aria-live="polite"
+                >
+                  <div className={styles.previewTitle}>{projectPreview.title}</div>
+                  <div className={styles.previewCanvas} aria-hidden>
+                    <div className={styles.previewTemplateCard}>
+                      <span className={styles.previewTemplateBadge}>
+                        <ExtensionIcon fontSize="inherit" />
+                      </span>
+                    </div>
+                  </div>
+                  <p className={styles.previewDescription}>{projectPreview.description}</p>
+                </aside>
+              ) : null}
             </div>
           ) : null}
         </div>

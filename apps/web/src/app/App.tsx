@@ -18,12 +18,13 @@ import type { AuthMode } from "@pages/auth/AuthPage";
 import { EditorPage } from "@pages/editor/EditorPage";
 import { LibraryPage } from "@pages/library/LibraryPage";
 import type { ProjectCard } from "@pages/library/lib/library-helpers";
-import type { TemplateId } from "@entities/ui-project/lib/projectTemplates";
+import { markProjectAsTemplate } from "@pages/library/lib/library-helpers";
 import type { AutosaveStatus, LibraryStatus } from "@shared/lib/sync-status";
 import { isProjectLimitReached } from "@shared/config/project-limits";
 import { ApiError } from "@shared/api/client";
 
 type AppView = "library" | "editor";
+type ActiveProjectMeta = Pick<ProjectCard, "id" | "template" | "isTemplate" | "sourceTemplateId">;
 
 const AUTOSAVE_DELAY_MS = 1000;
 const LOCAL_DRAFT_PREFIX = "g2ui:project-draft:";
@@ -41,9 +42,10 @@ export function App() {
   const [projects, setProjects] = useState<ProjectCard[]>(() =>
     mergeLocalDrafts(isApiConfigured() ? [] : [projectToCard(project)]),
   );
-  const [activeProjectMeta, setActiveProjectMeta] = useState<Pick<ProjectCard, "id" | "template">>({
+  const [activeProjectMeta, setActiveProjectMeta] = useState<ActiveProjectMeta>({
     id: project.id,
     template: "hello",
+    isTemplate: false,
   });
   const [libraryStatus, setLibraryStatus] = useState<LibraryStatus>("local");
   const [libraryError, setLibraryError] = useState<string | null>(null);
@@ -118,7 +120,7 @@ export function App() {
     const draft = readLocalDraft(card.id);
     const restoredFromDraft = !!draft && draft.savedAt.getTime() > card.updatedAt.getTime();
     const nextCard = restoredFromDraft ? draft.card : card;
-    setActiveProjectMeta({ id: nextCard.id, template: nextCard.template });
+    setActiveProjectMeta(cardMeta(nextCard));
     lastAutosavedSnapshotRef.current = restoredFromDraft ? null : JSON.stringify(nextCard.project);
     suppressNextAutosaveRef.current = !restoredFromDraft;
     setAutosaveStatus(restoredFromDraft ? "unsynced" : canSyncRemote ? "saved" : "local");
@@ -129,18 +131,22 @@ export function App() {
 
   const showLibrary = () => {
     const existing = projects.find((item) => item.id === project.id || item.project.id === project.id);
-    const card = projectToCard(project, existing?.template);
+    const card = projectToCard(project, {
+      template: existing?.template ?? "hello",
+      isTemplate: existing?.isTemplate,
+      sourceTemplateId: existing?.sourceTemplateId,
+    });
     if (existing) {
       card.id = existing.id;
     }
-    setActiveProjectMeta({ id: card.id, template: card.template });
+    setActiveProjectMeta(cardMeta(card));
     setProjects((items) => items.map((item) => (item.id === card.id ? card : item)));
     setView("library");
     void persistCanvas(card, persistCallbacks, canSyncRemote).then((saved) => {
       replaceProject(card.id, saved);
       if (saved.id !== card.id) {
         moveLocalDraft(card.id, saved.id, saved);
-        setActiveProjectMeta({ id: saved.id, template: saved.template });
+        setActiveProjectMeta(cardMeta(saved));
         setProject(cloneProject(saved.project));
       }
     });
@@ -153,7 +159,7 @@ export function App() {
       if (canSyncRemote && !isSavedRemotely) return;
 
       setProjects((items) => [saved, ...items.filter((item) => item.id !== saved.id)]);
-      setActiveProjectMeta({ id: saved.id, template: saved.template });
+      setActiveProjectMeta(cardMeta(saved));
       lastAutosavedSnapshotRef.current = isSavedRemotely ? JSON.stringify(saved.project) : null;
       suppressNextAutosaveRef.current = isSavedRemotely;
       setAutosaveStatus(isSavedRemotely ? "saved" : "unsynced");
@@ -217,10 +223,14 @@ export function App() {
       return { ...existing, project: cloneProject(existing.project) };
     }
 
-    const card = projectToCard(project, activeProjectMeta.template);
+    const card = projectToCard(project, existing ?? activeProjectMeta);
     card.id = activeProjectMeta.id;
-    const existingTemplate = existing?.template ?? activeProjectMeta.template;
-    return { ...card, template: existingTemplate };
+    return {
+      ...card,
+      template: existing?.template ?? activeProjectMeta.template,
+      isTemplate: existing?.isTemplate ?? activeProjectMeta.isTemplate,
+      sourceTemplateId: existing?.sourceTemplateId ?? activeProjectMeta.sourceTemplateId,
+    };
   };
 
   const hasCurrentProjectToPersist = (): boolean => {
@@ -244,7 +254,7 @@ export function App() {
         preferredCard ??
         nextProjects[0];
       if (activeCard) {
-        setActiveProjectMeta({ id: activeCard.id, template: activeCard.template });
+        setActiveProjectMeta(cardMeta(activeCard));
         lastAutosavedSnapshotRef.current = JSON.stringify(activeCard.project);
         suppressNextAutosaveRef.current = true;
         setProject(cloneProject(activeCard.project));
@@ -265,7 +275,7 @@ export function App() {
     setProjects((items) => upsertProjectCard(items.filter((item) => item.id !== card.id), saved));
     removeLocalDraft(card.id);
     removeLocalDraft(saved.id);
-    setActiveProjectMeta({ id: saved.id, template: saved.template });
+    setActiveProjectMeta(cardMeta(saved));
     lastAutosavedSnapshotRef.current = JSON.stringify(saved.project);
     suppressNextAutosaveRef.current = true;
     setAutosaveStatus("saved");
@@ -296,7 +306,7 @@ export function App() {
       return;
     }
 
-    const card = projectToCard(project, activeProjectMeta.template);
+    const card = projectToCard(project, activeProjectMeta);
     card.id = activeProjectMeta.id;
     const snapshot = JSON.stringify(card.project);
     const savedAt = new Date();
@@ -332,7 +342,7 @@ export function App() {
           removeLocalDraft(card.id);
           if (saved.id !== card.id) {
             removeLocalDraft(saved.id);
-            setActiveProjectMeta({ id: saved.id, template: saved.template });
+            setActiveProjectMeta(cardMeta(saved));
             suppressNextAutosaveRef.current = true;
             setProject(cloneProject(saved.project));
           }
@@ -350,7 +360,7 @@ export function App() {
         autosaveTimerRef.current = null;
       }
     };
-  }, [activeProjectMeta.id, activeProjectMeta.template, canSyncRemote, project, setProject, view]);
+  }, [activeProjectMeta, canSyncRemote, project, setProject, view]);
 
   const handleLogout = () => {
     logout();
@@ -394,6 +404,16 @@ export function App() {
         autosaveStatus={autosaveStatus}
         autosaveError={autosaveError}
         userEmail={sessionUser?.email ?? null}
+        isTemplate={Boolean(activeProjectMeta.isTemplate)}
+        onToggleTemplate={() => {
+          const existing = projects.find((item) => item.id === activeProjectMeta.id);
+          const current = existing
+            ? { ...existing, project: cloneProject(existing.project) }
+            : currentProjectCard();
+          const next = markProjectAsTemplate(current, !current.isTemplate);
+          setActiveProjectMeta(cardMeta(next));
+          updateProject(next);
+        }}
         onOpenAuth={isApiConfigured() && !isSignedIn ? setAuthModalMode : undefined}
         onLogout={isSignedIn ? handleLogout : undefined}
         onBackToLibrary={showLibrary}
@@ -408,13 +428,27 @@ export function App() {
   );
 }
 
-function projectToCard(project: ProjectCard["project"], template: TemplateId = "hello"): ProjectCard {
+function cardMeta(card: Pick<ProjectCard, "id" | "template" | "isTemplate" | "sourceTemplateId">): ActiveProjectMeta {
+  return {
+    id: card.id,
+    template: card.template,
+    isTemplate: Boolean(card.isTemplate),
+    sourceTemplateId: card.sourceTemplateId,
+  };
+}
+
+function projectToCard(
+  project: ProjectCard["project"],
+  meta: Pick<ProjectCard, "template" | "isTemplate" | "sourceTemplateId"> = { template: "hello" },
+): ProjectCard {
   return {
     id: project.id,
     name: project.name,
     width: project.display.width,
     height: project.display.height,
-    template,
+    template: meta.template,
+    isTemplate: Boolean(meta.isTemplate),
+    sourceTemplateId: meta.sourceTemplateId,
     updatedAt: new Date(),
     project: cloneProject(project),
   };

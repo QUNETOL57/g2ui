@@ -72,6 +72,21 @@ describe("CreateProjectPanel: create mode", () => {
     await userEvent.click(screen.getByRole("button", { name: "Create project" }));
     expect(h.onSubmit).toHaveBeenCalled();
   });
+
+  it("lists custom templates in the select", async () => {
+    renderCreate({ customTemplates: [{ id: "tpl1", name: "Dashboard" }] });
+    await userEvent.click(screen.getByRole("button", { name: "template" }));
+    expect(screen.getByRole("option", { name: /Dashboard/ })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /Blank/ })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /Hello/ })).toBeInTheDocument();
+  });
+
+  it("emits a custom template selection value", async () => {
+    const h = renderCreate({ customTemplates: [{ id: "tpl1", name: "Dashboard" }] });
+    await userEvent.click(screen.getByRole("button", { name: "template" }));
+    await userEvent.click(screen.getByRole("option", { name: /Dashboard/ }));
+    expect(h.onTemplateChange).toHaveBeenCalledWith("custom:tpl1");
+  });
 });
 
 describe("CreateProjectPanel: edit mode", () => {
@@ -79,5 +94,10 @@ describe("CreateProjectPanel: edit mode", () => {
     renderCreate({ mode: "edit" });
     expect(screen.getByText("Edit project")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save changes" })).toBeInTheDocument();
+  });
+
+  it("hides the template select in edit mode", () => {
+    renderCreate({ mode: "edit" });
+    expect(screen.queryByRole("button", { name: "template" })).not.toBeInTheDocument();
   });
 });

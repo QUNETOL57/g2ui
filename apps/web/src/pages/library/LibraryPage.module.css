@@ -37,11 +37,89 @@
   background: #121212;
 }
 
+.gridToolbar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 10px var(--space-7) 0;
+}
+
+.sortControls {
+  display: inline-flex;
+  flex: 0 0 auto;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  width: max-content;
+  height: 28px;
+  overflow: visible;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-2);
+}
+
+.sortControls > .sortSelect {
+  flex: 0 0 auto;
+  width: max-content;
+  min-width: 148px;
+}
+
+.sortSelect :global(button[aria-haspopup="listbox"]) {
+  height: 100%;
+  min-height: 0;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  outline: none;
+  font-weight: 400;
+}
+
+.sortSelect :global([role="option"]) {
+  font-weight: 400;
+}
+
+.sortSelect :global(button[aria-haspopup="listbox"]):hover,
+.sortSelect :global(button[aria-haspopup="listbox"]):focus,
+.sortSelect :global(button[aria-haspopup="listbox"][aria-expanded="true"]) {
+  border: 0;
+  outline: none;
+  color: var(--hover-text);
+}
+
+.sortDirection.sortDirection {
+  box-sizing: border-box;
+  flex: 0 0 28px;
+  width: 28px;
+  min-width: 28px;
+  height: auto;
+  border: 0;
+  border-left: 1px solid var(--color-border);
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-text);
+}
+
+.sortDirection.sortDirection:hover:not(:disabled) {
+  border-left-color: var(--color-border);
+  color: var(--hover-text);
+  box-shadow: none;
+}
+
+.sortDirection.sortDirection:focus-visible {
+  outline-offset: -1px;
+}
+
+.sortDirection svg {
+  width: 14px;
+  height: 14px;
+}
+
 .cardGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 280px));
   gap: 14px;
-  padding: var(--space-7);
+  padding: 10px var(--space-7) var(--space-7);
 }
 
 .card {

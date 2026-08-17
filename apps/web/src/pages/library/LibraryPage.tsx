@@ -1,4 +1,8 @@
 import { useMemo, useState } from "react";
+import ArrowDownwardRoundedIcon from "@mui/icons-material/ArrowDownwardRounded";
+import ArrowUpwardRoundedIcon from "@mui/icons-material/ArrowUpwardRounded";
+import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
+import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
 import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import CloudDoneOutlinedIcon from "@mui/icons-material/CloudDoneOutlined";
@@ -22,6 +26,7 @@ import {
 } from "@shared/lib/sync-status";
 import { BrandLogo } from "@shared/ui/BrandLogo";
 import { Button } from "@shared/ui/Button";
+import { CustomSelect } from "@shared/ui/CustomSelect";
 import { IconButton } from "@shared/ui/IconButton";
 import { Modal } from "@shared/ui/Modal";
 import { TopBar } from "@shared/ui/TopBar";
@@ -34,14 +39,22 @@ import { CreateProjectPanel } from "./CreateProjectPanel";
 import styles from "./LibraryPage.module.css";
 import { ProjectPreview } from "./ProjectPreview";
 import {
+  DEFAULT_LIBRARY_SORT,
+  DEFAULT_LIBRARY_SORT_DIRECTION,
   findPresetIdForSize,
   copyProjectCard,
   createProjectCardFromSelection,
   draftProjectFromSelection,
   formatEditedAt,
+  isLibrarySortBy,
+  LIBRARY_SORT_DIRECTION,
+  LIBRARY_SORT_OPTIONS,
   listCustomTemplates,
   orientSize,
+  sortProjectCards,
   templateLabel,
+  type LibrarySortBy,
+  type LibrarySortDirection,
   type Orientation,
   type ProjectCard,
 } from "./lib/library-helpers";
@@ -87,6 +100,10 @@ export function LibraryPage({
   const [editProjectName, setEditProjectName] = useState("Untitled");
   const [projectPendingDelete, setProjectPendingDelete] = useState<ProjectCard | null>(null);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
+  const [sortBy, setSortBy] = useState<LibrarySortBy>(DEFAULT_LIBRARY_SORT);
+  const [sortDirection, setSortDirection] = useState<LibrarySortDirection>(
+    DEFAULT_LIBRARY_SORT_DIRECTION,
+  );
 
   const selectedPreset = useMemo(
     () => DISPLAY_PRESETS.find((preset) => preset.id === selectedPresetId) ?? DISPLAY_PRESETS[0],
@@ -97,6 +114,24 @@ export function LibraryPage({
     [orientation, selectedPreset.height, selectedPreset.width],
   );
   const customTemplates = useMemo(() => listCustomTemplates(projects), [projects]);
+  const sortOptions = useMemo(
+    () =>
+      LIBRARY_SORT_OPTIONS.map((option) => ({
+        ...option,
+        icon:
+          option.value === "updatedAt" ? (
+            <HistoryOutlinedIcon fontSize="inherit" />
+          ) : (
+            <CalendarTodayOutlinedIcon fontSize="inherit" />
+          ),
+      })),
+    [],
+  );
+  const sortedProjects = useMemo(
+    () => sortProjectCards(projects, sortBy, sortDirection),
+    [projects, sortBy, sortDirection],
+  );
+  const isSortDescending = sortDirection === LIBRARY_SORT_DIRECTION.desc;
   const draftProject = useMemo(
     () =>
       draftProjectFromSelection({
@@ -200,6 +235,38 @@ export function LibraryPage({
 
       <section className={styles.libraryContent}>
         <div className={styles.gridSection}>
+          <div className={styles.gridToolbar}>
+            <div className={styles.sortControls}>
+              <CustomSelect
+                className={styles.sortSelect}
+                size="sm"
+                ariaLabel="Sort projects"
+                value={sortBy}
+                options={sortOptions}
+                onChange={(value) => {
+                  if (isLibrarySortBy(value)) setSortBy(value);
+                }}
+              />
+              <IconButton
+                className={styles.sortDirection}
+                tooltip={isSortDescending ? "Newest first" : "Oldest first"}
+                aria-label={isSortDescending ? "Sort newest first" : "Sort oldest first"}
+                onClick={() =>
+                  setSortDirection((current) =>
+                    current === LIBRARY_SORT_DIRECTION.desc
+                      ? LIBRARY_SORT_DIRECTION.asc
+                      : LIBRARY_SORT_DIRECTION.desc,
+                  )
+                }
+              >
+                {isSortDescending ? (
+                  <ArrowDownwardRoundedIcon fontSize="inherit" />
+                ) : (
+                  <ArrowUpwardRoundedIcon fontSize="inherit" />
+                )}
+              </IconButton>
+            </div>
+          </div>
           <div className={styles.cardGrid}>
             {showCreateCard ? (
               <article className={`${styles.card} ${styles.createCard}`}>
@@ -226,7 +293,7 @@ export function LibraryPage({
                 )}
               </article>
             ) : null}
-            {projects.map((item) => (
+            {sortedProjects.map((item) => (
               <article className={styles.card} key={item.id}>
                 {item.isTemplate ? (
                   <IconButton
@@ -246,7 +313,7 @@ export function LibraryPage({
                 {!projectLimitReached ? (
                   <IconButton
                     className={styles.copyButton}
-                    title={`Copy ${item.name}`}
+                    tooltip={`Copy ${item.name}`}
                     aria-label={`Copy ${item.name}`}
                     onClick={(event) => {
                       event.stopPropagation();
@@ -258,7 +325,7 @@ export function LibraryPage({
                 ) : null}
                 <IconButton
                   className={styles.editButton}
-                  title={`Edit ${item.name}`}
+                  tooltip={`Edit ${item.name}`}
                   aria-label={`Edit ${item.name}`}
                   onClick={(event) => {
                     event.stopPropagation();
@@ -269,7 +336,7 @@ export function LibraryPage({
                 </IconButton>
                 <IconButton
                   className={styles.deleteButton}
-                  title={`Delete ${item.name}`}
+                  tooltip={`Delete ${item.name}`}
                   aria-label={`Delete ${item.name}`}
                   onClick={(event) => {
                     event.stopPropagation();

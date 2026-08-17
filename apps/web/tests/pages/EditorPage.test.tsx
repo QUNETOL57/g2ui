@@ -91,6 +91,49 @@ describe("EditorPage", () => {
     expect(onToggleTemplate).toHaveBeenCalledTimes(1);
   });
 
+  it("restores Allow overflow and Show full widgets from saved project settings", async () => {
+    render(
+      <EditorPage
+        onBackToLibrary={() => undefined}
+        allowCanvasOverflow
+        showFullWidgets
+      />,
+    );
+    await userEvent.click(screen.getByRole("menuitem", { name: "View" }));
+    expect(screen.getByRole("menuitemcheckbox", { name: "Allow overflow" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    expect(screen.getByRole("menuitemcheckbox", { name: "Show full widgets" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    expect(screen.getByRole("menuitemcheckbox", { name: "Show full widgets" })).toBeEnabled();
+    expect(screen.getByTestId("canvas-device-frame")).toHaveAttribute("data-allow-overflow", "true");
+    expect(screen.getByTestId("canvas-device-frame")).toHaveAttribute("data-show-full-widgets", "true");
+  });
+
+  it("persists canvas overflow toggles to the project card", async () => {
+    const onCanvasViewSettingsChange = vi.fn();
+    render(
+      <EditorPage
+        onBackToLibrary={() => undefined}
+        onCanvasViewSettingsChange={onCanvasViewSettingsChange}
+      />,
+    );
+    await userEvent.click(screen.getByRole("menuitem", { name: "View" }));
+    await userEvent.click(screen.getByRole("menuitemcheckbox", { name: "Allow overflow" }));
+    expect(onCanvasViewSettingsChange).toHaveBeenCalledWith({
+      allowCanvasOverflow: true,
+      showFullWidgets: false,
+    });
+    await userEvent.click(screen.getByRole("menuitemcheckbox", { name: "Show full widgets" }));
+    expect(onCanvasViewSettingsChange).toHaveBeenLastCalledWith({
+      allowCanvasOverflow: true,
+      showFullWidgets: true,
+    });
+  });
+
   it("renders the error banner when lastError is set", () => {
     useEditorStore.setState({ lastError: "Oops" });
     render(<EditorPage onBackToLibrary={() => undefined} />);
@@ -172,6 +215,13 @@ describe("EditorPage", () => {
     );
     expect(screen.getByRole("menuitemcheckbox", { name: "Rulers" })).toHaveAttribute("aria-checked", "true");
     expect(screen.getByRole("menuitemcheckbox", { name: "Guides" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("menuitemcheckbox", { name: "Allow overflow" })).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
+    expect(screen.getByRole("menuitemcheckbox", { name: "Show full widgets" })).toBeDisabled();
+    expect(screen.getByTestId("canvas-device-frame")).not.toHaveAttribute("data-allow-overflow");
+    expect(screen.getByTestId("canvas-device-frame")).not.toHaveAttribute("data-show-full-widgets");
 
     await userEvent.click(screen.getByRole("menuitemcheckbox", { name: "Grid overlay" }));
     expect(screen.getByTestId("canvas-pixel-grid")).toHaveAttribute("data-overlay", "true");
@@ -203,6 +253,34 @@ describe("EditorPage", () => {
     expect(screen.getAllByTestId("selection-frame")).toHaveLength(4);
     expect(screen.getByTestId("resize-handle-nw")).toBeInTheDocument();
     expect(screen.getByRole("menuitemcheckbox", { name: "Guides" })).toHaveAttribute("aria-checked", "false");
+
+    await userEvent.click(screen.getByRole("menuitemcheckbox", { name: "Allow overflow" }));
+    expect(screen.getByRole("menuitemcheckbox", { name: "Allow overflow" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    expect(screen.getByRole("menuitemcheckbox", { name: "Show full widgets" })).toBeEnabled();
+    expect(screen.getByTestId("canvas-device-frame")).toHaveAttribute("data-allow-overflow", "true");
+    expect(screen.getByTestId("canvas-device-frame")).not.toHaveAttribute("data-show-full-widgets");
+    expect(getComputedStyle(screen.getByTestId("canvas-widget-clip")).overflow).toBe("hidden");
+    expect(
+      getComputedStyle(
+        document.querySelector('[data-testid="canvas-widget"][data-widget-id="lbl_1"]') as HTMLElement,
+      ).opacity,
+    ).toBe("1");
+
+    await userEvent.click(screen.getByRole("menuitemcheckbox", { name: "Show full widgets" }));
+    expect(screen.getByRole("menuitemcheckbox", { name: "Show full widgets" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    expect(screen.getByTestId("canvas-device-frame")).toHaveAttribute("data-show-full-widgets", "true");
+    expect(getComputedStyle(screen.getByTestId("canvas-widget-clip")).overflow).toBe("visible");
+    expect(
+      getComputedStyle(
+        document.querySelector('[data-testid="canvas-widget"][data-widget-id="lbl_1"]') as HTMLElement,
+      ).opacity,
+    ).toBe("1");
   });
 });
 

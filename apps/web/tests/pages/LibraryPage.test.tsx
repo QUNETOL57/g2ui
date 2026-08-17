@@ -22,6 +22,7 @@ function makeCard(id: string, name = "Demo", extras: Partial<ProjectCard> = {}):
     width: 160,
     height: 128,
     template: "blank",
+    createdAt: new Date(),
     updatedAt: new Date(),
     project,
     ...extras,
@@ -76,6 +77,76 @@ describe("LibraryPage: empty + listing", () => {
     render(<Harness initial={[makeCard("p1", "First"), makeCard("p2", "Second")]} />);
     expect(screen.getByText("First")).toBeInTheDocument();
     expect(screen.getByText("Second")).toBeInTheDocument();
+  });
+});
+
+describe("LibraryPage: sorting", () => {
+  function cardTitles(): string[] {
+    return screen
+      .getAllByRole("article")
+      .map((article) => article.querySelector("strong")?.textContent ?? "");
+  }
+
+  it("sorts by last edited by default, newest first", () => {
+    render(
+      <Harness
+        initial={[
+          makeCard("old-edit", "Older edit", {
+            createdAt: new Date("2026-01-01T00:00:00Z"),
+            updatedAt: new Date("2026-03-01T00:00:00Z"),
+          }),
+          makeCard("new-edit", "Newer edit", {
+            createdAt: new Date("2025-01-01T00:00:00Z"),
+            updatedAt: new Date("2026-06-01T00:00:00Z"),
+          }),
+        ]}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Sort projects" })).toHaveTextContent("Last edited");
+    expect(cardTitles()).toEqual(["New project", "Newer edit", "Older edit"]);
+  });
+
+  it("sorts by date created when selected", async () => {
+    render(
+      <Harness
+        initial={[
+          makeCard("old-create", "Created first", {
+            createdAt: new Date("2025-01-01T00:00:00Z"),
+            updatedAt: new Date("2026-06-01T00:00:00Z"),
+          }),
+          makeCard("new-create", "Created later", {
+            createdAt: new Date("2026-01-01T00:00:00Z"),
+            updatedAt: new Date("2026-02-01T00:00:00Z"),
+          }),
+        ]}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Sort projects" }));
+    await userEvent.click(screen.getByRole("option", { name: /Date created/ }));
+    expect(cardTitles()).toEqual(["New project", "Created later", "Created first"]);
+  });
+
+  it("toggles newest-first and oldest-first order", async () => {
+    render(
+      <Harness
+        initial={[
+          makeCard("old-edit", "Older edit", {
+            createdAt: new Date("2026-01-01T00:00:00Z"),
+            updatedAt: new Date("2026-03-01T00:00:00Z"),
+          }),
+          makeCard("new-edit", "Newer edit", {
+            createdAt: new Date("2025-01-01T00:00:00Z"),
+            updatedAt: new Date("2026-06-01T00:00:00Z"),
+          }),
+        ]}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Sort newest first" })).toBeInTheDocument();
+    expect(cardTitles()).toEqual(["New project", "Newer edit", "Older edit"]);
+
+    await userEvent.click(screen.getByRole("button", { name: "Sort newest first" }));
+    expect(screen.getByRole("button", { name: "Sort oldest first" })).toBeInTheDocument();
+    expect(cardTitles()).toEqual(["New project", "Older edit", "Newer edit"]);
   });
 });
 
@@ -198,6 +269,29 @@ describe("LibraryPage: custom templates", () => {
     expect(screen.getByRole("tooltip")).toHaveTextContent("This project is a template");
     await userEvent.click(badge);
     expect(onOpen).not.toHaveBeenCalled();
+  });
+
+  it("shows portal tooltips on copy, edit, and delete card buttons", async () => {
+    render(<Harness initial={[makeCard("p1", "Untitled")]} />);
+
+    const copy = screen.getByRole("button", { name: "Copy Untitled" });
+    const edit = screen.getByRole("button", { name: "Edit Untitled" });
+    const remove = screen.getByRole("button", { name: "Delete Untitled" });
+
+    expect(copy).not.toHaveAttribute("title");
+    expect(edit).not.toHaveAttribute("title");
+    expect(remove).not.toHaveAttribute("title");
+
+    await userEvent.hover(copy);
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Copy Untitled");
+    await userEvent.unhover(copy);
+
+    await userEvent.hover(edit);
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Edit Untitled");
+    await userEvent.unhover(edit);
+
+    await userEvent.hover(remove);
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Delete Untitled");
   });
 
   it("removes the badge when the card is unmarked but keeps the project", async () => {

@@ -17,14 +17,17 @@ import { AuthPage } from "@pages/auth/AuthPage";
 import type { AuthMode } from "@pages/auth/AuthPage";
 import { EditorPage } from "@pages/editor/EditorPage";
 import { LibraryPage } from "@pages/library/LibraryPage";
-import type { ProjectCard } from "@pages/library/lib/library-helpers";
-import { markProjectAsTemplate } from "@pages/library/lib/library-helpers";
+import { markProjectAsTemplate, normalizeCanvasViewSettings } from "@pages/library/lib/library-helpers";
+import type { CanvasViewSettings, ProjectCard } from "@pages/library/lib/library-helpers";
 import type { AutosaveStatus, LibraryStatus } from "@shared/lib/sync-status";
 import { isProjectLimitReached } from "@shared/config/project-limits";
 import { ApiError } from "@shared/api/client";
 
 type AppView = "library" | "editor";
-type ActiveProjectMeta = Pick<ProjectCard, "id" | "template" | "isTemplate" | "sourceTemplateId">;
+type ActiveProjectMeta = Pick<
+  ProjectCard,
+  "id" | "template" | "isTemplate" | "sourceTemplateId" | "allowCanvasOverflow" | "showFullWidgets"
+>;
 
 const AUTOSAVE_DELAY_MS = 1000;
 const LOCAL_DRAFT_PREFIX = "g2ui:project-draft:";
@@ -56,6 +59,8 @@ export function App() {
   const lastAutosavedSnapshotRef = useRef<string | null>(null);
   const suppressNextAutosaveRef = useRef(false);
   const skipNextRemoteLoadRef = useRef(false);
+  const projectsRef = useRef(projects);
+  projectsRef.current = projects;
   const canSyncRemote = isCanvasApiConfigured() && sessionStatus === "authenticated";
   const isSignedIn = sessionStatus === "authenticated";
   const projectLimitReached = isProjectLimitReached(projects, canSyncRemote);
@@ -135,9 +140,11 @@ export function App() {
       template: existing?.template ?? "hello",
       isTemplate: existing?.isTemplate,
       sourceTemplateId: existing?.sourceTemplateId,
+      ...normalizeCanvasViewSettings(existing),
     });
     if (existing) {
       card.id = existing.id;
+      card.createdAt = existing.createdAt;
     }
     setActiveProjectMeta(cardMeta(card));
     setProjects((items) => items.map((item) => (item.id === card.id ? card : item)));
@@ -211,6 +218,18 @@ export function App() {
     });
   };
 
+  const updateCanvasViewSettings = (settings: CanvasViewSettings) => {
+    const next = { ...currentProjectCard(), ...normalizeCanvasViewSettings(settings) };
+    setActiveProjectMeta(cardMeta(next));
+    setProjects((items) => upsertProjectCard(items, next));
+    void persistCanvas(next, persistCallbacks, canSyncRemote).then((saved) => {
+      replaceProject(next.id, saved);
+      if (saved.id !== next.id) {
+        setActiveProjectMeta(cardMeta(saved));
+      }
+    });
+  };
+
   const replaceProject = (previousId: string, saved: ProjectCard) => {
     setProjects((items) =>
       items.map((item) => (item.id === previousId || item.id === saved.id ? saved : item)),
@@ -227,9 +246,11 @@ export function App() {
     card.id = activeProjectMeta.id;
     return {
       ...card,
+      createdAt: existing?.createdAt ?? card.createdAt,
       template: existing?.template ?? activeProjectMeta.template,
       isTemplate: existing?.isTemplate ?? activeProjectMeta.isTemplate,
       sourceTemplateId: existing?.sourceTemplateId ?? activeProjectMeta.sourceTemplateId,
+      ...normalizeCanvasViewSettings(existing ?? activeProjectMeta),
     };
   };
 
@@ -310,9 +331,16 @@ export function App() {
     card.id = activeProjectMeta.id;
     const snapshot = JSON.stringify(card.project);
     const savedAt = new Date();
+    const existing = projectsRef.current.find((item) => item.id === card.id);
+    const nextCard = {
+      ...card,
+      createdAt: existing?.createdAt ?? card.createdAt,
+      ...normalizeCanvasViewSettings(existing ?? card),
+      updatedAt: savedAt,
+    };
 
-    writeLocalDraft(card, savedAt);
-    setProjects((items) => upsertProjectCard(items, { ...card, updatedAt: savedAt }));
+    writeLocalDraft(nextCard, savedAt);
+    setProjects((items) => upsertProjectCard(items, nextCard));
 
     if (snapshot === lastAutosavedSnapshotRef.current) return;
 
@@ -332,7 +360,7 @@ export function App() {
     autosaveTimerRef.current = window.setTimeout(() => {
       autosaveTimerRef.current = null;
       setAutosaveStatus("saving");
-      void persistCanvas(card, undefined, canSyncRemote)
+      void persistCanvas(nextCard, undefined, canSyncRemote)
         .then((saved) => {
           if (token !== autosaveTokenRef.current) return;
           lastAutosavedSnapshotRef.current = JSON.stringify(saved.project);
@@ -405,6 +433,9 @@ export function App() {
         autosaveError={autosaveError}
         userEmail={sessionUser?.email ?? null}
         isTemplate={Boolean(activeProjectMeta.isTemplate)}
+        allowCanvasOverflow={Boolean(activeProjectMeta.allowCanvasOverflow)}
+        showFullWidgets={Boolean(activeProjectMeta.showFullWidgets)}
+        onCanvasViewSettingsChange={updateCanvasViewSettings}
         onToggleTemplate={() => {
           const existing = projects.find((item) => item.id === activeProjectMeta.id);
           const current = existing
@@ -428,19 +459,29 @@ export function App() {
   );
 }
 
-function cardMeta(card: Pick<ProjectCard, "id" | "template" | "isTemplate" | "sourceTemplateId">): ActiveProjectMeta {
+function cardMeta(
+  card: Pick<
+    ProjectCard,
+    "id" | "template" | "isTemplate" | "sourceTemplateId" | "allowCanvasOverflow" | "showFullWidgets"
+  >,
+): ActiveProjectMeta {
   return {
     id: card.id,
     template: card.template,
     isTemplate: Boolean(card.isTemplate),
     sourceTemplateId: card.sourceTemplateId,
+    ...normalizeCanvasViewSettings(card),
   };
 }
 
 function projectToCard(
   project: ProjectCard["project"],
-  meta: Pick<ProjectCard, "template" | "isTemplate" | "sourceTemplateId"> = { template: "hello" },
+  meta: Pick<
+    ProjectCard,
+    "template" | "isTemplate" | "sourceTemplateId" | "allowCanvasOverflow" | "showFullWidgets"
+  > = { template: "hello" },
 ): ProjectCard {
+  const now = new Date();
   return {
     id: project.id,
     name: project.name,
@@ -449,7 +490,9 @@ function projectToCard(
     template: meta.template,
     isTemplate: Boolean(meta.isTemplate),
     sourceTemplateId: meta.sourceTemplateId,
-    updatedAt: new Date(),
+    createdAt: now,
+    updatedAt: now,
+    ...normalizeCanvasViewSettings(meta),
     project: cloneProject(project),
   };
 }
@@ -462,7 +505,8 @@ function upsertProjectCard(items: ProjectCard[], card: ProjectCard): ProjectCard
   return [nextCard, ...items];
 }
 
-interface StoredProjectCard extends Omit<ProjectCard, "updatedAt"> {
+interface StoredProjectCard extends Omit<ProjectCard, "createdAt" | "updatedAt"> {
+  createdAt?: string;
   updatedAt: string;
 }
 
@@ -478,15 +522,18 @@ function draftKey(projectId: string): string {
 function serializeCard(card: ProjectCard): StoredProjectCard {
   return {
     ...card,
+    createdAt: card.createdAt.toISOString(),
     updatedAt: card.updatedAt.toISOString(),
     project: cloneProject(card.project),
   };
 }
 
 function deserializeCard(card: StoredProjectCard): ProjectCard {
+  const updatedAt = new Date(card.updatedAt);
   return {
     ...card,
-    updatedAt: new Date(card.updatedAt),
+    createdAt: card.createdAt ? new Date(card.createdAt) : updatedAt,
+    updatedAt,
     project: cloneProject(card.project),
   };
 }
@@ -557,6 +604,12 @@ function mergeLocalDrafts(cards: ProjectCard[]): ProjectCard[] {
     if (!existing || draft.savedAt.getTime() > existing.updatedAt.getTime()) {
       byId.set(draft.card.id, {
         ...draft.card,
+        createdAt: existing?.createdAt ?? draft.card.createdAt,
+        ...normalizeCanvasViewSettings({
+          allowCanvasOverflow:
+            draft.card.allowCanvasOverflow ?? existing?.allowCanvasOverflow,
+          showFullWidgets: draft.card.showFullWidgets ?? existing?.showFullWidgets,
+        }),
         updatedAt: draft.savedAt,
         project: cloneProject(draft.card.project),
       });

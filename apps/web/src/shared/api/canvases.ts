@@ -11,6 +11,8 @@ interface CanvasSettings {
   template?: TemplateId;
   isTemplate?: boolean;
   sourceTemplateId?: string;
+  allowCanvasOverflow?: boolean;
+  showFullWidgets?: boolean;
   [key: string]: unknown;
 }
 
@@ -83,7 +85,11 @@ export function canvasToProjectCard(canvas: CanvasRecord): ProjectCard | null {
       typeof canvas.settings.sourceTemplateId === "string"
         ? canvas.settings.sourceTemplateId
         : undefined,
+    createdAt: new Date(canvas.created_at),
     updatedAt: new Date(canvas.updated_at),
+    allowCanvasOverflow: canvas.settings.allowCanvasOverflow === true,
+    showFullWidgets:
+      canvas.settings.allowCanvasOverflow === true && canvas.settings.showFullWidgets === true,
     project,
   };
 }
@@ -102,6 +108,8 @@ export function projectCardToPayload(card: ProjectCard): CanvasPayload {
       template: card.template,
       isTemplate: Boolean(card.isTemplate),
       sourceTemplateId: card.sourceTemplateId,
+      allowCanvasOverflow: Boolean(card.allowCanvasOverflow),
+      showFullWidgets: Boolean(card.allowCanvasOverflow && card.showFullWidgets),
     },
     schema_version: CANVAS_SCHEMA_VERSION,
   };

@@ -84,4 +84,16 @@ describe("CustomSelect", () => {
     render(<CustomSelect value="zzz" options={OPTIONS} onChange={() => undefined} ariaLabel="pick" />);
     expect(screen.getByRole("button", { name: "pick" })).toHaveTextContent("Alpha");
   });
+
+  it("renders option icons in the trigger and list", async () => {
+    const options = [
+      { value: "a", label: "Alpha", icon: <span data-testid="icon-a">A</span> },
+      { value: "b", label: "Bravo", icon: <span data-testid="icon-b">B</span> },
+    ];
+    render(<CustomSelect value="a" options={options} onChange={() => undefined} ariaLabel="pick" />);
+    expect(screen.getByTestId("icon-a")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "pick" }));
+    expect(screen.getAllByTestId("icon-a")).toHaveLength(2);
+    expect(screen.getByTestId("icon-b")).toBeInTheDocument();
+  });
 });

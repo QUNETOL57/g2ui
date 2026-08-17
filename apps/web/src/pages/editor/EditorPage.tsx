@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import { useEditorStore } from "@entities/ui-project/model/store";
 import { cn } from "@shared/lib/cn";
+import { debugLog } from "@shared/lib/debugLog";
 import type { AutosaveStatus } from "@shared/lib/sync-status";
 import { findNode } from "@entities/ui-project/model/tree-ops";
 import type { AuthMode } from "@pages/auth/AuthPage";
@@ -24,6 +25,12 @@ interface EditorPageProps {
   autosaveError?: string | null;
   userEmail?: string | null;
   isTemplate?: boolean;
+  allowCanvasOverflow?: boolean;
+  showFullWidgets?: boolean;
+  onCanvasViewSettingsChange?: (settings: {
+    allowCanvasOverflow: boolean;
+    showFullWidgets: boolean;
+  }) => void;
   onToggleTemplate?: () => void;
   onOpenAuth?: (mode: AuthMode) => void;
   onLogout?: () => void;
@@ -35,6 +42,9 @@ export function EditorPage({
   autosaveError = null,
   userEmail = null,
   isTemplate = false,
+  allowCanvasOverflow: initialAllowCanvasOverflow = false,
+  showFullWidgets: initialShowFullWidgets = false,
+  onCanvasViewSettingsChange,
   onToggleTemplate,
   onOpenAuth,
   onLogout,
@@ -57,6 +67,10 @@ export function EditorPage({
   const [showGridOverlay, setShowGridOverlay] = useState(false);
   const [showRulers, setShowRulers] = useState(true);
   const [showGuides, setShowGuides] = useState(true);
+  const [allowCanvasOverflow, setAllowCanvasOverflow] = useState(initialAllowCanvasOverflow);
+  const [showFullWidgets, setShowFullWidgets] = useState(
+    initialAllowCanvasOverflow && initialShowFullWidgets,
+  );
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
 
   useEffect(() => {
@@ -184,6 +198,8 @@ export function EditorPage({
               showGridOverlay,
               showRulers,
               showGuides,
+              allowCanvasOverflow,
+              showFullWidgets,
               onToggleGrid: () =>
                 setShowGrid((visible) => {
                   if (visible) setShowGridOverlay(false);
@@ -192,6 +208,27 @@ export function EditorPage({
               onToggleGridOverlay: () => setShowGridOverlay((visible) => !visible),
               onToggleRulers: () => setShowRulers((visible) => !visible),
               onToggleGuides: () => setShowGuides((visible) => !visible),
+              onToggleCanvasOverflow: () => {
+                const nextOverflow = !allowCanvasOverflow;
+                const next = {
+                  allowCanvasOverflow: nextOverflow,
+                  showFullWidgets: nextOverflow ? showFullWidgets : false,
+                };
+                setAllowCanvasOverflow(next.allowCanvasOverflow);
+                setShowFullWidgets(next.showFullWidgets);
+                debugLog("view", "allowCanvasOverflow changed", next);
+                onCanvasViewSettingsChange?.(next);
+              },
+              onToggleFullWidgets: () => {
+                if (!allowCanvasOverflow) return;
+                const next = {
+                  allowCanvasOverflow: true,
+                  showFullWidgets: !showFullWidgets,
+                };
+                setShowFullWidgets(next.showFullWidgets);
+                debugLog("view", "showFullWidgets changed", next);
+                onCanvasViewSettingsChange?.(next);
+              },
             }}
             templateSettings={{
               isTemplate,
@@ -224,6 +261,8 @@ export function EditorPage({
           showGridOverlay={showGridOverlay}
           showRulers={showRulers}
           showGuides={showGuides}
+          allowCanvasOverflow={allowCanvasOverflow}
+          showFullWidgets={showFullWidgets}
           isTemplate={isTemplate}
           onToggleLeftPanel={() => setLeftPanelOpen((open) => !open)}
           onToggleRightPanel={() => setRightPanelOpen((open) => !open)}

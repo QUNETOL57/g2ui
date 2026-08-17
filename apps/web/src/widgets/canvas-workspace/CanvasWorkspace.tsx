@@ -8,6 +8,7 @@ import type { LayoutNode } from "@entities/ui-project/lib/layoutEngine";
 import { resolveColor, resolveScreenBackground } from "@entities/ui-project/lib/color";
 import { normalizeIconFrame } from "@entities/icon/iconSizing";
 import { cn } from "@shared/lib/cn";
+import { debugLog } from "@shared/lib/debugLog";
 import { IconButton } from "@shared/ui/IconButton";
 import { SidebarPanelIcon } from "@shared/ui/SidebarPanelIcon";
 
@@ -22,8 +23,8 @@ import {
   PIXEL_GRID_VISIBLE_ZOOM,
   RULER_SIZE,
   borderInsetFor,
-  clamp,
-  clampPointToContent,
+  constrainPointToContent,
+  constrainToRange,
   lineEndpointsForRect,
   lineFrameFromEndpoints,
   lineStrokeWidthFor,
@@ -49,6 +50,7 @@ interface ActiveCanvasInteraction {
   parentRect: Frame;
   parentContentInset: number;
   parentMode: LayoutMode;
+  constrainToParent: boolean;
   siblingCenters?: { id: string; center: number }[];
   handle?: ResizeHandle;
   lineHandle?: LineHandle;
@@ -73,6 +75,8 @@ interface CanvasWorkspaceProps {
   showGridOverlay?: boolean;
   showRulers?: boolean;
   showGuides?: boolean;
+  allowCanvasOverflow?: boolean;
+  showFullWidgets?: boolean;
   isTemplate?: boolean;
   onToggleLeftPanel?: () => void;
   onToggleRightPanel?: () => void;
@@ -85,6 +89,8 @@ export function CanvasWorkspace({
   showGridOverlay = false,
   showRulers = true,
   showGuides = true,
+  allowCanvasOverflow = false,
+  showFullWidgets = false,
   isTemplate = false,
   onToggleLeftPanel,
   onToggleRightPanel,
@@ -396,6 +402,13 @@ export function CanvasWorkspace({
   };
 
   const startInteraction = (interaction: ActiveCanvasInteraction) => {
+    debugLog("canvas", "startInteraction", {
+      type: interaction.type,
+      nodeId: interaction.nodeId,
+      constrainToParent: interaction.constrainToParent,
+      allowCanvasOverflow,
+      showFullWidgets,
+    });
     activeInteractionRef.current = interaction;
     const previousUserSelect = document.body.style.userSelect;
     document.body.style.userSelect = "none";
@@ -414,8 +427,8 @@ export function CanvasWorkspace({
           const maxX = Math.max(minX, active.parentRect.width - active.parentContentInset - active.startFrame.width);
           const maxY = Math.max(minY, active.parentRect.height - active.parentContentInset - active.startFrame.height);
           const nextFrame = {
-            x: clamp(active.startFrame.x + deltaX, minX, maxX),
-            y: clamp(active.startFrame.y + deltaY, minY, maxY),
+            x: constrainToRange(active.startFrame.x + deltaX, minX, maxX, active.constrainToParent),
+            y: constrainToRange(active.startFrame.y + deltaY, minY, maxY, active.constrainToParent),
             width: active.startFrame.width,
             height: active.startFrame.height,
           };
@@ -457,11 +470,21 @@ export function CanvasWorkspace({
         };
         const nextStart =
           active.lineHandle === "start"
-            ? clampPointToContent(movedPoint, active.parentRect, active.parentContentInset)
+            ? constrainPointToContent(
+                movedPoint,
+                active.parentRect,
+                active.parentContentInset,
+                active.constrainToParent,
+              )
             : active.startLineStart;
         const nextEnd =
           active.lineHandle === "end"
-            ? clampPointToContent(movedPoint, active.parentRect, active.parentContentInset)
+            ? constrainPointToContent(
+                movedPoint,
+                active.parentRect,
+                active.parentContentInset,
+                active.constrainToParent,
+              )
             : active.startLineEnd;
         const strokeWidth = lineStrokeWidthFor(findNode(project, active.nodeId));
         const { frame: nextFrame, props: nextLineProps } = lineFrameFromEndpoints(
@@ -497,40 +520,66 @@ export function CanvasWorkspace({
 
       if (active.parentMode === "absolute") {
         if (active.handle?.includes("w")) {
-          nextLeft = clamp(active.startFrame.x + deltaX, active.parentContentInset, startRight - 1);
+          nextLeft = Math.min(active.startFrame.x + deltaX, startRight - 1);
+          nextLeft = constrainToRange(
+            nextLeft,
+            active.parentContentInset,
+            startRight - 1,
+            active.constrainToParent,
+          );
         }
         if (active.handle?.includes("e")) {
-          nextRight = clamp(
-            startRight + deltaX,
+          nextRight = Math.max(startRight + deltaX, active.startFrame.x + 1);
+          nextRight = constrainToRange(
+            nextRight,
             active.startFrame.x + 1,
             active.parentRect.width - active.parentContentInset,
+            active.constrainToParent,
           );
         }
         if (active.handle?.includes("n")) {
-          nextTop = clamp(active.startFrame.y + deltaY, active.parentContentInset, startBottom - 1);
+          nextTop = Math.min(active.startFrame.y + deltaY, startBottom - 1);
+          nextTop = constrainToRange(
+            nextTop,
+            active.parentContentInset,
+            startBottom - 1,
+            active.constrainToParent,
+          );
         }
         if (active.handle?.includes("s")) {
-          nextBottom = clamp(
-            startBottom + deltaY,
+          nextBottom = Math.max(startBottom + deltaY, active.startFrame.y + 1);
+          nextBottom = constrainToRange(
+            nextBottom,
             active.startFrame.y + 1,
             active.parentRect.height - active.parentContentInset,
+            active.constrainToParent,
           );
         }
       } else {
         if (active.handle?.includes("w") || active.handle?.includes("e")) {
           const nextWidthDelta = active.handle?.includes("w") ? -deltaX : deltaX;
-          nextRight = clamp(
+          nextRight = Math.max(
             active.startFrame.x + active.startFrame.width + nextWidthDelta,
             active.startFrame.x + 1,
+          );
+          nextRight = constrainToRange(
+            nextRight,
+            active.startFrame.x + 1,
             active.parentRect.width,
+            active.constrainToParent,
           );
         }
         if (active.handle?.includes("n") || active.handle?.includes("s")) {
           const nextHeightDelta = active.handle?.includes("n") ? -deltaY : deltaY;
-          nextBottom = clamp(
+          nextBottom = Math.max(
             active.startFrame.y + active.startFrame.height + nextHeightDelta,
             active.startFrame.y + 1,
+          );
+          nextBottom = constrainToRange(
+            nextBottom,
+            active.startFrame.y + 1,
             active.parentRect.height,
+            active.constrainToParent,
           );
         }
       }
@@ -544,14 +593,16 @@ export function CanvasWorkspace({
       if (active.isIcon) {
         const anchorX = active.handle?.includes("w") ? "right" : "left";
         const anchorY = active.handle?.includes("n") ? "bottom" : "top";
-        const maxWidth =
-          anchorX === "right"
+        const maxWidth = active.constrainToParent
+          ? anchorX === "right"
             ? active.startFrame.x + active.startFrame.width
-            : active.parentRect.width - active.parentContentInset - active.startFrame.x;
-        const maxHeight =
-          anchorY === "bottom"
+            : active.parentRect.width - active.parentContentInset - active.startFrame.x
+          : undefined;
+        const maxHeight = active.constrainToParent
+          ? anchorY === "bottom"
             ? active.startFrame.y + active.startFrame.height
-            : active.parentRect.height - active.parentContentInset - active.startFrame.y;
+            : active.parentRect.height - active.parentContentInset - active.startFrame.y
+          : undefined;
         nextFrame = normalizeIconFrame(active.iconId, nextFrame, {
           anchorX,
           anchorY,
@@ -626,6 +677,7 @@ export function CanvasWorkspace({
     if (event.button !== 0) return;
     event.preventDefault();
     const parentMode: LayoutMode = parentNode?.layout?.mode ?? "absolute";
+    const constrainToParent = !(allowCanvasOverflow && parentNode?.type === "screen");
     const startFrame: Frame = {
       x: nodeLayout.rect.x - parentLayout.rect.x,
       y: nodeLayout.rect.y - parentLayout.rect.y,
@@ -659,9 +711,10 @@ export function CanvasWorkspace({
       parentRect: parentLayout.rect,
       parentContentInset: borderInsetFor(parentNode),
       parentMode: "absolute",
+      constrainToParent,
       siblingCenters,
     });
-  }, [project, layout, screen?.id, absolutizeLayout]);
+  }, [allowCanvasOverflow, project, layout, screen?.id, absolutizeLayout]);
 
   const handleResizeMouseDown =
     (handle: ResizeHandle) => (event: React.MouseEvent<HTMLDivElement>) => {
@@ -694,6 +747,7 @@ export function CanvasWorkspace({
         parentRect: selectedParentLayoutNode.rect,
         parentContentInset: borderInsetFor(selectedParentNode),
         parentMode: "absolute",
+        constrainToParent: !(allowCanvasOverflow && selectedParentNode?.type === "screen"),
         handle,
         isIcon: selectedNode.type === "icon",
         iconId:
@@ -762,6 +816,7 @@ export function CanvasWorkspace({
         parentRect: selectedParentLayoutNode.rect,
         parentContentInset: borderInsetFor(selectedParentNode),
         parentMode: "absolute",
+        constrainToParent: !(allowCanvasOverflow && selectedParentNode?.type === "screen"),
         lineHandle,
         startLineStart: endpoints.start,
         startLineEnd: endpoints.end,
@@ -928,7 +983,11 @@ export function CanvasWorkspace({
           if (e.button !== 0) return;
           const target = e.target;
           if (!(target instanceof Node)) return;
-          if (!deviceFrameRef.current?.contains(target)) selectNode(null);
+          if (deviceFrameRef.current?.contains(target)) return;
+          if (target instanceof Element && target.closest('[data-testid="canvas-selection-layer"]')) {
+            return;
+          }
+          selectNode(null);
         }}
       >
         <div
@@ -957,8 +1016,13 @@ export function CanvasWorkspace({
             ) : null}
 
             <div
-              className={styles.deviceFrame}
+              className={cn(
+                styles.deviceFrame,
+                allowCanvasOverflow && showFullWidgets && styles.deviceFrameShowFull,
+              )}
               data-testid="canvas-device-frame"
+              data-allow-overflow={allowCanvasOverflow ? "true" : undefined}
+              data-show-full-widgets={allowCanvasOverflow && showFullWidgets ? "true" : undefined}
               ref={deviceFrameRef}
               style={{
                 width: scaledW,
@@ -990,58 +1054,75 @@ export function CanvasWorkspace({
                 </div>
               ) : null}
               <div
-                className={styles.scaledContent}
-                data-testid="canvas-scaled-content"
+                className={cn(
+                  styles.widgetClip,
+                  allowCanvasOverflow && showFullWidgets && styles.widgetClipShowFull,
+                )}
+                data-testid="canvas-widget-clip"
+              >
+                <div
+                  className={styles.scaledContent}
+                  data-testid="canvas-scaled-content"
+                  style={{
+                    width: w,
+                    height: h,
+                    transformOrigin: "top left",
+                    transform: `scale(${renderZoom})`,
+                  }}
+                >
+                  <PreviewNode
+                    layoutNode={layout}
+                    ctx={renderCtx}
+                  />
+                  {markerDraftPoints.map((point, index) => (
+                    <div
+                      key={`${point.x}:${point.y}:${index}`}
+                      aria-hidden
+                      style={{
+                        position: "absolute",
+                        left: point.x,
+                        top: point.y,
+                        width: markerDraftWidth,
+                        height: markerDraftWidth,
+                        background: markerDraftColor,
+                        pointerEvents: "none",
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+            {showSelectionOverlay && displayedSelectedRect ? (
+              <div
+                className={styles.selectionLayer}
+                data-testid="canvas-selection-layer"
                 style={{
-                  width: w,
-                  height: h,
-                  transformOrigin: "top left",
-                  transform: `scale(${renderZoom})`,
+                  left: RULER_SIZE,
+                  top: RULER_SIZE,
+                  width: scaledW,
+                  height: scaledH,
                 }}
               >
-                <PreviewNode
-                  layoutNode={layout}
-                  ctx={renderCtx}
+                <SelectionOverlay
+                  rect={displayedSelectedRect}
+                  renderZoom={renderZoom}
+                  scaledW={scaledW}
+                  scaledH={scaledH}
+                  showGuides={showGuides}
+                  showMoveMask={showSelectionMoveMask}
+                  showResizeHandles={showSelectionTransformChrome}
+                  transformsLocked={isSelectionLocked}
+                  lineEndpoints={displayedLineEndpoints}
+                  onMoveMouseDown={handleSelectionMoveMouseDown}
+                  onFrameDoubleClick={
+                    showSelectionFrameDoubleClick ? handleSelectionFrameDoubleClick : undefined
+                  }
+                  allowContentInteraction={allowSelectionContentInteraction}
+                  onResizeHandleMouseDown={handleResizeMouseDown}
+                  onLineEndpointMouseDown={handleLineEndpointMouseDown}
                 />
-                {markerDraftPoints.map((point, index) => (
-                  <div
-                    key={`${point.x}:${point.y}:${index}`}
-                    aria-hidden
-                    style={{
-                      position: "absolute",
-                      left: point.x,
-                      top: point.y,
-                      width: markerDraftWidth,
-                      height: markerDraftWidth,
-                      background: markerDraftColor,
-                      pointerEvents: "none",
-                    }}
-                  />
-                ))}
               </div>
-              {showSelectionOverlay && displayedSelectedRect ? (
-                <div className={styles.selectionLayer} data-testid="canvas-selection-layer">
-                  <SelectionOverlay
-                    rect={displayedSelectedRect}
-                    renderZoom={renderZoom}
-                    scaledW={scaledW}
-                    scaledH={scaledH}
-                    showGuides={showGuides}
-                    showMoveMask={showSelectionMoveMask}
-                    showResizeHandles={showSelectionTransformChrome}
-                    transformsLocked={isSelectionLocked}
-                    lineEndpoints={displayedLineEndpoints}
-                    onMoveMouseDown={handleSelectionMoveMouseDown}
-                    onFrameDoubleClick={
-                      showSelectionFrameDoubleClick ? handleSelectionFrameDoubleClick : undefined
-                    }
-                    allowContentInteraction={allowSelectionContentInteraction}
-                    onResizeHandleMouseDown={handleResizeMouseDown}
-                    onLineEndpointMouseDown={handleLineEndpointMouseDown}
-                  />
-                </div>
-              ) : null}
-            </div>
+            ) : null}
           </div>
         </div>
       </div>

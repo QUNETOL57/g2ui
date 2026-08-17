@@ -23,6 +23,32 @@ export interface Point {
   y: number;
 }
 
+export function constrainToRange(
+  value: number,
+  min: number,
+  max: number,
+  constrain: boolean,
+): number {
+  return constrain ? clamp(value, min, max) : value;
+}
+
+export interface GuideSpan {
+  origin: number;
+  size: number;
+}
+
+/** Segment from the canvas start to the object edge, including overflow before 0. */
+export function guideSpanBefore(edge: number, canvasStart = 0): GuideSpan {
+  const origin = Math.min(edge, canvasStart);
+  return { origin, size: Math.abs(edge - canvasStart) };
+}
+
+/** Segment from the object edge to the canvas end, including overflow past the canvas. */
+export function guideSpanAfter(edge: number, canvasEnd: number): GuideSpan {
+  const origin = Math.min(edge, canvasEnd);
+  return { origin, size: Math.abs(canvasEnd - edge) };
+}
+
 export function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
@@ -155,6 +181,16 @@ export function selectionLineEndpointsForNode(
 }
 
 export function clampPointToContent(point: Point, parentRect: Frame, inset: number): Point {
+  return constrainPointToContent(point, parentRect, inset, true);
+}
+
+export function constrainPointToContent(
+  point: Point,
+  parentRect: Frame,
+  inset: number,
+  constrain: boolean,
+): Point {
+  if (!constrain) return point;
   return {
     x: clamp(point.x, parentRect.x + inset, parentRect.x + parentRect.width - inset),
     y: clamp(point.y, parentRect.y + inset, parentRect.y + parentRect.height - inset),

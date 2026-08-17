@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { cloneElement, isValidElement, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { cn } from "@shared/lib/cn";
 
@@ -8,6 +8,7 @@ export interface SelectOption {
   value: string;
   label: string;
   color?: string;
+  icon?: ReactNode;
 }
 
 interface CustomSelectProps {
@@ -20,6 +21,10 @@ interface CustomSelectProps {
   triggerClassName?: string;
   menuClassName?: string;
   optionClassName?: string;
+}
+
+function renderOptionIcon(icon: ReactNode): ReactNode {
+  return isValidElement(icon) ? cloneElement(icon) : icon;
 }
 
 export function CustomSelect({
@@ -67,6 +72,11 @@ export function CustomSelect({
       >
         <span className={styles.triggerValueText}>
           <span className={styles.value}>
+            {selected?.icon ? (
+              <span className={styles.optionIcon} aria-hidden="true">
+                {renderOptionIcon(selected.icon)}
+              </span>
+            ) : null}
             {selected?.color ? (
               <span
                 className={styles.swatch}
@@ -104,6 +114,11 @@ export function CustomSelect({
                   {isSelected ? "✓" : ""}
                 </span>
                 <span className={styles.value}>
+                  {option.icon ? (
+                    <span className={styles.optionIcon} aria-hidden="true">
+                      {renderOptionIcon(option.icon)}
+                    </span>
+                  ) : null}
                   {option.color ? (
                     <span
                       className={styles.swatch}

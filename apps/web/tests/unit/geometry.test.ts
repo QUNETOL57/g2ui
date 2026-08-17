@@ -10,6 +10,10 @@ import {
   borderInsetFor,
   clamp,
   clampPointToContent,
+  constrainPointToContent,
+  constrainToRange,
+  guideSpanAfter,
+  guideSpanBefore,
   clampZoom,
   formatZoomLabel,
   frameCenter,
@@ -27,6 +31,49 @@ import {
   visualRectForNode,
   zoomToProgress,
 } from "@widgets/canvas-workspace/lib/geometry";
+
+describe("constrainToRange", () => {
+  it("clamps when constrain is enabled", () => {
+    expect(constrainToRange(-4, 0, 10, true)).toBe(0);
+    expect(constrainToRange(4, 0, 10, true)).toBe(4);
+    expect(constrainToRange(14, 0, 10, true)).toBe(10);
+  });
+
+  it("returns the raw value when constrain is disabled", () => {
+    expect(constrainToRange(-4, 0, 10, false)).toBe(-4);
+    expect(constrainToRange(14, 0, 10, false)).toBe(14);
+  });
+});
+
+describe("guideSpanBefore / guideSpanAfter", () => {
+  it("spans from the canvas start to an in-bounds edge", () => {
+    expect(guideSpanBefore(40)).toEqual({ origin: 0, size: 40 });
+  });
+
+  it("extends past the canvas when the edge overflows before 0", () => {
+    expect(guideSpanBefore(-24)).toEqual({ origin: -24, size: 24 });
+  });
+
+  it("spans from an in-bounds edge to the canvas end", () => {
+    expect(guideSpanAfter(80, 200)).toEqual({ origin: 80, size: 120 });
+  });
+
+  it("extends past the canvas when the edge overflows after the end", () => {
+    expect(guideSpanAfter(230, 200)).toEqual({ origin: 200, size: 30 });
+  });
+});
+
+describe("constrainPointToContent", () => {
+  const parent = { x: 0, y: 0, width: 160, height: 128 };
+
+  it("keeps the point inside the parent when constrain is enabled", () => {
+    expect(constrainPointToContent({ x: -8, y: 200 }, parent, 0, true)).toEqual({ x: 0, y: 128 });
+  });
+
+  it("keeps the original point when constrain is disabled", () => {
+    expect(constrainPointToContent({ x: -8, y: 200 }, parent, 0, false)).toEqual({ x: -8, y: 200 });
+  });
+});
 
 describe("clamp", () => {
   it("clamps a value into [min, max]", () => {

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { useEditorStore } from "@entities/ui-project/model/store";
@@ -58,6 +58,15 @@ describe("EditorMenu", () => {
     );
     expect(screen.getByRole("menuitemcheckbox", { name: "Rulers" })).toHaveAttribute("aria-checked", "false");
     expect(screen.getByRole("menuitemcheckbox", { name: "Guides" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("menuitemcheckbox", { name: "Allow overflow" })).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
+    expect(screen.getByRole("menuitemcheckbox", { name: "Show full widgets" })).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
+    expect(screen.getByRole("menuitemcheckbox", { name: "Show full widgets" })).toBeDisabled();
   });
 
   it("toggles display settings from View menu", async () => {
@@ -65,6 +74,8 @@ describe("EditorMenu", () => {
     const onToggleGridOverlay = vi.fn();
     const onToggleRulers = vi.fn();
     const onToggleGuides = vi.fn();
+    const onToggleCanvasOverflow = vi.fn();
+    const onToggleFullWidgets = vi.fn();
     render(
       <EditorMenu
         onBackToLibrary={() => undefined}
@@ -73,10 +84,14 @@ describe("EditorMenu", () => {
           showGridOverlay: false,
           showRulers: true,
           showGuides: true,
+          allowCanvasOverflow: false,
+          showFullWidgets: false,
           onToggleGrid,
           onToggleGridOverlay,
           onToggleRulers,
           onToggleGuides,
+          onToggleCanvasOverflow,
+          onToggleFullWidgets,
         }}
       />,
     );
@@ -86,11 +101,45 @@ describe("EditorMenu", () => {
     await userEvent.click(screen.getByRole("menuitemcheckbox", { name: "Grid overlay" }));
     await userEvent.click(screen.getByRole("menuitemcheckbox", { name: "Rulers" }));
     await userEvent.click(screen.getByRole("menuitemcheckbox", { name: "Guides" }));
+    await userEvent.click(screen.getByRole("menuitemcheckbox", { name: "Allow overflow" }));
 
     expect(onToggleGrid).toHaveBeenCalledTimes(1);
     expect(onToggleGridOverlay).toHaveBeenCalledTimes(1);
     expect(onToggleRulers).toHaveBeenCalledTimes(1);
     expect(onToggleGuides).toHaveBeenCalledTimes(1);
+    expect(onToggleCanvasOverflow).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("menuitemcheckbox", { name: "Show full widgets" })).toBeDisabled();
+    await userEvent.click(screen.getByRole("menuitemcheckbox", { name: "Show full widgets" }));
+    expect(onToggleFullWidgets).not.toHaveBeenCalled();
+  });
+
+  it("toggles Show full widgets when overflow is allowed", async () => {
+    const onToggleFullWidgets = vi.fn();
+    render(
+      <EditorMenu
+        onBackToLibrary={() => undefined}
+        viewSettings={{
+          showGrid: true,
+          showGridOverlay: false,
+          showRulers: true,
+          showGuides: true,
+          allowCanvasOverflow: true,
+          showFullWidgets: false,
+          onToggleGrid: vi.fn(),
+          onToggleGridOverlay: vi.fn(),
+          onToggleRulers: vi.fn(),
+          onToggleGuides: vi.fn(),
+          onToggleCanvasOverflow: vi.fn(),
+          onToggleFullWidgets,
+        }}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("menuitem", { name: "View" }));
+    const fullWidgetsItem = screen.getByRole("menuitemcheckbox", { name: "Show full widgets" });
+    expect(fullWidgetsItem).toBeEnabled();
+    await userEvent.click(fullWidgetsItem);
+    expect(onToggleFullWidgets).toHaveBeenCalledTimes(1);
   });
 
   it("disables Grid overlay when Grid is off", async () => {
@@ -220,6 +269,64 @@ describe("EditorMenu", () => {
     expect(preview.querySelector('[class*="previewRulerLeft"]')).toBeTruthy();
   });
 
+  it("renders overflow preview with a widget past the canvas edge", async () => {
+    render(
+      <EditorMenu
+        onBackToLibrary={() => undefined}
+        viewSettings={{
+          showGrid: true,
+          showGridOverlay: false,
+          showRulers: true,
+          showGuides: true,
+          onToggleGrid: vi.fn(),
+          onToggleGridOverlay: vi.fn(),
+          onToggleRulers: vi.fn(),
+          onToggleGuides: vi.fn(),
+        }}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("menuitem", { name: "View" }));
+    await userEvent.hover(screen.getByRole("menuitemcheckbox", { name: "Allow overflow" }));
+
+    const preview = screen.getByTestId("view-setting-preview");
+    expect(preview.querySelector('[class*="previewOverflowCanvas"]')).toBeTruthy();
+    expect(preview.querySelector('[class*="previewOverflowWidget"]')).toBeTruthy();
+    expect(preview.querySelector('[class*="previewOverflowGuide"]')).toBeTruthy();
+    expect(preview).toHaveTextContent("Allow overflow");
+  });
+
+  it("renders full-widgets preview with an opaque widget past the canvas", async () => {
+    render(
+      <EditorMenu
+        onBackToLibrary={() => undefined}
+        viewSettings={{
+          showGrid: true,
+          showGridOverlay: false,
+          showRulers: true,
+          showGuides: true,
+          allowCanvasOverflow: true,
+          onToggleGrid: vi.fn(),
+          onToggleGridOverlay: vi.fn(),
+          onToggleRulers: vi.fn(),
+          onToggleGuides: vi.fn(),
+          onToggleCanvasOverflow: vi.fn(),
+          onToggleFullWidgets: vi.fn(),
+        }}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("menuitem", { name: "View" }));
+    await userEvent.hover(screen.getByRole("menuitemcheckbox", { name: "Show full widgets" }));
+
+    const preview = screen.getByTestId("view-setting-preview");
+    const widget = preview.querySelector('[class*="previewOverflowWidgetFull"]') as HTMLElement | null;
+    expect(preview.querySelector('[class*="previewOverflowCanvas"]')).toBeTruthy();
+    expect(widget).toBeTruthy();
+    expect(getComputedStyle(widget!).opacity).toBe("1");
+    expect(preview).toHaveTextContent("Show full widgets");
+  });
+
   it("runs undo from Edit menu when history exists", async () => {
     const id = useEditorStore.getState().addWidget("screen_main", "label")!;
     expect(useEditorStore.getState().historyPast.length).toBeGreaterThan(0);
@@ -347,5 +454,125 @@ describe("EditorMenu", () => {
 
     expect(screen.getByTestId("project-setting-preview")).toHaveTextContent("Use as template");
     expect(screen.getByText(/appear in the template list/i)).toBeInTheDocument();
+  });
+});
+
+describe("EditorMenu setting previews", () => {
+  const viewSettings = {
+    showGrid: true,
+    showGridOverlay: false,
+    showRulers: true,
+    showGuides: true,
+    onToggleGrid: vi.fn(),
+    onToggleGridOverlay: vi.fn(),
+    onToggleRulers: vi.fn(),
+    onToggleGuides: vi.fn(),
+  };
+
+  it("does not show the template preview when the Project menu opens", async () => {
+    render(
+      <EditorMenu
+        onBackToLibrary={() => undefined}
+        templateSettings={{ isTemplate: false, onToggleTemplate: vi.fn() }}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("menuitem", { name: "Project" }));
+    expect(screen.queryByTestId("project-setting-preview")).not.toBeInTheDocument();
+  });
+
+  it("hides the template preview when hovering another Project item", async () => {
+    render(
+      <EditorMenu
+        onBackToLibrary={() => undefined}
+        templateSettings={{ isTemplate: false, onToggleTemplate: vi.fn() }}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("menuitem", { name: "Project" }));
+    await userEvent.hover(screen.getByRole("menuitemcheckbox", { name: "Use as template" }));
+    expect(screen.getByTestId("project-setting-preview")).toBeInTheDocument();
+
+    await userEvent.hover(screen.getByRole("menuitem", { name: "Export…" }));
+    expect(screen.queryByTestId("project-setting-preview")).not.toBeInTheDocument();
+
+    await userEvent.hover(screen.getByRole("menuitemcheckbox", { name: "Use as template" }));
+    await userEvent.hover(screen.getByRole("menuitem", { name: "Import…" }));
+    expect(screen.queryByTestId("project-setting-preview")).not.toBeInTheDocument();
+
+    await userEvent.hover(screen.getByRole("menuitemcheckbox", { name: "Use as template" }));
+    await userEvent.hover(screen.getByRole("menuitem", { name: "Edit palette…" }));
+    expect(screen.queryByTestId("project-setting-preview")).not.toBeInTheDocument();
+
+    await userEvent.hover(screen.getByRole("menuitemcheckbox", { name: "Use as template" }));
+    await userEvent.hover(screen.getByRole("menuitem", { name: "Back to library" }));
+    expect(screen.queryByTestId("project-setting-preview")).not.toBeInTheDocument();
+  });
+
+  it("hides the template preview when the pointer leaves the Project menu", async () => {
+    render(
+      <EditorMenu
+        onBackToLibrary={() => undefined}
+        templateSettings={{ isTemplate: false, onToggleTemplate: vi.fn() }}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("menuitem", { name: "Project" }));
+    await userEvent.hover(screen.getByRole("menuitemcheckbox", { name: "Use as template" }));
+    expect(screen.getByTestId("project-setting-preview")).toBeInTheDocument();
+
+    fireEvent.mouseLeave(screen.getByRole("menu", { name: "Project" }));
+    expect(screen.queryByTestId("project-setting-preview")).not.toBeInTheDocument();
+  });
+
+  it("does not keep the template preview after the Project menu is reopened", async () => {
+    render(
+      <EditorMenu
+        onBackToLibrary={() => undefined}
+        templateSettings={{ isTemplate: false, onToggleTemplate: vi.fn() }}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("menuitem", { name: "Project" }));
+    await userEvent.hover(screen.getByRole("menuitemcheckbox", { name: "Use as template" }));
+    expect(screen.getByTestId("project-setting-preview")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("menuitem", { name: "Project" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Project" }));
+
+    expect(screen.getByRole("menu", { name: "Project" })).toBeInTheDocument();
+    expect(screen.queryByTestId("project-setting-preview")).not.toBeInTheDocument();
+  });
+
+  it("does not show a View preview until a setting is hovered", async () => {
+    render(<EditorMenu onBackToLibrary={() => undefined} viewSettings={viewSettings} />);
+
+    await userEvent.click(screen.getByRole("menuitem", { name: "View" }));
+    expect(screen.queryByTestId("view-setting-preview")).not.toBeInTheDocument();
+  });
+
+  it("hides the View preview when the pointer leaves the View menu", async () => {
+    render(<EditorMenu onBackToLibrary={() => undefined} viewSettings={viewSettings} />);
+
+    await userEvent.click(screen.getByRole("menuitem", { name: "View" }));
+    await userEvent.hover(screen.getByRole("menuitemcheckbox", { name: "Guides" }));
+    expect(screen.getByTestId("view-setting-preview")).toBeInTheDocument();
+
+    fireEvent.mouseLeave(screen.getByRole("menu", { name: "View" }));
+    expect(screen.queryByTestId("view-setting-preview")).not.toBeInTheDocument();
+  });
+
+  it("does not keep the View preview after the View menu is reopened", async () => {
+    render(<EditorMenu onBackToLibrary={() => undefined} viewSettings={viewSettings} />);
+
+    await userEvent.click(screen.getByRole("menuitem", { name: "View" }));
+    await userEvent.hover(screen.getByRole("menuitemcheckbox", { name: "Grid" }));
+    expect(screen.getByTestId("view-setting-preview")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("menuitem", { name: "View" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "View" }));
+
+    expect(screen.getByRole("menu", { name: "View" })).toBeInTheDocument();
+    expect(screen.queryByTestId("view-setting-preview")).not.toBeInTheDocument();
   });
 });

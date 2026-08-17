@@ -3,7 +3,7 @@ import type { MouseEvent as ReactMouseEvent } from "react";
 import type { Frame } from "@entities/ui-project";
 import { cn } from "@shared/lib/cn";
 
-import type { LineHandle, Point, ResizeHandle } from "./lib/geometry";
+import { guideSpanAfter, guideSpanBefore, type LineHandle, type Point, type ResizeHandle } from "./lib/geometry";
 import styles from "./SelectionOverlay.module.css";
 
 interface SelectionOverlayProps {
@@ -101,6 +101,10 @@ export function SelectionOverlay({
 
   const showBorderMove = showMoveMask && allowContentInteraction && onMoveMouseDown;
   const showCenterMoveMask = showMoveMask && !allowContentInteraction && onMoveMouseDown;
+  const verticalBefore = guideSpanBefore(top);
+  const verticalAfter = guideSpanAfter(bottom, scaledH);
+  const horizontalBefore = guideSpanBefore(left);
+  const horizontalAfter = guideSpanAfter(right, scaledW);
 
   const edgeLayout = {
     n: { left, top, width: maskWidth },
@@ -116,42 +120,42 @@ export function SelectionOverlay({
           <div
             className={cn(styles.guide, styles.guideVertical)}
             data-testid="selection-guide"
-            style={{ left, top: 0, height: top }}
+            style={{ left, top: verticalBefore.origin, height: verticalBefore.size }}
           />
           <div
             className={cn(styles.guide, styles.guideVertical)}
             data-testid="selection-guide"
-            style={{ left, top: bottom, height: Math.max(0, scaledH - bottom) }}
+            style={{ left, top: verticalAfter.origin, height: verticalAfter.size }}
           />
           <div
             className={cn(styles.guide, styles.guideVertical)}
             data-testid="selection-guide"
-            style={{ left: right, top: 0, height: top }}
+            style={{ left: right, top: verticalBefore.origin, height: verticalBefore.size }}
           />
           <div
             className={cn(styles.guide, styles.guideVertical)}
             data-testid="selection-guide"
-            style={{ left: right, top: bottom, height: Math.max(0, scaledH - bottom) }}
+            style={{ left: right, top: verticalAfter.origin, height: verticalAfter.size }}
           />
           <div
             className={cn(styles.guide, styles.guideHorizontal)}
             data-testid="selection-guide"
-            style={{ top, left: 0, width: left }}
+            style={{ top, left: horizontalBefore.origin, width: horizontalBefore.size }}
           />
           <div
             className={cn(styles.guide, styles.guideHorizontal)}
             data-testid="selection-guide"
-            style={{ top, left: right, width: Math.max(0, scaledW - right) }}
+            style={{ top, left: horizontalAfter.origin, width: horizontalAfter.size }}
           />
           <div
             className={cn(styles.guide, styles.guideHorizontal)}
             data-testid="selection-guide"
-            style={{ top: bottom, left: 0, width: left }}
+            style={{ top: bottom, left: horizontalBefore.origin, width: horizontalBefore.size }}
           />
           <div
             className={cn(styles.guide, styles.guideHorizontal)}
             data-testid="selection-guide"
-            style={{ top: bottom, left: right, width: Math.max(0, scaledW - right) }}
+            style={{ top: bottom, left: horizontalAfter.origin, width: horizontalAfter.size }}
           />
         </>
       ) : null}

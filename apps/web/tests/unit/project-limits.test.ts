@@ -14,6 +14,7 @@ function makeCard(id: string): ProjectCard {
     width: 480,
     height: 320,
     template: "blank",
+    createdAt: new Date(),
     updatedAt: new Date(),
     project: {
       id: "project_1",

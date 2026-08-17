@@ -49,6 +49,39 @@
   padding: 4px 6px;
 }
 
+.triggerSm .value {
+  gap: 6px;
+}
+
+.optionIcon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  color: currentColor;
+}
+
+.optionIcon svg {
+  width: 14px;
+  height: 14px;
+  font-size: 14px;
+}
+
+.triggerSm .optionIcon,
+.optionSm .optionIcon {
+  width: 13px;
+  height: 13px;
+}
+
+.triggerSm .optionIcon svg,
+.optionSm .optionIcon svg {
+  width: 13px;
+  height: 13px;
+  font-size: 13px;
+}
+
 .menuSm {
   padding: 4px;
   max-height: 200px;

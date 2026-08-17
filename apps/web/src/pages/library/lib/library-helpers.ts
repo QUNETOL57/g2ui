@@ -19,8 +19,65 @@ export interface ProjectCard {
   template: TemplateId;
   isTemplate?: boolean;
   sourceTemplateId?: string;
+  createdAt: Date;
   updatedAt: Date;
+  allowCanvasOverflow?: boolean;
+  showFullWidgets?: boolean;
   project: UiProject;
+}
+
+export interface CanvasViewSettings {
+  allowCanvasOverflow: boolean;
+  showFullWidgets: boolean;
+}
+
+export function normalizeCanvasViewSettings(
+  input: Partial<CanvasViewSettings> | null | undefined,
+): CanvasViewSettings {
+  const allowCanvasOverflow = Boolean(input?.allowCanvasOverflow);
+  return {
+    allowCanvasOverflow,
+    showFullWidgets: allowCanvasOverflow && Boolean(input?.showFullWidgets),
+  };
+}
+
+export const LIBRARY_SORT_BY = {
+  updatedAt: "updatedAt",
+  createdAt: "createdAt",
+} as const;
+
+export type LibrarySortBy = (typeof LIBRARY_SORT_BY)[keyof typeof LIBRARY_SORT_BY];
+
+export const LIBRARY_SORT_DIRECTION = {
+  desc: "desc",
+  asc: "asc",
+} as const;
+
+export type LibrarySortDirection = (typeof LIBRARY_SORT_DIRECTION)[keyof typeof LIBRARY_SORT_DIRECTION];
+
+export const DEFAULT_LIBRARY_SORT: LibrarySortBy = LIBRARY_SORT_BY.updatedAt;
+export const DEFAULT_LIBRARY_SORT_DIRECTION: LibrarySortDirection = LIBRARY_SORT_DIRECTION.desc;
+
+export const LIBRARY_SORT_OPTIONS: Array<{ value: LibrarySortBy; label: string }> = [
+  { value: LIBRARY_SORT_BY.updatedAt, label: "Last edited" },
+  { value: LIBRARY_SORT_BY.createdAt, label: "Date created" },
+];
+
+export function isLibrarySortBy(value: string): value is LibrarySortBy {
+  return value === LIBRARY_SORT_BY.updatedAt || value === LIBRARY_SORT_BY.createdAt;
+}
+
+export function sortProjectCards(
+  projects: ProjectCard[],
+  sortBy: LibrarySortBy = DEFAULT_LIBRARY_SORT,
+  direction: LibrarySortDirection = DEFAULT_LIBRARY_SORT_DIRECTION,
+): ProjectCard[] {
+  const sign = direction === LIBRARY_SORT_DIRECTION.asc ? 1 : -1;
+  return [...projects].sort((left, right) => {
+    const delta = (left[sortBy].getTime() - right[sortBy].getTime()) * sign;
+    if (delta !== 0) return delta;
+    return (left.updatedAt.getTime() - right.updatedAt.getTime()) * sign;
+  });
 }
 
 export function orientSize(width: number, height: number, orientation: Orientation) {
@@ -119,7 +176,10 @@ export function createProjectCardFromSelection(args: {
     template: source ? "custom" : args.selection === "hello" ? "hello" : "blank",
     sourceTemplateId: source?.id,
     isTemplate: false,
+    createdAt,
     updatedAt: createdAt,
+    allowCanvasOverflow: false,
+    showFullWidgets: false,
     project,
   };
 }
@@ -138,7 +198,9 @@ export function copyProjectCard(source: ProjectCard): ProjectCard {
     template: source.template,
     sourceTemplateId: source.sourceTemplateId,
     isTemplate: false,
+    createdAt,
     updatedAt: createdAt,
+    ...normalizeCanvasViewSettings(source),
     project: copiedProject,
   };
 }

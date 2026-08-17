@@ -7,7 +7,9 @@ import {
   formatEditedAt,
   listCustomTemplates,
   markProjectAsTemplate,
+  normalizeCanvasViewSettings,
   orientSize,
+  sortProjectCards,
   templateLabel,
   type ProjectCard,
 } from "@pages/library/lib/library-helpers";
@@ -96,6 +98,7 @@ describe("copyProjectCard", () => {
       width: 160,
       height: 128,
       template: "blank",
+      createdAt: new Date("2024-01-01"),
       updatedAt: new Date("2024-01-01"),
       project,
     };
@@ -112,6 +115,7 @@ describe("copyProjectCard", () => {
     expect(copied.width).toBe(source.width);
     expect(copied.height).toBe(source.height);
     expect(copied.template).toBe(source.template);
+    expect(copied.createdAt).toEqual(new Date("2026-06-12T10:00:00Z"));
     expect(copied.updatedAt).toEqual(new Date("2026-06-12T10:00:00Z"));
     expect(copied.project.id).toBe(copied.id);
     expect(copied.project.name).toBe("Original copy");
@@ -130,6 +134,15 @@ describe("copyProjectCard", () => {
     expect(copied.template).toBe("custom");
     expect(copied.sourceTemplateId).toBe("tpl_1");
   });
+
+  it("copies canvas overflow view settings onto the duplicate", () => {
+    const source = makeCard("p1", "Original");
+    source.allowCanvasOverflow = true;
+    source.showFullWidgets = true;
+    const copied = copyProjectCard(source);
+    expect(copied.allowCanvasOverflow).toBe(true);
+    expect(copied.showFullWidgets).toBe(true);
+  });
 });
 
 describe("custom template helpers", () => {
@@ -147,6 +160,7 @@ describe("custom template helpers", () => {
       width: 160,
       height: 128,
       template: "blank",
+      createdAt: new Date("2024-01-01"),
       updatedAt: new Date("2024-01-01"),
       project,
       ...extras,
@@ -220,5 +234,81 @@ describe("custom template helpers", () => {
     expect(child.sourceTemplateId).toBeUndefined();
     expect(child.isTemplate).toBe(false);
     expect(child.project.screens[0].children).toEqual([]);
+  });
+});
+
+describe("sortProjectCards", () => {
+  function makeCard(
+    id: string,
+    name: string,
+    createdAt: string,
+    updatedAt: string,
+  ): ProjectCard {
+    const project = makeProjectFromTemplate({
+      id,
+      name,
+      width: 160,
+      height: 128,
+      template: "blank",
+    });
+    return {
+      id,
+      name,
+      width: 160,
+      height: 128,
+      template: "blank",
+      createdAt: new Date(createdAt),
+      updatedAt: new Date(updatedAt),
+      project,
+    };
+  }
+
+  it("defaults to last edited, newest first", () => {
+    const olderEdit = makeCard("a", "A", "2026-01-01T00:00:00Z", "2026-02-01T00:00:00Z");
+    const newerEdit = makeCard("b", "B", "2025-01-01T00:00:00Z", "2026-06-01T00:00:00Z");
+    expect(sortProjectCards([olderEdit, newerEdit]).map((card) => card.id)).toEqual(["b", "a"]);
+  });
+
+  it("sorts by date created when requested", () => {
+    const createdFirst = makeCard("a", "A", "2025-01-01T00:00:00Z", "2026-06-01T00:00:00Z");
+    const createdLater = makeCard("b", "B", "2026-01-01T00:00:00Z", "2026-02-01T00:00:00Z");
+    expect(
+      sortProjectCards([createdFirst, createdLater], "createdAt").map((card) => card.id),
+    ).toEqual(["b", "a"]);
+  });
+
+  it("sorts oldest first when direction is asc", () => {
+    const olderEdit = makeCard("a", "A", "2026-01-01T00:00:00Z", "2026-02-01T00:00:00Z");
+    const newerEdit = makeCard("b", "B", "2025-01-01T00:00:00Z", "2026-06-01T00:00:00Z");
+    expect(sortProjectCards([olderEdit, newerEdit], "updatedAt", "asc").map((card) => card.id)).toEqual(
+      ["a", "b"],
+    );
+  });
+});
+
+describe("normalizeCanvasViewSettings", () => {
+  it("defaults both flags to false", () => {
+    expect(normalizeCanvasViewSettings(undefined)).toEqual({
+      allowCanvasOverflow: false,
+      showFullWidgets: false,
+    });
+  });
+
+  it("clears showFullWidgets when overflow is off", () => {
+    expect(
+      normalizeCanvasViewSettings({ allowCanvasOverflow: false, showFullWidgets: true }),
+    ).toEqual({
+      allowCanvasOverflow: false,
+      showFullWidgets: false,
+    });
+  });
+
+  it("keeps showFullWidgets only with overflow", () => {
+    expect(
+      normalizeCanvasViewSettings({ allowCanvasOverflow: true, showFullWidgets: true }),
+    ).toEqual({
+      allowCanvasOverflow: true,
+      showFullWidgets: true,
+    });
   });
 });

@@ -54,6 +54,34 @@ describe("SelectionOverlay", () => {
     expect(getAllByTestId("selection-frame")).toHaveLength(4);
   });
 
+  it("extends alignment guides past the canvas when the object overflows", () => {
+    const { getAllByTestId } = render(
+      <SelectionOverlay
+        rect={{ x: -10, y: 5, width: 40, height: 20 }}
+        renderZoom={2}
+        scaledW={200}
+        scaledH={200}
+        showGuides
+        showMoveMask={false}
+        showResizeHandles={false}
+        lineEndpoints={null}
+        onResizeHandleMouseDown={() => () => undefined}
+        onLineEndpointMouseDown={() => () => undefined}
+      />,
+    );
+
+    const frames = getAllByTestId("selection-frame");
+    const horizontalFrames = frames.filter((frame) => frame.className.includes("guideHorizontal"));
+    const guides = getAllByTestId("selection-guide");
+    const horizontalGuides = guides.filter((guide) => guide.className.includes("guideHorizontal"));
+
+    expect(horizontalFrames.every((frame) => frame.style.left === "-20px")).toBe(true);
+    expect(horizontalFrames.every((frame) => frame.style.width === "80px")).toBe(true);
+    expect(
+      horizontalGuides.some((guide) => guide.style.left === "-20px" && guide.style.width === "20px"),
+    ).toBe(true);
+  });
+
   it("keeps selection frame scoped to the object bounds when guides are hidden", () => {
     const { getAllByTestId } = render(
       <SelectionOverlay

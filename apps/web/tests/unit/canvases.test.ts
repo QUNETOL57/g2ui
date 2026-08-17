@@ -25,7 +25,10 @@ function makeCard(): ProjectCard {
     template: "custom",
     isTemplate: true,
     sourceTemplateId: "src_1",
+    createdAt: new Date("2026-06-12T10:00:00Z"),
     updatedAt: new Date("2026-06-12T10:00:00Z"),
+    allowCanvasOverflow: true,
+    showFullWidgets: true,
     project,
   };
 }
@@ -67,6 +70,24 @@ describe("canvas settings mapping", () => {
     expect(restored?.isTemplate).toBe(true);
     expect(restored?.sourceTemplateId).toBe("src_1");
     expect(restored?.name).toBe("Dashboard");
+    expect(restored?.createdAt).toEqual(new Date("2026-06-12T10:00:00.000Z"));
+    expect(restored?.updatedAt).toEqual(new Date("2026-06-12T10:00:00.000Z"));
+  });
+
+  it("round-trips canvas overflow view settings", () => {
+    const card = makeCard();
+    const restored = canvasToProjectCard(recordFromCard(card));
+    expect(restored?.allowCanvasOverflow).toBe(true);
+    expect(restored?.showFullWidgets).toBe(true);
+  });
+
+  it("drops showFullWidgets when overflow is off", () => {
+    const card = makeCard();
+    card.allowCanvasOverflow = false;
+    card.showFullWidgets = true;
+    const restored = canvasToProjectCard(recordFromCard(card));
+    expect(restored?.allowCanvasOverflow).toBe(false);
+    expect(restored?.showFullWidgets).toBe(false);
   });
 
   it("does not drop custom origin when template is missing but sourceTemplateId is set", () => {

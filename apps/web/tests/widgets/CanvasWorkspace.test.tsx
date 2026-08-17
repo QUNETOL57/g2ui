@@ -10,6 +10,7 @@ import {
   makeFixtureProject,
   makeLabel,
   makePanel,
+  makeRect,
   withChildren,
 } from "../fixtures/projects";
 import { resetEditorStore } from "../fixtures/store";
@@ -510,6 +511,61 @@ describe("CanvasWorkspace: grid overlay stacking", () => {
     expect(grid).toHaveAttribute("data-overlay", "true");
     expect(screen.getAllByTestId("selection-guide").length).toBeGreaterThan(0);
     expect(zIndexOf(selectionLayer)).toBeGreaterThan(zIndexOf(grid));
+  });
+});
+
+describe("CanvasWorkspace: overflow clip", () => {
+  it("clips widgets to the canvas while keeping selection chrome outside", () => {
+    const project = withChildren(makeFixtureProject(), [makeLabel("lbl_1")]);
+    get().setProject(project);
+    get().selectNode("lbl_1");
+    render(<CanvasWorkspace allowCanvasOverflow showGuides />);
+
+    const frame = screen.getByTestId("canvas-device-frame");
+    const clip = screen.getByTestId("canvas-widget-clip");
+    const selectionLayer = screen.getByTestId("canvas-selection-layer");
+    const widget = document.querySelector(
+      '[data-testid="canvas-widget"][data-widget-id="lbl_1"]',
+    ) as HTMLElement;
+    expect(frame).toHaveAttribute("data-allow-overflow", "true");
+    expect(frame).not.toHaveAttribute("data-show-full-widgets");
+    expect(frame.contains(selectionLayer)).toBe(false);
+    expect(clip.contains(selectionLayer)).toBe(false);
+    expect(getComputedStyle(clip).overflow).toBe("hidden");
+    expect(getComputedStyle(selectionLayer).overflow).toBe("visible");
+    expect(getComputedStyle(widget).opacity).toBe("1");
+    expect(screen.getAllByTestId("selection-guide").length).toBeGreaterThan(0);
+  });
+
+  it("keeps overflowing selection guides outside the canvas clip", () => {
+    const rect = makeRect("rect_1");
+    rect.frame = { x: 140, y: 8, width: 40, height: 24 };
+    const project = withChildren(makeFixtureProject(), [rect]);
+    get().setProject(project);
+    get().selectNode("rect_1");
+    render(<CanvasWorkspace allowCanvasOverflow showGuides />);
+
+    const frames = screen.getAllByTestId("selection-frame");
+    const guides = screen.getAllByTestId("selection-guide");
+    expect(frames.some((node) => node.style.left === "360px")).toBe(true);
+    expect(guides.some((node) => node.style.left === "360px")).toBe(true);
+    expect(
+      screen.getByTestId("canvas-device-frame").contains(screen.getByTestId("canvas-selection-layer")),
+    ).toBe(false);
+  });
+
+  it("shows overflowing widgets at full opacity when showFullWidgets is on", () => {
+    const project = withChildren(makeFixtureProject(), [makeLabel("lbl_1")]);
+    get().setProject(project);
+    render(<CanvasWorkspace allowCanvasOverflow showFullWidgets />);
+
+    const clip = screen.getByTestId("canvas-widget-clip");
+    const widget = document.querySelector(
+      '[data-testid="canvas-widget"][data-widget-id="lbl_1"]',
+    ) as HTMLElement;
+    expect(screen.getByTestId("canvas-device-frame")).toHaveAttribute("data-show-full-widgets", "true");
+    expect(getComputedStyle(clip).overflow).toBe("visible");
+    expect(getComputedStyle(widget).opacity).toBe("1");
   });
 });
 

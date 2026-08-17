@@ -17,7 +17,7 @@ import { PaletteModal } from "@widgets/palette-panel/PaletteModal";
 import styles from "./EditorMenu.module.css";
 
 type OpenMenuId = "project" | "edit" | "view" | null;
-type ViewSettingId = "grid" | "gridOverlay" | "rulers" | "guides";
+type ViewSettingId = "grid" | "gridOverlay" | "rulers" | "guides" | "overflow" | "fullWidgets";
 type ProjectSettingId = "template";
 
 interface EditorMenuProps {
@@ -27,10 +27,14 @@ interface EditorMenuProps {
     showGridOverlay: boolean;
     showRulers: boolean;
     showGuides: boolean;
+    allowCanvasOverflow?: boolean;
+    showFullWidgets?: boolean;
     onToggleGrid: () => void;
     onToggleGridOverlay: () => void;
     onToggleRulers: () => void;
     onToggleGuides: () => void;
+    onToggleCanvasOverflow?: () => void;
+    onToggleFullWidgets?: () => void;
   };
   templateSettings?: {
     isTemplate: boolean;
@@ -61,6 +65,18 @@ const viewSettingPreviews: Record<
     title: "Guides",
     description: "Shows alignment guide lines from the selected object to the canvas edges.",
     kind: "guides",
+  },
+  overflow: {
+    title: "Allow overflow",
+    description:
+      "Lets widgets move and resize beyond the canvas. Off-canvas pixels stay clipped; guides follow the full object.",
+    kind: "overflow",
+  },
+  fullWidgets: {
+    title: "Show full widgets",
+    description:
+      "Renders overflowing widgets outside the canvas at full opacity instead of clipping them to the screen.",
+    kind: "fullWidgets",
   },
 };
 
@@ -94,6 +110,11 @@ export function EditorMenu({ onBackToLibrary, viewSettings, templateSettings }: 
   const [hoveredProjectSetting, setHoveredProjectSetting] = useState<ProjectSettingId | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const menuBaseId = useId();
+
+  useEffect(() => {
+    setHoveredViewSetting(null);
+    setHoveredProjectSetting(null);
+  }, [openMenuId]);
 
   useEffect(() => {
     if (!openMenuId) return;
@@ -145,11 +166,19 @@ export function EditorMenu({ onBackToLibrary, viewSettings, templateSettings }: 
             Project
           </button>
           {openMenuId === "project" ? (
-            <div className={styles.menu} id={projectMenuId} role="menu" aria-label="Project">
+            <div
+              className={styles.menu}
+              id={projectMenuId}
+              role="menu"
+              aria-label="Project"
+              onMouseLeave={() => setHoveredProjectSetting(null)}
+            >
               <button
                 type="button"
                 role="menuitem"
                 className={styles.menuItem}
+                onMouseEnter={() => setHoveredProjectSetting(null)}
+                onFocus={() => setHoveredProjectSetting(null)}
                 onClick={() => {
                   closeMenu();
                   onBackToLibrary();
@@ -162,6 +191,8 @@ export function EditorMenu({ onBackToLibrary, viewSettings, templateSettings }: 
                 type="button"
                 role="menuitem"
                 className={styles.menuItem}
+                onMouseEnter={() => setHoveredProjectSetting(null)}
+                onFocus={() => setHoveredProjectSetting(null)}
                 onClick={() => openModal("export")}
               >
                 <span className={styles.menuItemLabel}>Export…</span>
@@ -170,6 +201,8 @@ export function EditorMenu({ onBackToLibrary, viewSettings, templateSettings }: 
                 type="button"
                 role="menuitem"
                 className={styles.menuItem}
+                onMouseEnter={() => setHoveredProjectSetting(null)}
+                onFocus={() => setHoveredProjectSetting(null)}
                 onClick={() => openModal("import")}
               >
                 <span className={styles.menuItemLabel}>Import…</span>
@@ -178,6 +211,8 @@ export function EditorMenu({ onBackToLibrary, viewSettings, templateSettings }: 
                 type="button"
                 role="menuitem"
                 className={styles.menuItem}
+                onMouseEnter={() => setHoveredProjectSetting(null)}
+                onFocus={() => setHoveredProjectSetting(null)}
                 onClick={() => openModal("palette")}
               >
                 <span className={styles.menuItemLabel}>Edit palette…</span>
@@ -231,7 +266,13 @@ export function EditorMenu({ onBackToLibrary, viewSettings, templateSettings }: 
             View
           </button>
           {openMenuId === "view" ? (
-            <div className={styles.menu} id={viewMenuId} role="menu" aria-label="View">
+            <div
+              className={styles.menu}
+              id={viewMenuId}
+              role="menu"
+              aria-label="View"
+              onMouseLeave={() => setHoveredViewSetting(null)}
+            >
               <button
                 type="button"
                 role="menuitemcheckbox"
@@ -288,6 +329,35 @@ export function EditorMenu({ onBackToLibrary, viewSettings, templateSettings }: 
                   {viewSettings?.showGuides ?? true ? "✓" : ""}
                 </span>
                 <span className={styles.menuItemLabel}>Guides</span>
+              </button>
+              <button
+                type="button"
+                role="menuitemcheckbox"
+                aria-checked={viewSettings?.allowCanvasOverflow ?? false}
+                className={styles.menuItem}
+                onMouseEnter={() => setHoveredViewSetting("overflow")}
+                onFocus={() => setHoveredViewSetting("overflow")}
+                onClick={viewSettings?.onToggleCanvasOverflow}
+              >
+                <span className={styles.menuItemCheck} aria-hidden>
+                  {viewSettings?.allowCanvasOverflow ?? false ? "✓" : ""}
+                </span>
+                <span className={styles.menuItemLabel}>Allow overflow</span>
+              </button>
+              <button
+                type="button"
+                role="menuitemcheckbox"
+                aria-checked={viewSettings?.showFullWidgets ?? false}
+                className={styles.menuItem}
+                disabled={!(viewSettings?.allowCanvasOverflow ?? false)}
+                onMouseEnter={() => setHoveredViewSetting("fullWidgets")}
+                onFocus={() => setHoveredViewSetting("fullWidgets")}
+                onClick={viewSettings?.onToggleFullWidgets}
+              >
+                <span className={styles.menuItemCheck} aria-hidden>
+                  {viewSettings?.showFullWidgets ?? false ? "✓" : ""}
+                </span>
+                <span className={styles.menuItemLabel}>Show full widgets</span>
               </button>
               {viewPreview ? (
                 <aside
@@ -349,6 +419,25 @@ export function EditorMenu({ onBackToLibrary, viewSettings, templateSettings }: 
                         <span className={cn(styles.previewHandle, styles.previewHandleNe)} />
                         <span className={cn(styles.previewHandle, styles.previewHandleSw)} />
                         <span className={cn(styles.previewHandle, styles.previewHandleSe)} />
+                      </>
+                    ) : null}
+                    {viewPreview.kind === "overflow" ? (
+                      <>
+                        <div className={styles.previewOverflowCanvas}>
+                          <span className={styles.previewOverflowWidget} />
+                        </div>
+                        <span className={cn(styles.previewOverflowGuide, styles.previewOverflowGuideV)} />
+                        <span className={cn(styles.previewOverflowGuide, styles.previewOverflowGuideH)} />
+                        <span className={cn(styles.previewHandle, styles.previewOverflowHandleNw)} />
+                        <span className={cn(styles.previewHandle, styles.previewOverflowHandleNe)} />
+                        <span className={cn(styles.previewHandle, styles.previewOverflowHandleSw)} />
+                        <span className={cn(styles.previewHandle, styles.previewOverflowHandleSe)} />
+                      </>
+                    ) : null}
+                    {viewPreview.kind === "fullWidgets" ? (
+                      <>
+                        <div className={styles.previewOverflowCanvas} />
+                        <span className={styles.previewOverflowWidgetFull} />
                       </>
                     ) : null}
                   </div>

@@ -5,9 +5,174 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico?v=1" />
     <title>G2UI</title>
+    <style>
+      :root {
+        --color-bg-deep: #0b0b0b;
+      }
+
+      html,
+      body,
+      #root {
+        margin: 0;
+        height: 100%;
+        background: var(--color-bg-deep);
+      }
+
+      .boot-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--color-bg-deep);
+      }
+
+      .boot-splash svg {
+        display: block;
+        width: 80px;
+        height: 80px;
+        transform: translateZ(0);
+      }
+
+      .boot-splash path {
+        fill: #f74f9e;
+        opacity: 0;
+      }
+
+      .boot-splash.is-waiting svg {
+        animation: boot-wait 1.8s ease-in-out infinite;
+      }
+
+      @keyframes boot-wait {
+        0%,
+        100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 0.7;
+          transform: scale(0.98);
+        }
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
+    <div class="boot-splash" id="boot-splash" role="status" aria-live="polite" aria-busy="true" aria-label="Загрузка G2UI">
+      <!-- Paths are ordered along the fill path: top row RTL, left column, bottom row, right edge up, then inward. -->
+      <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M81.4815 0H100V18.5185H81.4815V0Z" />
+        <path d="M61.1111 0H79.6296V18.5185H61.1111V0Z" />
+        <path d="M40.7407 0H59.2593V18.5185H40.7407V0Z" />
+        <path d="M20.3704 0H38.8889V18.5185H20.3704V0Z" />
+        <path d="M0 0H18.5185V18.5185H0V0Z" />
+        <path d="M0 20.3704H18.5185V38.8889H0V20.3704Z" />
+        <path d="M0 40.7407H18.5185V59.2593H0V40.7407Z" />
+        <path d="M0 61.1111H18.5185V79.6296H0V61.1111Z" />
+        <path d="M0 81.4815H18.5185V100H0V81.4815Z" />
+        <path d="M20.3704 81.4815H38.8889V100H20.3704V81.4815Z" />
+        <path d="M40.7407 81.4815H59.2593V100H40.7407V81.4815Z" />
+        <path d="M61.1111 81.4815H79.6296V100H61.1111V81.4815Z" />
+        <path d="M81.4815 81.4815H100V100H81.4815V81.4815Z" />
+        <path d="M81.4815 61.1111H100V79.6296H81.4815V61.1111Z" />
+        <path d="M81.4815 40.7407H100V59.2593H81.4815V40.7407Z" />
+        <path d="M61.1111 40.7407H79.6296V59.2593H61.1111V40.7407Z" />
+        <path d="M61.1111 61.1111H79.6296V79.6296H61.1111V61.1111Z" />
+        <path d="M40.7407 40.7407H59.2593V59.2593H40.7407V40.7407Z" />
+        <path d="M20.3704 20.3704H38.8889V38.8889H20.3704V20.3704Z" />
+      </svg>
+    </div>
+    <script>
+      (function () {
+        var splash = document.getElementById("boot-splash");
+        if (!splash) return;
+
+        var paths = splash.querySelectorAll("path");
+        var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        var appReady = false;
+        var easingIn = "cubic-bezier(0.22, 1, 0.36, 1)";
+        var staggerMs = 70;
+        var fadeInMs = 220;
+        var holdMs = 80;
+        var leaveMs = 1100;
+        var leaveEasing = "cubic-bezier(0.33, 0, 0.2, 1)";
+
+        window.addEventListener("g2ui:app-ready", function () {
+          appReady = true;
+        });
+
+        function wait(ms) {
+          return new Promise(function (resolve) {
+            window.setTimeout(resolve, ms);
+          });
+        }
+
+        function fillCubes() {
+          return Promise.all(
+            Array.prototype.map.call(paths, function (path, index) {
+              return path.animate([{ opacity: 0 }, { opacity: 1 }], {
+                duration: fadeInMs,
+                delay: index * staggerMs,
+                easing: easingIn,
+                fill: "forwards",
+              }).finished.catch(function () {});
+            }),
+          );
+        }
+
+        function leaveToApp() {
+          var logo = splash.querySelector("svg");
+          splash.classList.remove("is-waiting");
+          splash.setAttribute("aria-busy", "false");
+          splash.style.pointerEvents = "none";
+
+          if (logo) {
+            logo.getAnimations().forEach(function (anim) {
+              anim.cancel();
+            });
+            logo.animate(
+              [{ transform: "scale(1)" }, { transform: "scale(0.97)" }],
+              { duration: leaveMs, easing: leaveEasing, fill: "forwards" },
+            );
+          }
+
+          return splash
+            .animate([{ opacity: 1 }, { opacity: 0 }], {
+              duration: leaveMs,
+              easing: leaveEasing,
+              fill: "forwards",
+            })
+            .finished.then(function () {
+              splash.remove();
+            })
+            .catch(function () {
+              splash.remove();
+            });
+        }
+
+        async function run() {
+          if (reduceMotion) {
+            Array.prototype.forEach.call(paths, function (path) {
+              path.style.opacity = "1";
+            });
+            while (!appReady) await wait(50);
+            await wait(160);
+            leaveToApp();
+            return;
+          }
+
+          await fillCubes();
+          await wait(holdMs);
+          if (!appReady) splash.classList.add("is-waiting");
+          while (!appReady) await wait(50);
+          splash.classList.remove("is-waiting");
+          leaveToApp();
+        }
+
+        run();
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

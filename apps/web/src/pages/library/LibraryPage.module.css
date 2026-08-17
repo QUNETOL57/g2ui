@@ -22,8 +22,8 @@
   grid-row: 2;
   display: block;
   min-height: 0;
-  overflow-y: auto;
-  background: var(--color-border);
+  overflow: auto;
+  background: #121212;
 }
 
 .libraryStatusBar {

@@ -1,5 +1,4 @@
 import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
 import RotateLeftIcon from "@mui/icons-material/RotateLeft";
 import RotateRightIcon from "@mui/icons-material/RotateRight";
 
@@ -18,9 +17,10 @@ import {
 } from "@entities/ui-project/lib/rotation";
 import { getResolvedIconDefinition } from "@entities/icon/iconSizing";
 import { findParent } from "@entities/ui-project/model/tree-ops";
+import type { TooltipAnchor } from "@shared/lib/placeTooltip";
 import { DraftNumberInput } from "@shared/ui/DraftNumberInput";
 import { IconButton } from "@shared/ui/IconButton";
-import iconButtonStyles from "@shared/ui/IconButton.module.css";
+import { TooltipPortal } from "@shared/ui/TooltipPortal";
 
 import styles from "../PropertiesPanel.module.css";
 import { ParentAlignControls } from "../ui/ParentAlignControls";
@@ -210,22 +210,22 @@ function TransformField({
   disabled?: boolean;
 }) {
   const labelRef = useRef<HTMLSpanElement>(null);
-  const [tooltipVisible, setTooltipVisible] = useState(false);
-  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+  const [anchor, setAnchor] = useState<TooltipAnchor | null>(null);
 
   const revealTooltip = useCallback(() => {
     const el = labelRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
-    setTooltipPos({
-      x: rect.left + rect.width / 2,
-      y: rect.top,
+    setAnchor({
+      left: rect.left,
+      top: rect.top,
+      width: rect.width,
+      height: rect.height,
     });
-    setTooltipVisible(true);
   }, []);
 
   const hideTooltip = useCallback(() => {
-    setTooltipVisible(false);
+    setAnchor(null);
   }, []);
 
   return (
@@ -245,18 +245,7 @@ function TransformField({
         onChange={onChange}
         variant="bare"
       />
-      {tooltipVisible
-        ? createPortal(
-            <span
-              role="tooltip"
-              className={iconButtonStyles.tooltipPortal}
-              style={{ left: tooltipPos.x, top: tooltipPos.y }}
-            >
-              {tooltip}
-            </span>,
-            document.body,
-          )
-        : null}
+      <TooltipPortal anchor={anchor}>{tooltip}</TooltipPortal>
     </label>
   );
 }

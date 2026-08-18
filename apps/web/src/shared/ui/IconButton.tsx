@@ -7,9 +7,10 @@ import {
   type MouseEvent,
   type ReactNode,
 } from "react";
-import { createPortal } from "react-dom";
 
 import { cn } from "@shared/lib/cn";
+import type { TooltipAnchor } from "@shared/lib/placeTooltip";
+import { TooltipPortal } from "@shared/ui/TooltipPortal";
 
 import styles from "./IconButton.module.css";
 
@@ -33,22 +34,22 @@ export function IconButton({
   ...props
 }: IconButtonProps) {
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const [tooltipVisible, setTooltipVisible] = useState(false);
-  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+  const [anchor, setAnchor] = useState<TooltipAnchor | null>(null);
 
   const revealTooltip = useCallback(() => {
     const button = buttonRef.current;
     if (!button || !tooltip) return;
     const rect = button.getBoundingClientRect();
-    setTooltipPos({
-      x: rect.left + rect.width / 2,
-      y: rect.top,
+    setAnchor({
+      left: rect.left,
+      top: rect.top,
+      width: rect.width,
+      height: rect.height,
     });
-    setTooltipVisible(true);
   }, [tooltip]);
 
   const hideTooltip = useCallback(() => {
-    setTooltipVisible(false);
+    setAnchor(null);
   }, []);
 
   const handleMouseEnter = (event: MouseEvent<HTMLButtonElement>) => {
@@ -86,18 +87,7 @@ export function IconButton({
       >
         {children}
       </button>
-      {tooltip && tooltipVisible
-        ? createPortal(
-            <span
-              role="tooltip"
-              className={styles.tooltipPortal}
-              style={{ left: tooltipPos.x, top: tooltipPos.y }}
-            >
-              {tooltip}
-            </span>,
-            document.body,
-          )
-        : null}
+      {tooltip ? <TooltipPortal anchor={anchor}>{tooltip}</TooltipPortal> : null}
     </>
   );
 }

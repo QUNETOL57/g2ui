@@ -40,5 +40,8 @@ playwright/.cache/
 opencode.json
 skills-lock.json
 
+# Documentation
+docs/
+
 # Logs
 *.log

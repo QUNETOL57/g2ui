@@ -2,14 +2,13 @@
 
 > Визуальный редактор UI для встраиваемых устройств с маленькими TFT/OLED-дисплеями (ESP-IDF, ST7735 и аналоги).
 
-G2UI позволяет проектировать экраны в браузере, хранить проекты в облаке (или локально) и
-экспортировать их в JSON для прошивки. Рантайм на устройстве парсит этот JSON напрямую — без
-отдельного шага генерации C-кода.
+Проектируйте экраны в браузере, храните проекты в облаке или локально и экспортируйте JSON
+для прошивки. Рантайм на устройстве читает этот JSON напрямую — без генерации C-кода.
 
-## Quick Start
+## Быстрый старт
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/QUNETOL57/g2ui.git
 cd g2ui
 cp .env.example .env
 npm install
@@ -24,37 +23,44 @@ npm run dev:web
 
 Web: http://localhost:5173. Подробнее — [Быстрый старт](docs/getting-started.md).
 
-## Key Features
+## Возможности
 
-- **Библиотека проектов** — создание, переименование, удаление и предпросмотр карточек; встроенные шаблоны Blank/Hello и пользовательские шаблоны через Project → Use as template.
-- **Визуальный редактор** — дерево виджетов, холст с линейками и выделением, панель свойств.
-- **Виджеты** — панели, метки, кнопки, иконки, bitmap-текст; абсолютная и flex-вёрстка (column/row).
-- **Пресеты дисплеев** — 160×128, 128×128, 240×240 и другие типовые разрешения.
-- **Undo/redo** — история изменений в редакторе.
-- **Экспорт** — копирование или скачивание `*.project.json` для встраивания в прошивку через `EMBED_FILES`.
-- **Синхронизация** — опциональный backend API с PostgreSQL; без API проекты сохраняются в `localStorage`.
+- **Библиотека проектов** — карточки, шаблоны Blank/Hello и пользовательские шаблоны (Project → Use as template).
+- **Визуальный редактор** — дерево виджетов, холст с линейками, панель свойств, undo/redo.
+- **Виджеты** — панели, метки, кнопки, иконки, bitmap-текст; absolute и flex (column/row).
+- **Пресеты дисплеев** — 160×128, 128×128, 240×240 и другие разрешения.
+- **Экспорт** — `*.project.json` для прошивки через `EMBED_FILES`.
+- **Синхронизация** — опциональный API + PostgreSQL; без API — `localStorage`.
 
-## Example
+## Пример
 
-Проект редактируется в браузере и экспортируется в единый JSON-файл, который компонент `g2ui`
-на устройстве читает напрямую — без дополнительной генерации C-кода:
+Редактор работает с каноническим IR (intermediate representation: `UiProject → ScreenNode → WidgetNode`). Тот же JSON уходит на устройство.
 
-```bash
-# Экспорт из панели Export редактора → *.project.json
-# Подключение в ESP-IDF-проекте через EMBED_FILES
+```json
+{
+  "schemaVersion": "0.1.0",
+  "id": "hello",
+  "name": "Hello G2UI",
+  "display": { "width": 240, "height": 240, "colorFormat": "rgb565" },
+  "initialScreenId": "screen_main",
+  "screens": [{ "id": "screen_main", "type": "screen", "children": [] }]
+}
 ```
+
+Экспорт — панель Export в редакторе. Подключение в ESP-IDF — `EMBED_FILES`.
 
 ---
 
-## Documentation
+## Документация
 
-| Guide | Description |
-|-------|-------------|
-| [Getting Started](docs/getting-started.md) | Установка, режимы запуска, миграции БД |
-| [Architecture](docs/architecture.md) | Структура проекта и паттерны |
-| [Configuration](docs/configuration.md) | Переменные окружения |
-| [Deployment](docs/deployment.md) | Docker и продакшен-развёртывание |
-| [Testing](docs/testing.md) | Запуск тестов |
+| Руководство | Описание |
+|-------------|----------|
+| [Быстрый старт](docs/getting-started.md) | Установка, режимы запуска, миграции БД |
+| [Архитектура](docs/architecture.md) | Структура проекта и паттерны |
+| [API](docs/api.md) | Эндпоинты, JWT, коды ошибок |
+| [Конфигурация](docs/configuration.md) | Переменные окружения |
+| [Развёртывание](docs/deployment.md) | Docker и продакшен |
+| [Тестирование](docs/testing.md) | Vitest, pytest, Playwright |
 
 ## Полезные команды
 
@@ -64,10 +70,10 @@ Web: http://localhost:5173. Подробнее — [Быстрый старт](d
 | `npm run dev:docker` | API + PostgreSQL в Docker |
 | `npm run dev:docker:full` | API + web + PostgreSQL в Docker |
 | `npm run build:web` | Production-сборка web |
-| `npm run test:web` | Unit/feature-тесты (Vitest) |
-| `npm run test:e2e` | E2E-тесты (Playwright) |
-| `npm run gen:types` | Сгенерировать TS-типы из OpenAPI API |
+| `npm run test:web` | Unit-тесты (Vitest) |
+| `npm run test:e2e` | E2E (Playwright) |
+| `npm run gen:types` | TS-типы из OpenAPI |
 
-## License
+## Лицензия
 
 MIT

@@ -70,6 +70,7 @@ g2ui/
 | README | `README.md` | Главная страница проекта (landing page) |
 | Быстрый старт | `docs/getting-started.md` | Установка, режимы запуска, миграции БД |
 | Архитектура | `docs/architecture.md` | Структура проекта и паттерны |
+| API | `docs/api.md` | Эндпоинты, JWT, коды ошибок |
 | Конфигурация | `docs/configuration.md` | Переменные окружения |
 | Развёртывание | `docs/deployment.md` | Docker и продакшен-развёртывание |
 | Тестирование | `docs/testing.md` | Запуск тестов |
@@ -85,11 +86,13 @@ g2ui/
 | `.ai-factory/ARCHITECTURE.md` | Архитектурные решения и паттерны |
 | `.ai-factory/config.yaml` | Настройки AI Factory |
 | `.ai-factory/rules/base.md` | Базовые правила и конвенции проекта |
+| `.ai-factory/skill-context/aif-best-practices/SKILL.md` | Project-level overrides для `/aif-best-practices` |
+| `.cursor/rules/` | Cursor-правила: архитектура, frontend, backend, тесты |
 
 ## Правила для агентов
 
 - Декомпозируйте shell-команды: не объединяйте `git checkout` и `git pull` в одну команду.
   - Неправильно: `git checkout main && git pull`
   - Правильно: сначала `git checkout main`, затем `git pull origin main`
-- При работе с кодом соблюдайте конвенции из `.ai-factory/rules/base.md`.
+- При работе с кодом соблюдайте конвенции из `.ai-factory/rules/base.md` и `.ai-factory/skill-context/aif-best-practices/SKILL.md`.
 - Все AI Factory команды доступны через `/aif-*` слэш-команды.

@@ -48,7 +48,7 @@ interface RenderCtx {
   lockedId: string | null;
   dragPreview: { nodeId: string; rect: Frame; lineProps?: Partial<LineProps> } | null;
   draftFrames?: Record<string, Frame> | null;
-  onSelect: (id: string) => void;
+  onSelect: (id: string, mods?: { toggle?: boolean; range?: boolean }) => void;
   onNodeMouseDown?: (nodeId: string, event: React.MouseEvent<HTMLDivElement>) => void;
   onLabelEditStart?: (nodeId: string) => void;
   editingLabelId?: string | null;
@@ -101,9 +101,17 @@ function PreviewNodeImpl({
   };
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     e.stopPropagation();
-    ctx.onSelect(node.id);
-    ctx.onNodeMouseDown?.(node.id, e);
+    const mods = {
+      toggle: e.metaKey || e.ctrlKey,
+      range: e.shiftKey,
+    };
+    if (mods.toggle || mods.range) ctx.onSelect(node.id, mods);
+    else ctx.onSelect(node.id);
+    if (!mods.toggle && !mods.range) {
+      ctx.onNodeMouseDown?.(node.id, e);
+    }
   };
+  const capturePointer = node.type !== "screen";
   const handleDoubleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     e.stopPropagation();
     if (node.locked === true) return;
@@ -125,7 +133,7 @@ function PreviewNodeImpl({
           data-widget-id={node.id}
           data-widget-type={node.type}
           style={style}
-          onMouseDown={handleMouseDown}
+          onMouseDown={capturePointer ? handleMouseDown : undefined}
         />
       ) : null}
       <div
@@ -137,8 +145,8 @@ function PreviewNodeImpl({
           ...style,
           pointerEvents: hasPanelChildren ? "none" : undefined,
         }}
-        onMouseDown={hasPanelChildren ? undefined : handleMouseDown}
-        onDoubleClick={hasPanelChildren ? undefined : handleDoubleClick}
+        onMouseDown={capturePointer && !hasPanelChildren ? handleMouseDown : undefined}
+        onDoubleClick={capturePointer && !hasPanelChildren ? handleDoubleClick : undefined}
       >
         <NodeVisual node={visualNode} ctx={ctx} rect={{ ...displayRect, height: visualHeight }} />
       </div>

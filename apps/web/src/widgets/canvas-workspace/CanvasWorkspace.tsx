@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { Frame, IconProps, LayoutMode, PixelPoint } from "@entities/ui-project";
-import { draftFrameFor } from "@entities/ui-project";
+import { draftFrameFor, flattenSelectableIds } from "@entities/ui-project";
 import { useEditorStore } from "@entities/ui-project/model/store";
 import { findNode, findParent } from "@entities/ui-project/model/tree-ops";
 import { layoutTree } from "@entities/ui-project/lib/layoutEngine";
@@ -17,12 +17,14 @@ import { CanvasRulers } from "./CanvasRulers";
 import { CanvasToolbar } from "./CanvasToolbar";
 import { CanvasZoomToolbar } from "./CanvasZoomToolbar";
 import styles from "./CanvasWorkspace.module.css";
+import { MarqueeOverlay } from "./MarqueeOverlay";
 import { SelectionOverlay } from "./SelectionOverlay";
 import { PreviewNode } from "./renderNode";
 import { computeWidgetStackIndices } from "./lib/widgetStackIndices";
 import {
   PIXEL_GRID_VISIBLE_ZOOM,
   RULER_SIZE,
+  MARQUEE_THRESHOLD_PX,
   borderInsetFor,
   constrainPointToContent,
   constrainToRange,
@@ -31,10 +33,12 @@ import {
   lineStrokeWidthFor,
   nextWheelZoom,
   normalizeZoom,
+  rectFromDragPoints,
   renderZoomFor,
   sameFrame,
   selectionLineEndpointsForNode,
   selectionRectForNode,
+  collectNodeIdsInRect,
   visualRectForNode,
   zoomToProgress,
 } from "./lib/geometry";
@@ -102,6 +106,8 @@ export function CanvasWorkspace({
   const markerStyle = useEditorStore((s) => s.markerStyle);
   const selectedNodeId = useEditorStore((s) => s.selectedNodeId);
   const selectNode = useEditorStore((s) => s.selectNode);
+  const toggleNodeSelection = useEditorStore((s) => s.toggleNodeSelection);
+  const setSelection = useEditorStore((s) => s.setSelection);
   const setActiveTool = useEditorStore((s) => s.setActiveTool);
   const addFreehandStroke = useEditorStore((s) => s.addFreehandStroke);
   const absolutizeLayout = useEditorStore((s) => s.absolutizeLayout);
@@ -134,6 +140,7 @@ export function CanvasWorkspace({
   const [stageViewport, setStageViewport] = useState({ width: 0, height: 0 });
   const [dragPreview, setDragPreview] = useState<DragPreview | null>(null);
   const [markerDraftPoints, setMarkerDraftPoints] = useState<PixelPoint[]>([]);
+  const [marqueeRect, setMarqueeRect] = useState<Frame | null>(null);
   const screen = project.screens.find((s) => s.id === activeScreenId);
   const layout = useMemo(() => {
     if (!screen) return null;
@@ -666,6 +673,29 @@ export function CanvasWorkspace({
       },
     }));
 
+  const handleCanvasSelect = useCallback(
+    (id: string, mods?: { toggle?: boolean; range?: boolean }) => {
+      if (mods?.range) {
+        const flatIds = flattenSelectableIds(project, activeScreenId);
+        const anchor = selectedNodeId ?? id;
+        const anchorIndex = flatIds.indexOf(anchor);
+        const targetIndex = flatIds.indexOf(id);
+        if (anchorIndex >= 0 && targetIndex >= 0) {
+          const [lo, hi] =
+            anchorIndex <= targetIndex ? [anchorIndex, targetIndex] : [targetIndex, anchorIndex];
+          setSelection(flatIds.slice(lo, hi + 1), id);
+          return;
+        }
+      }
+      if (mods?.toggle) {
+        toggleNodeSelection(id);
+        return;
+      }
+      selectNode(id);
+    },
+    [activeScreenId, project, selectNode, selectedNodeId, setSelection, toggleNodeSelection],
+  );
+
   const handleNodeMouseDown = useCallback((nodeId: string, event: React.MouseEvent<HTMLDivElement>) => {
     const node = findNode(project, nodeId);
     const parentNode = findParent(project, nodeId);
@@ -881,6 +911,98 @@ export function CanvasWorkspace({
     [activeScreenId, activeTool, addFreehandStroke, pointFromCanvasEvent, selectNode, setActiveTool],
   );
 
+  const canvasPointFromClient = useCallback(
+    (event: MouseEvent | React.MouseEvent<HTMLDivElement>): Point | null => {
+      const frame = deviceFrameRef.current;
+      if (!frame) return null;
+      const bounds = frame.getBoundingClientRect();
+      return {
+        x: Math.floor((event.clientX - bounds.left) / renderZoom),
+        y: Math.floor((event.clientY - bounds.top) / renderZoom),
+      };
+    },
+    [renderZoom],
+  );
+
+  const startMarquee = useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      if (activeTool !== "select" || event.button !== 0) return false;
+      const startPoint = canvasPointFromClient(event);
+      if (!startPoint) return false;
+
+      event.preventDefault();
+      const additive = event.shiftKey || event.metaKey || event.ctrlKey;
+      const baseIds = useEditorStore.getState().selectedNodeIds;
+      const startClientX = event.clientX;
+      const startClientY = event.clientY;
+      let exceeded = false;
+      let latestRect: Frame | null = null;
+
+      const handleMouseMove = (moveEvent: MouseEvent) => {
+        const dx = moveEvent.clientX - startClientX;
+        const dy = moveEvent.clientY - startClientY;
+        if (!exceeded && Math.hypot(dx, dy) < MARQUEE_THRESHOLD_PX) return;
+        exceeded = true;
+        const endPoint = canvasPointFromClient(moveEvent);
+        if (!endPoint) return;
+        latestRect = rectFromDragPoints(startPoint, endPoint);
+        setMarqueeRect(latestRect);
+      };
+
+      const applyHits = (hitIds: string[]) => {
+        if (additive) {
+          const union: string[] = [];
+          const seen = new Set<string>();
+          for (const id of [...baseIds, ...hitIds]) {
+            if (seen.has(id)) continue;
+            seen.add(id);
+            union.push(id);
+          }
+          if (union.length === 0) {
+            selectNode(null);
+            return;
+          }
+          setSelection(union, hitIds.at(-1) ?? union.at(-1) ?? null);
+          return;
+        }
+        if (hitIds.length === 0) {
+          selectNode(null);
+          return;
+        }
+        if (hitIds.length === 1) {
+          selectNode(hitIds[0]);
+          return;
+        }
+        setSelection(hitIds, hitIds.at(-1) ?? null);
+      };
+
+      const handleMouseUp = (upEvent: MouseEvent) => {
+        window.removeEventListener("mousemove", handleMouseMove);
+        window.removeEventListener("mouseup", handleMouseUp);
+        setMarqueeRect(null);
+        if (!exceeded) {
+          selectNode(null);
+          return;
+        }
+        const endPoint = canvasPointFromClient(upEvent);
+        const rect =
+          latestRect ?? (endPoint ? rectFromDragPoints(startPoint, endPoint) : null);
+        if (!rect) {
+          selectNode(null);
+          return;
+        }
+        const currentLayout = layoutRef.current;
+        if (!currentLayout) return;
+        applyHits(collectNodeIdsInRect(currentLayout, rect, activeScreenId));
+      };
+
+      window.addEventListener("mousemove", handleMouseMove);
+      window.addEventListener("mouseup", handleMouseUp);
+      return true;
+    },
+    [activeScreenId, activeTool, canvasPointFromClient, selectNode, setSelection],
+  );
+
   const renderCtx = useMemo(
     () => ({
       palette: project.palette,
@@ -890,7 +1012,7 @@ export function CanvasWorkspace({
       lockedId: isSelectionLocked ? selectedNodeId : null,
       dragPreview,
       draftFrames,
-      onSelect: selectNode,
+      onSelect: handleCanvasSelect,
       onNodeMouseDown: activeTool === "marker"
         ? (_nodeId: string, event: React.MouseEvent<HTMLDivElement>) => {
             startMarkerDrawing(event);
@@ -920,7 +1042,7 @@ export function CanvasWorkspace({
       isSelectionLocked,
       dragPreview,
       draftFrames,
-      selectNode,
+      handleCanvasSelect,
       activeTool,
       startMarkerDrawing,
       handleNodeMouseDown,
@@ -1034,7 +1156,7 @@ export function CanvasWorkspace({
               onMouseDown={(e) => {
                 e.stopPropagation();
                 if (startMarkerDrawing(e)) return;
-                if (e.button === 0) selectNode(null);
+                if (startMarquee(e)) return;
               }}
             >
               {showPixelGrid ? (
@@ -1120,6 +1242,19 @@ export function CanvasWorkspace({
                   onResizeHandleMouseDown={handleResizeMouseDown}
                   onLineEndpointMouseDown={handleLineEndpointMouseDown}
                 />
+              </div>
+            ) : null}
+            {marqueeRect ? (
+              <div
+                className={styles.selectionLayer}
+                style={{
+                  left: RULER_SIZE,
+                  top: RULER_SIZE,
+                  width: scaledW,
+                  height: scaledH,
+                }}
+              >
+                <MarqueeOverlay rect={marqueeRect} renderZoom={renderZoom} />
               </div>
             ) : null}
           </div>

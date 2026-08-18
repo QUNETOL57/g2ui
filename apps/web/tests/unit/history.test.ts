@@ -15,6 +15,7 @@ function makeState(overrides: Partial<HistoryHostState> = {}): HistoryHostState 
     project: makeFixtureProject(),
     activeScreenId: "screen_main",
     selectedNodeId: null,
+    selectedNodeIds: [],
     historyPast: [],
     historyFuture: [],
     ...overrides,
@@ -36,7 +37,7 @@ describe("recordHistory", () => {
   it("appends current state to past and clears future", () => {
     const state = makeState({
       historyFuture: [
-        { project: makeFixtureProject(), activeScreenId: "screen_main", selectedNodeId: null },
+        { project: makeFixtureProject(), activeScreenId: "screen_main", selectedNodeId: null, selectedNodeIds: [] },
       ],
     });
     const next = recordHistory(state);
@@ -49,6 +50,7 @@ describe("recordHistory", () => {
       project: makeFixtureProject(),
       activeScreenId: "screen_main",
       selectedNodeId: null,
+      selectedNodeIds: [],
     }));
     const state = makeState({ historyPast: past });
     const next = recordHistory(state);

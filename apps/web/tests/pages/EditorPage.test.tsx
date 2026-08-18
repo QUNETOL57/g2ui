@@ -192,6 +192,20 @@ describe("EditorPage", () => {
     expect(verticalFrames.map((frame) => frame.style.height)).toEqual([height, height]);
   });
 
+  it("shows a frame for each of three selected widgets without resize handles", () => {
+    const a = { ...makeLabel("lbl_a", "A"), frame: { x: 8, y: 8, width: 40, height: 10 } };
+    const b = { ...makeLabel("lbl_b", "B"), frame: { x: 8, y: 28, width: 40, height: 10 } };
+    const c = { ...makeLabel("lbl_c", "C"), frame: { x: 8, y: 48, width: 40, height: 10 } };
+    get().setProject(withChildren(makeFixtureProject(), [a, b, c]));
+    get().setSelection(["lbl_a", "lbl_b", "lbl_c"], "lbl_c");
+    render(<EditorPage onBackToLibrary={() => undefined} />);
+
+    expect(screen.getAllByTestId("selection-frame")).toHaveLength(12);
+    expect(screen.getAllByTestId("selection-group-frame")).toHaveLength(4);
+    expect(screen.getAllByTestId("selection-guide")).toHaveLength(8);
+    expect(screen.queryByTestId("resize-handle-nw")).not.toBeInTheDocument();
+  });
+
   it("toggles grid, rulers, and guides from the View menu", async () => {
     const project = withChildren(makeFixtureProject(), [makeLabel("lbl_1")]);
     get().setProject(project);

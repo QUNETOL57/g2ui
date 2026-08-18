@@ -41,6 +41,7 @@ import {
   offsetWidgetFrame,
   prependChild,
   pruneCopySelection,
+  flattenSelectableIds,
   removeNode,
   renameNodeInProject,
   remapColorTokenRefs,
@@ -121,6 +122,7 @@ interface EditorState {
   duplicateSelectedNodes: () => string[] | null;
   clearClipboard: () => void;
   moveNode: (id: string, direction: "up" | "down") => void;
+  moveNodes: (ids: string[], direction: "up" | "down") => void;
   moveNodeToIndex: (id: string, index: number) => void;
   moveNodeToParentIndex: (id: string, parentId: string, index: number) => void;
   moveNodesToTarget: (ids: string[], targetId: string, position: "before" | "inside" | "after") => void;
@@ -660,6 +662,33 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const j = direction === "up" ? idx - 1 : idx + 1;
       if (j < 0 || j >= parent.children.length) return state;
       [parent.children[idx], parent.children[j]] = [parent.children[j], parent.children[idx]];
+      return { ...recordHistory(state), project: next, draftFrames: null };
+    }),
+
+  moveNodes: (ids, direction) =>
+    set((state) => {
+      const unique = [...new Set(ids.filter((id) => id && id !== state.activeScreenId))];
+      if (unique.length === 0) return state;
+      const next = cloneProject(state.project);
+      const documentOrder = flattenSelectableIds(next, state.activeScreenId).filter((id) =>
+        unique.includes(id),
+      );
+      const sequence = direction === "up" ? documentOrder : [...documentOrder].reverse();
+      let changed = false;
+      for (const id of sequence) {
+        const parent = findParent(next, id);
+        if (!parent?.children) continue;
+        const idx = parent.children.findIndex((child) => child.id === id);
+        if (idx < 0) continue;
+        const swapWith = direction === "up" ? idx - 1 : idx + 1;
+        if (swapWith < 0 || swapWith >= parent.children.length) continue;
+        [parent.children[idx], parent.children[swapWith]] = [
+          parent.children[swapWith],
+          parent.children[idx],
+        ];
+        changed = true;
+      }
+      if (!changed) return state;
       return { ...recordHistory(state), project: next, draftFrames: null };
     }),
 

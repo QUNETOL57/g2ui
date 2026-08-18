@@ -77,7 +77,7 @@ export function CanvasToolbar() {
   const selectNode = useEditorStore((s) => s.selectNode);
   const setActiveTool = useEditorStore((s) => s.setActiveTool);
   const addWidget = useEditorStore((s) => s.addWidget);
-  const moveNode = useEditorStore((s) => s.moveNode);
+  const moveNodes = useEditorStore((s) => s.moveNodes);
   const deleteNodes = useEditorStore((s) => s.deleteNodes);
 
   const [openGroupId, setOpenGroupId] = useState<string | null>(null);
@@ -114,7 +114,7 @@ export function CanvasToolbar() {
     setOpenGroupId(null);
   };
 
-  const canArrange = !!selectedNodeId;
+  const canArrange = selectedNodeIds.some((id) => id !== activeScreenId);
   const deletableIds = selectedNodeIds.filter((id) => id !== activeScreenId);
   const canDelete = deletableIds.length > 0;
 
@@ -219,7 +219,7 @@ export function CanvasToolbar() {
           title="Move up"
           aria-label="Move up"
           disabled={!canArrange}
-          onClick={() => selectedNodeId && moveNode(selectedNodeId, "up")}
+          onClick={() => moveNodes(selectedNodeIds, "up")}
         >
           <ArrowUpIcon />
         </button>
@@ -229,7 +229,7 @@ export function CanvasToolbar() {
           title="Move down"
           aria-label="Move down"
           disabled={!canArrange}
-          onClick={() => selectedNodeId && moveNode(selectedNodeId, "down")}
+          onClick={() => moveNodes(selectedNodeIds, "down")}
         >
           <ArrowDownIcon />
         </button>

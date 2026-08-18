@@ -8,8 +8,9 @@ test.describe("widget tree layer order on canvas", () => {
   });
 
   test("sibling order controls z-index and hit-testing at overlap", async ({ page }) => {
-    await addLabelWidget(page);
     await page.getByRole("button", { name: "Add panel" }).click();
+    await treeRow(page, "screen_main").click();
+    await addLabelWidget(page);
     await treeRow(page, "screen_main").click();
 
     const label = canvasWidget(page, "lab_1");

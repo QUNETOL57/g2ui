@@ -44,7 +44,7 @@ interface RenderCtx {
   palette: PaletteEntry[] | undefined;
   stackIndices: ReadonlyMap<string, number>;
   selectedId: string | null;
-  movableId: string | null;
+  movableIds: readonly string[];
   lockedId: string | null;
   dragPreview: { nodeId: string; rect: Frame; lineProps?: Partial<LineProps> } | null;
   draftFrames?: Record<string, Frame> | null;
@@ -92,7 +92,7 @@ function PreviewNodeImpl({
     transform: rotation ? `rotate(${rotation}deg)` : undefined,
     transformOrigin: rotation ? "center center" : undefined,
     cursor:
-      node.id === ctx.movableId
+      ctx.movableIds.includes(node.id)
         ? "move"
         : node.id === ctx.lockedId
           ? "not-allowed"
@@ -179,7 +179,7 @@ const PreviewNode = memo(PreviewNodeImpl, (prev, next) => {
 
   if (pc.palette !== nc.palette) return false;
   if ((pc.selectedId === nid) !== (nc.selectedId === nid)) return false;
-  if ((pc.movableId === nid) !== (nc.movableId === nid)) return false;
+  if (pc.movableIds.includes(nid) !== nc.movableIds.includes(nid)) return false;
   if ((pc.lockedId === nid) !== (nc.lockedId === nid)) return false;
 
   const prevDragged = pc.dragPreview?.nodeId === nid;

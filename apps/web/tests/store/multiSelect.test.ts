@@ -126,3 +126,40 @@ describe("store: moveNodesToTarget", () => {
     expect(root).toEqual(["pan_1"]);
   });
 });
+
+describe("store: moveNodes", () => {
+  it("reorders a multi-selection as a block in one history step", () => {
+    get().setSelection(["lab_2", "lab_3"], "lab_3");
+    const historyBefore = get().historyPast.length;
+    get().moveNodes(["lab_2", "lab_3"], "up");
+    expect(get().project.screens[0].children?.map((child) => child.id)).toEqual([
+      "lab_2",
+      "lab_3",
+      "lab_1",
+      "pan_1",
+    ]);
+    expect(get().historyPast.length).toBe(historyBefore + 1);
+    get().undo();
+    expect(get().project.screens[0].children?.map((child) => child.id)).toEqual([
+      "lab_1",
+      "lab_2",
+      "lab_3",
+      "pan_1",
+    ]);
+  });
+});
+
+describe("store: paste into primary parent", () => {
+  it("pastes into the parent of the primary selection when multiple nodes are selected", () => {
+    const panel = makePanel("pan_dst", [makeLabel("lab_in")]);
+    resetEditorStore(withChildren(makeFixtureProject(), [makeLabel("lab_1"), panel]));
+    get().selectNode("lab_1");
+    expect(get().copySelectedNodes()).toBe(true);
+    get().setSelection(["lab_in", "lab_1"], "lab_in");
+    const pasted = get().pasteClipboard();
+    expect(pasted).toHaveLength(1);
+    expect(findNode(get().project, pasted![0])).toBeTruthy();
+    expect(get().project.screens[0].children?.find((child) => child.id === "pan_dst")?.children?.some((child) => child.id === pasted![0])).toBe(true);
+  });
+});
+

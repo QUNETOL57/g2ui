@@ -54,7 +54,7 @@ export function snapshotState(state: HistoryHostState): HistorySnapshot {
     project: cloneProject(state.project),
     activeScreenId: state.activeScreenId,
     selectedNodeId: state.selectedNodeId,
-    selectedNodeIds: [...state.selectedNodeIds],
+    selectedNodeIds: [...(state.selectedNodeIds ?? (state.selectedNodeId ? [state.selectedNodeId] : []))],
   };
 }
 

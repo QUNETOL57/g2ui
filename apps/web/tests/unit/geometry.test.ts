@@ -26,6 +26,7 @@ import {
   rectFromDragPoints,
   rectsIntersect,
   collectNodeIdsInRect,
+  unionRect,
   renderZoomFor,
   rotatePoint90,
   rotatedFrameAabb,
@@ -505,5 +506,20 @@ describe("collectNodeIdsInRect", () => {
     expect(ids).toEqual(["pan_1", "lbl_nested"]);
     expect(ids).not.toContain("screen_main");
     expect(ids).not.toContain("lbl_hidden");
+  });
+});
+
+describe("unionRect", () => {
+  it("returns the bounding box of all frames", () => {
+    expect(
+      unionRect([
+        { x: 8, y: 8, width: 40, height: 10 },
+        { x: 8, y: 40, width: 40, height: 10 },
+      ]),
+    ).toEqual({ x: 8, y: 8, width: 40, height: 42 });
+  });
+
+  it("returns null for an empty list", () => {
+    expect(unionRect([])).toBeNull();
   });
 });

@@ -24,7 +24,9 @@ describe("editorShortcuts", () => {
     expect(labels).toContain("Delete selection");
     expect(labels).toContain("Rotate shape 90°");
     expect(labels).toContain("Rotate shape −90°");
-    expect(labels).toContain("Zoom canvas");
+    expect(labels).toContain("Add to selection");
+    expect(labels).toContain("Range selection");
+    expect(labels).toContain("Marquee selection");
     expect(labels).toContain("Close menu, dialog, or dropdown");
   });
 
@@ -41,6 +43,20 @@ describe("editorShortcuts", () => {
     expect(
       getEditorShortcuts().filter((shortcut) => shortcut.label === "Edit label or button"),
     ).toHaveLength(1);
+  });
+
+  it("documents canvas and tree modifier selection plus marquee", () => {
+    vi.stubGlobal("navigator", { platform: "Win32" });
+    const shortcuts = getEditorShortcuts();
+    expect(shortcuts.find((shortcut) => shortcut.label === "Add to selection")?.keys).toBe(
+      "Ctrl+Click · tree or canvas",
+    );
+    expect(shortcuts.find((shortcut) => shortcut.label === "Range selection")?.keys).toBe(
+      "Shift+Click · tree or canvas",
+    );
+    expect(shortcuts.find((shortcut) => shortcut.label === "Marquee selection")?.keys).toBe(
+      "Drag empty canvas",
+    );
   });
 
   it("formats copy/paste/duplicate shortcuts for non-mac platforms", () => {

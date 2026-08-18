@@ -32,7 +32,7 @@ function makePreviewCtx(
     palette: project.palette,
     stackIndices: computeWidgetStackIndices(layout),
     selectedId: null,
-    movableId: null,
+    movableIds: [],
     lockedId: null,
     dragPreview: null,
     draftFrames: null,

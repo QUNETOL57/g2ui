@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { Frame, IconProps, LayoutMode, PixelPoint } from "@entities/ui-project";
-import { draftFrameFor, flattenSelectableIds } from "@entities/ui-project";
+import { draftFrameFor, flattenSelectableIds, pruneMovableSelection } from "@entities/ui-project";
 import { useEditorStore } from "@entities/ui-project/model/store";
 import { findNode, findParent } from "@entities/ui-project/model/tree-ops";
 import { layoutTree } from "@entities/ui-project/lib/layoutEngine";
@@ -39,14 +39,23 @@ import {
   selectionLineEndpointsForNode,
   selectionRectForNode,
   collectNodeIdsInRect,
+  unionRect,
   visualRectForNode,
   zoomToProgress,
 } from "./lib/geometry";
 import type { LineHandle, Point, ResizeHandle } from "./lib/geometry";
 import { findLayoutNode, findParentLayoutNode } from "./lib/layoutNodeOps";
 
+interface GroupMoveMember {
+  nodeId: string;
+  startFrame: Frame;
+  parentRect: Frame;
+  parentContentInset: number;
+  constrainToParent: boolean;
+}
+
 interface ActiveCanvasInteraction {
-  type: "move" | "resize" | "line-end";
+  type: "move" | "resize" | "line-end" | "move-group";
   nodeId: string;
   startClientX: number;
   startClientY: number;
@@ -65,6 +74,9 @@ interface ActiveCanvasInteraction {
   iconId?: string;
   latestFrame?: Frame;
   latestLineProps?: Partial<import("@entities/ui-project").LineProps>;
+  members?: GroupMoveMember[];
+  latestGroupFrames?: Array<{ id: string; frame: Frame }>;
+  hasMoved?: boolean;
 }
 
 interface DragPreview {
@@ -105,6 +117,7 @@ export function CanvasWorkspace({
   const activeTool = useEditorStore((s) => s.activeTool);
   const markerStyle = useEditorStore((s) => s.markerStyle);
   const selectedNodeId = useEditorStore((s) => s.selectedNodeId);
+  const selectedNodeIds = useEditorStore((s) => s.selectedNodeIds);
   const selectNode = useEditorStore((s) => s.selectNode);
   const toggleNodeSelection = useEditorStore((s) => s.toggleNodeSelection);
   const setSelection = useEditorStore((s) => s.setSelection);
@@ -112,10 +125,12 @@ export function CanvasWorkspace({
   const addFreehandStroke = useEditorStore((s) => s.addFreehandStroke);
   const absolutizeLayout = useEditorStore((s) => s.absolutizeLayout);
   const updateFrame = useEditorStore((s) => s.updateFrame);
+  const updateFrames = useEditorStore((s) => s.updateFrames);
   const fitNodeFrameToContent = useEditorStore((s) => s.fitNodeFrameToContent);
   const updateProps = useEditorStore((s) => s.updateProps);
   const draftFrames = useEditorStore((s) => s.draftFrames);
   const setDraftFrame = useEditorStore((s) => s.setDraftFrame);
+  const setDraftFrames = useEditorStore((s) => s.setDraftFrames);
   const editingLabelId = useEditorStore((s) => s.editingLabelId);
   const beginLabelTextEdit = useEditorStore((s) => s.beginLabelTextEdit);
   const commitLabelText = useEditorStore((s) => s.commitLabelText);
@@ -127,6 +142,7 @@ export function CanvasWorkspace({
   const pendingDragPreviewRef = useRef<DragPreview | null>(null);
   const dragPreviewRafRef = useRef<number | null>(null);
   const pendingDraftFrameRef = useRef<{ nodeId: string; frame: Frame } | null>(null);
+  const pendingDraftFramesRef = useRef<Record<string, Frame> | null>(null);
   const draftFrameRafRef = useRef<number | null>(null);
   const pendingWheelFocusRef = useRef<
     | { type: "frame"; viewportX: number; viewportY: number; localX: number; localY: number }
@@ -229,6 +245,22 @@ export function CanvasWorkspace({
           rawDisplayedSelectedRect,
         )
       : null;
+  const selectedMemberOverlays = selectedNodeIds.flatMap((id) => {
+    if (id === screen.id) return [];
+    const layoutNode = findLayoutNode(layout, id);
+    if (!layoutNode) return [];
+    const rawRect =
+      dragPreview?.nodeId === id
+        ? dragPreview.rect
+        : draftFrameFor(draftFrames, id) ?? layoutNode.rect;
+    return [{ id, rect: selectionRectForNode(layoutNode.node, rawRect) }];
+  });
+  const isMultiSelection = selectedMemberOverlays.length > 1;
+  const movableIds = pruneMovableSelection(project, selectedNodeIds, screen.id);
+  const groupSelectionRect = isMultiSelection
+    ? unionRect(selectedMemberOverlays.map((member) => member.rect))
+    : null;
+  const overlaySelectionRect = groupSelectionRect ?? displayedSelectedRect;
   const selectedParentMode: LayoutMode = selectedParentNode?.layout?.mode ?? "absolute";
   const selectionHasFrame = !!selectedNode?.frame && !!selectedParentLayoutNode;
   const isSelectionLocked = selectedNode?.locked === true;
@@ -374,14 +406,16 @@ export function CanvasWorkspace({
         dragPreviewRafRef.current = null;
       }
       pendingDraftFrameRef.current = null;
+      pendingDraftFramesRef.current = null;
       if (draftFrameRafRef.current !== null) {
         window.cancelAnimationFrame(draftFrameRafRef.current);
         draftFrameRafRef.current = null;
       }
       setDraftFrame(null);
+      setDraftFrames(null);
       document.body.style.userSelect = "";
     };
-  }, [setDraftFrame]);
+  }, [setDraftFrame, setDraftFrames]);
 
   const scheduleDragPreview = (preview: DragPreview) => {
     pendingDragPreviewRef.current = preview;
@@ -407,6 +441,18 @@ export function CanvasWorkspace({
     });
   };
 
+  const scheduleDraftFrames = (frames: Record<string, Frame>) => {
+    pendingDraftFramesRef.current = frames;
+    if (draftFrameRafRef.current !== null) return;
+
+    draftFrameRafRef.current = window.requestAnimationFrame(() => {
+      draftFrameRafRef.current = null;
+      const next = pendingDraftFramesRef.current;
+      pendingDraftFramesRef.current = null;
+      if (next) setDraftFrames(next);
+    });
+  };
+
   const startInteraction = (interaction: ActiveCanvasInteraction) => {
     debugLog("canvas", "startInteraction", {
       type: interaction.type,
@@ -425,6 +471,66 @@ export function CanvasWorkspace({
 
       const deltaX = Math.round((event.clientX - active.startClientX) / renderZoom);
       const deltaY = Math.round((event.clientY - active.startClientY) / renderZoom);
+
+      if (active.type === "move-group") {
+        const members = active.members ?? [];
+        if (members.length === 0) return;
+        const screenDx = event.clientX - active.startClientX;
+        const screenDy = event.clientY - active.startClientY;
+        if (!active.hasMoved && Math.hypot(screenDx, screenDy) < MARQUEE_THRESHOLD_PX) return;
+        active.hasMoved = true;
+
+        let minDx = Number.NEGATIVE_INFINITY;
+        let maxDx = Number.POSITIVE_INFINITY;
+        let minDy = Number.NEGATIVE_INFINITY;
+        let maxDy = Number.POSITIVE_INFINITY;
+        for (const member of members) {
+          if (!member.constrainToParent) continue;
+          const minX = member.parentContentInset;
+          const minY = member.parentContentInset;
+          const maxX = Math.max(
+            minX,
+            member.parentRect.width - member.parentContentInset - member.startFrame.width,
+          );
+          const maxY = Math.max(
+            minY,
+            member.parentRect.height - member.parentContentInset - member.startFrame.height,
+          );
+          minDx = Math.max(minDx, minX - member.startFrame.x);
+          maxDx = Math.min(maxDx, maxX - member.startFrame.x);
+          minDy = Math.max(minDy, minY - member.startFrame.y);
+          maxDy = Math.min(maxDy, maxY - member.startFrame.y);
+        }
+        if (minDx > maxDx) {
+          minDx = 0;
+          maxDx = 0;
+        }
+        if (minDy > maxDy) {
+          minDy = 0;
+          maxDy = 0;
+        }
+        const nextDx = constrainToRange(deltaX, minDx, maxDx, true);
+        const nextDy = constrainToRange(deltaY, minDy, maxDy, true);
+        const drafts: Record<string, Frame> = {};
+        const latest: Array<{ id: string; frame: Frame }> = [];
+        for (const member of members) {
+          const nextFrame = {
+            ...member.startFrame,
+            x: member.startFrame.x + nextDx,
+            y: member.startFrame.y + nextDy,
+          };
+          latest.push({ id: member.nodeId, frame: nextFrame });
+          drafts[member.nodeId] = {
+            x: member.parentRect.x + nextFrame.x,
+            y: member.parentRect.y + nextFrame.y,
+            width: nextFrame.width,
+            height: nextFrame.height,
+          };
+        }
+        active.latestGroupFrames = latest;
+        scheduleDraftFrames(drafts);
+        return;
+      }
 
       if (active.type === "move") {
         if (active.parentMode === "absolute") {
@@ -638,6 +744,7 @@ export function CanvasWorkspace({
         dragPreviewRafRef.current = null;
       }
       pendingDraftFrameRef.current = null;
+      pendingDraftFramesRef.current = null;
       if (draftFrameRafRef.current !== null) {
         window.cancelAnimationFrame(draftFrameRafRef.current);
         draftFrameRafRef.current = null;
@@ -647,6 +754,16 @@ export function CanvasWorkspace({
       window.removeEventListener("mouseup", handleMouseUp);
       // Commit the final frame before clearing the preview so the widget never
       // paints for a frame at the pre-drag layout position (visible upward jump).
+      if (active?.type === "move-group") {
+        if (!active.hasMoved) {
+          selectNode(active.nodeId);
+        } else if (active.latestGroupFrames && active.latestGroupFrames.length > 0) {
+          updateFrames(active.latestGroupFrames);
+        }
+        setDraftFrames(null);
+        setDragPreview(null);
+        return;
+      }
       if (active?.latestFrame) {
         updateFrame(active.nodeId, active.latestFrame);
       }
@@ -691,6 +808,8 @@ export function CanvasWorkspace({
         toggleNodeSelection(id);
         return;
       }
+      const currentIds = useEditorStore.getState().selectedNodeIds;
+      if (currentIds.length > 1 && currentIds.includes(id)) return;
       selectNode(id);
     },
     [activeScreenId, project, selectNode, selectedNodeId, setSelection, toggleNodeSelection],
@@ -699,12 +818,85 @@ export function CanvasWorkspace({
   const handleNodeMouseDown = useCallback((nodeId: string, event: React.MouseEvent<HTMLDivElement>) => {
     const node = findNode(project, nodeId);
     const parentNode = findParent(project, nodeId);
-    const nodeLayout = layout ? findLayoutNode(layout, nodeId) : null;
-    const parentLayout = layout ? findParentLayoutNode(layout, nodeId) : null;
-    if (!node || !node.frame || !nodeLayout || !parentLayout || node.id === screen.id) return;
-    if (node.locked === true) return;
+    const currentLayout = layoutRef.current;
+    const nodeLayout = currentLayout ? findLayoutNode(currentLayout, nodeId) : null;
+    const parentLayout = currentLayout ? findParentLayoutNode(currentLayout, nodeId) : null;
+    if (!currentLayout || !node || !node.frame || !nodeLayout || !parentLayout || node.id === screen.id) return;
     if (event.button !== 0) return;
+
+    const selectedIds = useEditorStore.getState().selectedNodeIds;
+    const isGroupMember = selectedIds.length > 1 && selectedIds.includes(nodeId);
+    if (isGroupMember && node.locked === true) {
+      const startX = event.clientX;
+      const startY = event.clientY;
+      const handleLockedUp = (upEvent: MouseEvent) => {
+        window.removeEventListener("mouseup", handleLockedUp);
+        if (Math.hypot(upEvent.clientX - startX, upEvent.clientY - startY) < MARQUEE_THRESHOLD_PX) {
+          selectNode(nodeId);
+        }
+      };
+      window.addEventListener("mouseup", handleLockedUp);
+      return;
+    }
+    if (node.locked === true) return;
     event.preventDefault();
+
+    if (isGroupMember) {
+      const movableIds = pruneMovableSelection(project, selectedIds, activeScreenId);
+      if (movableIds.length > 1) {
+        const members: GroupMoveMember[] = [];
+        const flexParents = new Map<string, LayoutNode>();
+        for (const id of movableIds) {
+          const memberNode = findNode(project, id);
+          const memberParent = findParent(project, id);
+          const memberLayout = findLayoutNode(currentLayout, id);
+          const memberParentLayout = findParentLayoutNode(currentLayout, id);
+          if (!memberNode || !memberLayout || !memberParentLayout) {
+            console.warn("[canvas.moveGroup] parent layout missing", { nodeId: id });
+            return;
+          }
+          const parentMode: LayoutMode = memberParent?.layout?.mode ?? "absolute";
+          if (memberParent && parentMode !== "absolute" && !flexParents.has(memberParent.id)) {
+            flexParents.set(memberParent.id, memberParentLayout);
+          }
+          members.push({
+            nodeId: id,
+            startFrame: {
+              x: memberLayout.rect.x - memberParentLayout.rect.x,
+              y: memberLayout.rect.y - memberParentLayout.rect.y,
+              width: memberLayout.rect.width,
+              height: memberLayout.rect.height,
+            },
+            parentRect: memberParentLayout.rect,
+            parentContentInset: borderInsetFor(memberParent),
+            constrainToParent: !(allowCanvasOverflow && memberParent?.type === "screen"),
+          });
+        }
+        for (const [parentId, parentLayoutNode] of flexParents) {
+          absolutizeLayout(parentId, makeAbsoluteChildFrames(parentLayoutNode));
+        }
+        const lead = members[0];
+        startInteractionRef.current({
+          type: "move-group",
+          nodeId,
+          startClientX: event.clientX,
+          startClientY: event.clientY,
+          startFrame: lead.startFrame,
+          startRect: { ...lead.startFrame },
+          parentRect: lead.parentRect,
+          parentContentInset: lead.parentContentInset,
+          parentMode: "absolute",
+          constrainToParent: lead.constrainToParent,
+          members,
+        });
+        return;
+      }
+      if (movableIds.length === 1 && movableIds[0] !== nodeId) {
+        handleNodeMouseDown(movableIds[0], event);
+        return;
+      }
+    }
+
     const parentMode: LayoutMode = parentNode?.layout?.mode ?? "absolute";
     const constrainToParent = !(allowCanvasOverflow && parentNode?.type === "screen");
     const startFrame: Frame = {
@@ -743,7 +935,7 @@ export function CanvasWorkspace({
       constrainToParent,
       siblingCenters,
     });
-  }, [allowCanvasOverflow, project, layout, screen?.id, absolutizeLayout]);
+  }, [allowCanvasOverflow, project, activeScreenId, screen?.id, absolutizeLayout, selectNode]);
 
   const handleResizeMouseDown =
     (handle: ResizeHandle) => (event: React.MouseEvent<HTMLDivElement>) => {
@@ -811,8 +1003,9 @@ export function CanvasWorkspace({
   const showSelectionFrameDoubleClick =
     selectedNode?.type === "label" || selectedNode?.type === "icon";
 
-  const showSelectionMoveMask =
-    selectionHasTransform && editingLabelId !== selectedNodeId;
+  const showSelectionMoveMask = isMultiSelection
+    ? movableIds.length > 0 && editingLabelId !== selectedNodeId
+    : selectionHasTransform && editingLabelId !== selectedNodeId;
 
   const handleLineEndpointMouseDown =
     (lineHandle: LineHandle) => (event: React.MouseEvent<HTMLDivElement>) => {
@@ -1008,7 +1201,7 @@ export function CanvasWorkspace({
       palette: project.palette,
       stackIndices,
       selectedId: selectedNodeId,
-      movableId: canMoveSelection ? selectedNodeId : null,
+      movableIds,
       lockedId: isSelectionLocked ? selectedNodeId : null,
       dragPreview,
       draftFrames,
@@ -1038,7 +1231,7 @@ export function CanvasWorkspace({
       project.palette,
       stackIndices,
       selectedNodeId,
-      canMoveSelection,
+      movableIds,
       isSelectionLocked,
       dragPreview,
       draftFrames,
@@ -1131,7 +1324,7 @@ export function CanvasWorkspace({
                 scaledW={scaledW}
                 scaledH={scaledH}
                 renderZoom={renderZoom}
-                selectionRect={showSelectionGuides ? displayedSelectedRect : null}
+                selectionRect={showSelectionGuides ? overlaySelectionRect : null}
                 showSelectionLabels={showSelectionGuides}
               />
             ) : null}
@@ -1213,7 +1406,7 @@ export function CanvasWorkspace({
                 </div>
               </div>
             </div>
-            {showSelectionOverlay && displayedSelectedRect ? (
+            {showSelectionOverlay && displayedSelectedRect && !isMultiSelection ? (
               <div
                 className={styles.selectionLayer}
                 data-testid="canvas-selection-layer"
@@ -1242,6 +1435,51 @@ export function CanvasWorkspace({
                   onResizeHandleMouseDown={handleResizeMouseDown}
                   onLineEndpointMouseDown={handleLineEndpointMouseDown}
                 />
+              </div>
+            ) : null}
+            {isMultiSelection ? (
+              <div
+                className={styles.selectionLayer}
+                data-testid="canvas-selection-layer"
+                style={{
+                  left: RULER_SIZE,
+                  top: RULER_SIZE,
+                  width: scaledW,
+                  height: scaledH,
+                }}
+              >
+                {selectedMemberOverlays.map((member) => (
+                  <SelectionOverlay
+                    key={member.id}
+                    rect={member.rect}
+                    renderZoom={renderZoom}
+                    scaledW={scaledW}
+                    scaledH={scaledH}
+                    showGuides={false}
+                    showMoveMask={false}
+                    showResizeHandles={false}
+                    lineEndpoints={null}
+                    onResizeHandleMouseDown={handleResizeMouseDown}
+                    onLineEndpointMouseDown={handleLineEndpointMouseDown}
+                  />
+                ))}
+                {groupSelectionRect ? (
+                  <SelectionOverlay
+                    rect={groupSelectionRect}
+                    renderZoom={renderZoom}
+                    scaledW={scaledW}
+                    scaledH={scaledH}
+                    showGuides={showGuides}
+                    showMoveMask={showSelectionMoveMask}
+                    showResizeHandles={false}
+                    frameTestId="selection-group-frame"
+                    lineEndpoints={null}
+                    onMoveMouseDown={handleSelectionMoveMouseDown}
+                    allowContentInteraction={false}
+                    onResizeHandleMouseDown={handleResizeMouseDown}
+                    onLineEndpointMouseDown={handleLineEndpointMouseDown}
+                  />
+                ) : null}
               </div>
             ) : null}
             {marqueeRect ? (

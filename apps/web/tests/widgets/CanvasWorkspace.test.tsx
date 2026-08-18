@@ -265,14 +265,14 @@ describe("CanvasWorkspace: selection", () => {
     await act(async () => {
       await new Promise((resolve) => requestAnimationFrame(resolve));
     });
-    expect(get().draftFrame?.nodeId).toBe("lbl_1");
-    expect(get().draftFrame?.frame.width).toBeGreaterThan(
+    expect(get().draftFrames?.lbl_1).toBeTruthy();
+    expect(get().draftFrames?.lbl_1?.width).toBeGreaterThan(
       get().project.screens[0].children?.[0].frame?.width ?? 0,
     );
 
     fireEvent.blur(input);
     expect((get().project.screens[0].children?.[0].props as { text: string }).text).toBe("New label that grows");
-    expect(get().draftFrame).toBeNull();
+    expect(get().draftFrames).toBeNull();
   });
 
   it("edits selected button text inline on the canvas", async () => {
@@ -286,7 +286,7 @@ describe("CanvasWorkspace: selection", () => {
 
     expect(input).toHaveValue("Send");
     expect((get().project.screens[0].children?.[0].props as { text: string }).text).toBe("Save");
-    expect(get().draftFrame).toBeNull();
+    expect(get().draftFrames).toBeNull();
 
     fireEvent.blur(input);
     expect((get().project.screens[0].children?.[0].props as { text: string }).text).toBe("Send");
@@ -436,7 +436,7 @@ describe("CanvasWorkspace: move without jump", () => {
         '[data-testid="canvas-device-frame"] [data-testid="canvas-widget"][data-widget-id="lab_1"]',
       ) as HTMLElement | null;
       tops.push(Number.parseFloat(el?.style.top ?? "NaN"));
-      const draftY = get().draftFrame?.frame.y;
+      const draftY = get().draftFrames?.lab_1?.y;
       if (typeof draftY === "number") draftYs.push(draftY);
     };
 
@@ -470,7 +470,7 @@ describe("CanvasWorkspace: move without jump", () => {
     }
 
     expect(get().project.screens[0].children?.[0].children?.[0].frame?.y).toBeGreaterThan(12);
-    expect(get().draftFrame).toBeNull();
+    expect(get().draftFrames).toBeNull();
   });
 });
 

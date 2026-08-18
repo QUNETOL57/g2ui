@@ -83,7 +83,7 @@ describe("label text editing (feature)", () => {
     });
 
     expect((get().project.screens[0].children?.[0].props as { text: string }).text).toBe("A");
-    expect(get().draftFrame?.frame.width).toBeGreaterThan(
+    expect(get().draftFrames?.lbl_1?.width).toBeGreaterThan(
       get().project.screens[0].children?.[0].frame?.width ?? 0,
     );
 
@@ -92,7 +92,7 @@ describe("label text editing (feature)", () => {
     expect((after?.props as { text: string }).text).toBe("Longer label text");
     expect(after?.frame?.width).toBeGreaterThan(80);
     expect(get().editingLabelId).toBeNull();
-    expect(get().draftFrame).toBeNull();
+    expect(get().draftFrames).toBeNull();
   });
 
   it("commits button text on blur without resizing the button frame", () => {
@@ -109,7 +109,7 @@ describe("label text editing (feature)", () => {
     expect((after?.props as { text: string }).text).toBe("Submit");
     expect(after?.frame).toEqual(before);
     expect(get().editingLabelId).toBeNull();
-    expect(get().draftFrame).toBeNull();
+    expect(get().draftFrames).toBeNull();
   });
 
   it("preserves label position inside a panel when committing by clicking outside", async () => {

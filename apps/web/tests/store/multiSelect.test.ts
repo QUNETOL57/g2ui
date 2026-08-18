@@ -43,6 +43,49 @@ describe("store: multi-selection", () => {
     expect(get().selectedNodeIds).toEqual(["lab_1", "lab_2", "lab_3"]);
     expect(get().selectedNodeId).toBe("lab_3");
   });
+
+  it("undo and redo restore the full multi-selection", () => {
+    get().setSelection(["lab_1", "lab_2", "lab_3"]);
+    get().updateNode("lab_1", { name: "moved" });
+    expect(get().selectedNodeIds).toEqual(["lab_1", "lab_2", "lab_3"]);
+
+    get().undo();
+    expect(get().selectedNodeIds).toEqual(["lab_1", "lab_2", "lab_3"]);
+    expect(get().selectedNodeId).toBe("lab_3");
+    expect(findNode(get().project, "lab_1")?.name).not.toBe("moved");
+
+    get().redo();
+    expect(get().selectedNodeIds).toEqual(["lab_1", "lab_2", "lab_3"]);
+    expect(get().selectedNodeId).toBe("lab_3");
+    expect(findNode(get().project, "lab_1")?.name).toBe("moved");
+  });
+});
+
+describe("store: updateFrames", () => {
+  it("updates multiple frames in one history step", () => {
+    const pastBefore = get().historyPast.length;
+    get().updateFrames([
+      { id: "lab_1", frame: { x: 11, y: 12 } },
+      { id: "lab_2", frame: { x: 21, y: 22 } },
+      { id: "lab_3", frame: { x: 31, y: 32 } },
+    ]);
+    expect(findNode(get().project, "lab_1")?.frame).toMatchObject({ x: 11, y: 12 });
+    expect(findNode(get().project, "lab_2")?.frame).toMatchObject({ x: 21, y: 22 });
+    expect(findNode(get().project, "lab_3")?.frame).toMatchObject({ x: 31, y: 32 });
+    expect(get().historyPast.length).toBe(pastBefore + 1);
+
+    get().undo();
+    expect(findNode(get().project, "lab_1")?.frame).toMatchObject({ x: 8, y: 8 });
+    expect(findNode(get().project, "lab_2")?.frame).toMatchObject({ x: 8, y: 8 });
+    expect(findNode(get().project, "lab_3")?.frame).toMatchObject({ x: 8, y: 8 });
+  });
+
+  it("is a no-op for an empty or fully missing update list", () => {
+    const pastBefore = get().historyPast.length;
+    get().updateFrames([]);
+    get().updateFrames([{ id: "missing", frame: { x: 1 } }]);
+    expect(get().historyPast.length).toBe(pastBefore);
+  });
 });
 
 describe("store: deleteNodes", () => {

@@ -35,7 +35,7 @@ function makePreviewCtx(
     movableId: null,
     lockedId: null,
     dragPreview: null,
-    draftFrame: null,
+    draftFrames: null,
     onSelect: vi.fn(),
     ...overrides,
   };
@@ -1303,7 +1303,7 @@ describe("PreviewNode: draftFrame coordinates", () => {
       <PreviewNode
         layoutNode={layout}
         ctx={makePreviewCtx(project, layout, {
-          draftFrame: { nodeId: "lab_1", frame: { x: 8, y: 20, width: 40, height: 7 } },
+          draftFrames: { lab_1: { x: 8, y: 20, width: 40, height: 7 } },
         })}
       />,
     );
@@ -1314,7 +1314,7 @@ describe("PreviewNode: draftFrame coordinates", () => {
       <PreviewNode
         layoutNode={layout}
         ctx={makePreviewCtx(project, layout, {
-          draftFrame: { nodeId: "lab_1", frame: { x: 8, y: 60, width: 40, height: 7 } },
+          draftFrames: { lab_1: { x: 8, y: 60, width: 40, height: 7 } },
         })}
       />,
     );

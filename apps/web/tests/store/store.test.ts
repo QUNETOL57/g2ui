@@ -79,14 +79,14 @@ describe("store: setProject / loadHelloSample", () => {
 });
 
 describe("store: selection & active screen", () => {
-  it("selectNode updates selectedNodeId and clears draftFrame", () => {
+  it("selectNode updates selectedNodeId and clears draftFrames", () => {
     get().selectNode("x");
     expect(get().selectedNodeId).toBe("x");
     get().setDraftFrame({ nodeId: "x", frame: { x: 0, y: 0, width: 5, height: 5 } });
-    expect(get().draftFrame).not.toBeNull();
+    expect(get().draftFrames).not.toBeNull();
     get().selectNode(null);
     expect(get().selectedNodeId).toBeNull();
-    expect(get().draftFrame).toBeNull();
+    expect(get().draftFrames).toBeNull();
   });
 
   it("setActiveScreen updates activeScreenId and resets selection", () => {

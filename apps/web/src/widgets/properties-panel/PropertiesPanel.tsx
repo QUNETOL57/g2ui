@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 
+import { draftFrameFor } from "@entities/ui-project";
 import { layoutTree } from "@entities/ui-project/lib/layoutEngine";
 import { useEditorStore } from "@entities/ui-project/model/store";
 import { findNode } from "@entities/ui-project/model/tree-ops";
@@ -24,7 +25,7 @@ export function PropertiesPanel() {
   const activeTool = useEditorStore((s) => s.activeTool);
   const markerStyle = useEditorStore((s) => s.markerStyle);
   const selectedNodeId = useEditorStore((s) => s.selectedNodeId);
-  const draftFrame = useEditorStore((s) => s.draftFrame);
+  const draftFrames = useEditorStore((s) => s.draftFrames);
   const updateNode = useEditorStore((s) => s.updateNode);
   const renameNode = useEditorStore((s) => s.renameNode);
   const updateFrame = useEditorStore((s) => s.updateFrame);
@@ -38,20 +39,22 @@ export function PropertiesPanel() {
     [project, selectedNodeId],
   );
 
-  /** draftFrame is stored in absolute canvas space; Transform fields need parent-local. */
+  /** draftFrames are stored in absolute canvas space; Transform fields need parent-local. */
   const localDraftFrame = useMemo(() => {
-    if (!node || !draftFrame || draftFrame.nodeId !== node.id) return null;
+    if (!node) return null;
+    const absolute = draftFrameFor(draftFrames, node.id);
+    if (!absolute) return null;
     const screen = project.screens.find((entry) => entry.id === activeScreenId) ?? project.screens[0];
-    if (!screen) return draftFrame.frame;
+    if (!screen) return absolute;
     const layout = layoutTree(screen, project.display.width, project.display.height);
     const parentLayout = findParentLayoutNode(layout, node.id);
-    if (!parentLayout) return draftFrame.frame;
+    if (!parentLayout) return absolute;
     return {
-      ...draftFrame.frame,
-      x: draftFrame.frame.x - parentLayout.rect.x,
-      y: draftFrame.frame.y - parentLayout.rect.y,
+      ...absolute,
+      x: absolute.x - parentLayout.rect.x,
+      y: absolute.y - parentLayout.rect.y,
     };
-  }, [activeScreenId, draftFrame, node, project.display.height, project.display.width, project.screens]);
+  }, [activeScreenId, draftFrames, node, project.display.height, project.display.width, project.screens]);
 
   if (!selectedNodeId) {
     if (activeTool === "marker") {

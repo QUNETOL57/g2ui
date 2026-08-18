@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { Frame, IconProps, LayoutMode, PixelPoint } from "@entities/ui-project";
+import { draftFrameFor } from "@entities/ui-project";
 import { useEditorStore } from "@entities/ui-project/model/store";
 import { findNode, findParent } from "@entities/ui-project/model/tree-ops";
 import { layoutTree } from "@entities/ui-project/lib/layoutEngine";
@@ -107,7 +108,7 @@ export function CanvasWorkspace({
   const updateFrame = useEditorStore((s) => s.updateFrame);
   const fitNodeFrameToContent = useEditorStore((s) => s.fitNodeFrameToContent);
   const updateProps = useEditorStore((s) => s.updateProps);
-  const draftFrame = useEditorStore((s) => s.draftFrame);
+  const draftFrames = useEditorStore((s) => s.draftFrames);
   const setDraftFrame = useEditorStore((s) => s.setDraftFrame);
   const editingLabelId = useEditorStore((s) => s.editingLabelId);
   const beginLabelTextEdit = useEditorStore((s) => s.beginLabelTextEdit);
@@ -208,9 +209,7 @@ export function CanvasWorkspace({
   const rawDisplayedSelectedRect =
     dragPreview && dragPreview.nodeId === selectedNodeId
       ? dragPreview.rect
-      : draftFrame?.nodeId === selectedNodeId
-        ? draftFrame.frame
-        : selectedRect;
+      : draftFrameFor(draftFrames, selectedNodeId) ?? selectedRect;
   const displayedSelectedRect = rawDisplayedSelectedRect && selectedNode
     ? selectionRectForNode(selectedNode, rawDisplayedSelectedRect)
     : rawDisplayedSelectedRect;
@@ -890,7 +889,7 @@ export function CanvasWorkspace({
       movableId: canMoveSelection ? selectedNodeId : null,
       lockedId: isSelectionLocked ? selectedNodeId : null,
       dragPreview,
-      draftFrame,
+      draftFrames,
       onSelect: selectNode,
       onNodeMouseDown: activeTool === "marker"
         ? (_nodeId: string, event: React.MouseEvent<HTMLDivElement>) => {
@@ -920,7 +919,7 @@ export function CanvasWorkspace({
       canMoveSelection,
       isSelectionLocked,
       dragPreview,
-      draftFrame,
+      draftFrames,
       selectNode,
       activeTool,
       startMarkerDrawing,

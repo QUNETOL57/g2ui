@@ -47,7 +47,7 @@ interface RenderCtx {
   movableId: string | null;
   lockedId: string | null;
   dragPreview: { nodeId: string; rect: Frame; lineProps?: Partial<LineProps> } | null;
-  draftFrame?: { nodeId: string; frame: Frame } | null;
+  draftFrames?: Record<string, Frame> | null;
   onSelect: (id: string) => void;
   onNodeMouseDown?: (nodeId: string, event: React.MouseEvent<HTMLDivElement>) => void;
   onLabelEditStart?: (nodeId: string) => void;
@@ -68,7 +68,7 @@ function PreviewNodeImpl({
   const { node, rect, children } = layoutNode;
   if (node.visible === false) return null;
   const preview = ctx.dragPreview?.nodeId === node.id ? ctx.dragPreview : null;
-  const draftRect = ctx.draftFrame?.nodeId === node.id ? ctx.draftFrame.frame : null;
+  const draftRect = ctx.draftFrames?.[node.id] ?? null;
   const previewRect = preview?.rect ?? draftRect;
   const nextDragOffset = previewRect
     ? { x: previewRect.x - rect.x, y: previewRect.y - rect.y }
@@ -179,10 +179,10 @@ const PreviewNode = memo(PreviewNodeImpl, (prev, next) => {
   if (prevDragged !== nextDragged) return false;
   if (prevDragged && nextDragged && pc.dragPreview?.rect !== nc.dragPreview?.rect) return false;
 
-  const prevDrafted = pc.draftFrame?.nodeId === nid;
-  const nextDrafted = nc.draftFrame?.nodeId === nid;
-  if (prevDrafted !== nextDrafted) return false;
-  if (prevDrafted && nextDrafted && pc.draftFrame?.frame !== nc.draftFrame?.frame) return false;
+  const prevDrafted = pc.draftFrames?.[nid];
+  const nextDrafted = nc.draftFrames?.[nid];
+  if (!!prevDrafted !== !!nextDrafted) return false;
+  if (prevDrafted && nextDrafted && prevDrafted !== nextDrafted) return false;
 
   const prevEditing = pc.editingLabelId === nid;
   const nextEditing = nc.editingLabelId === nid;

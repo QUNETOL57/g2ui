@@ -65,4 +65,22 @@ describe("CanvasRulers", () => {
     );
     expect(screen.queryByText("10")).toBeNull();
   });
+
+  it("renders group bounding-box coordinates when given a union rect", () => {
+    render(
+      <CanvasRulers
+        horizontalTicks={horizontalTicks}
+        verticalTicks={verticalTicks}
+        scaledW={128}
+        scaledH={128}
+        renderZoom={2}
+        selectionRect={{ x: 11, y: 13, width: 29, height: 32 }}
+        showSelectionLabels
+      />,
+    );
+    expect(screen.getAllByText("11").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("40").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("13").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("45").length).toBeGreaterThan(0);
+  });
 });

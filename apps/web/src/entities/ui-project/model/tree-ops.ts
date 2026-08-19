@@ -115,20 +115,16 @@ export function cloneWidgetSubtree(node: WidgetNode, usedIds: Set<string>): Widg
   return cloned;
 }
 
-/**
- * Selection roots suitable for copy/duplicate: skip the active screen,
- * skip screen-typed nodes, and drop descendants when an ancestor is also selected.
- * Result is sorted in document (DFS) order.
- */
-export function pruneCopySelection(
+function pruneSelectionRoots(
   project: UiProject,
   ids: readonly string[],
   activeScreenId: string,
+  accept: (node: WidgetNode) => boolean,
 ): string[] {
   const candidates = ids.filter((id) => {
     if (!id || id === activeScreenId) return false;
     const node = findNode(project, id);
-    return !!node && node.type !== "screen";
+    return !!node && node.type !== "screen" && accept(node);
   });
   const roots = candidates.filter(
     (id) => !candidates.some((other) => other !== id && isAncestor(project, other, id)),
@@ -143,6 +139,53 @@ export function pruneCopySelection(
   project.screens.forEach(indexWalk);
 
   return [...roots].sort((a, b) => (order.get(a) ?? 0) - (order.get(b) ?? 0));
+}
+
+/**
+ * Selection roots suitable for copy/duplicate: skip the active screen,
+ * skip screen-typed nodes, and drop descendants when an ancestor is also selected.
+ * Result is sorted in document (DFS) order.
+ */
+export function pruneCopySelection(
+  project: UiProject,
+  ids: readonly string[],
+  activeScreenId: string,
+): string[] {
+  return pruneSelectionRoots(project, ids, activeScreenId, () => true);
+}
+
+/**
+ * Selection roots suitable for group move: copy roots minus locked nodes and
+ * nodes without a frame. Descendants of selected ancestors are dropped.
+ */
+export function pruneMovableSelection(
+  project: UiProject,
+  ids: readonly string[],
+  activeScreenId: string,
+): string[] {
+  return pruneSelectionRoots(
+    project,
+    ids,
+    activeScreenId,
+    (node) => !node.locked && !!node.frame,
+  );
+}
+
+/**
+ * DFS order of every node on the given screen, including the screen itself.
+ * Used for Shift-range selection on canvas. TreePanel keeps a separate walk
+ * that skips collapsed panels.
+ */
+export function flattenSelectableIds(project: UiProject, screenId: string): string[] {
+  const screen = project.screens.find((entry) => entry.id === screenId);
+  if (!screen) return [];
+  const ids: string[] = [];
+  const walk = (node: WidgetNode) => {
+    ids.push(node.id);
+    (node.children ?? []).forEach(walk);
+  };
+  walk(screen);
+  return ids;
 }
 
 export function offsetWidgetFrame(node: WidgetNode, dx: number, dy: number): void {

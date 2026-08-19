@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { layoutTree } from "@entities/ui-project/lib/layoutEngine";
 import {
   MAX_ZOOM,
   MIN_ZOOM,
@@ -22,6 +23,10 @@ import {
   lineStrokeWidthFor,
   nextWheelZoom,
   normalizeZoom,
+  rectFromDragPoints,
+  rectsIntersect,
+  collectNodeIdsInRect,
+  unionRect,
   renderZoomFor,
   rotatePoint90,
   rotatedFrameAabb,
@@ -31,6 +36,12 @@ import {
   visualRectForNode,
   zoomToProgress,
 } from "@widgets/canvas-workspace/lib/geometry";
+import {
+  makeFixtureProject,
+  makeLabel,
+  makePanel,
+  withChildren,
+} from "../fixtures/projects";
 
 describe("constrainToRange", () => {
   it("clamps when constrain is enabled", () => {
@@ -445,5 +456,70 @@ describe("lineFrameFromEndpoints", () => {
     );
     expect(frame.width).toBeGreaterThanOrEqual(1);
     expect(frame.height).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe("rectFromDragPoints / rectsIntersect", () => {
+  it("normalizes a drag into a positive-size frame", () => {
+    expect(rectFromDragPoints({ x: 40, y: 10 }, { x: 10, y: 30 })).toEqual({
+      x: 10,
+      y: 10,
+      width: 30,
+      height: 20,
+    });
+  });
+
+  it("detects overlapping frames and ignores touching-only edges", () => {
+    expect(
+      rectsIntersect(
+        { x: 0, y: 0, width: 10, height: 10 },
+        { x: 5, y: 5, width: 10, height: 10 },
+      ),
+    ).toBe(true);
+    expect(
+      rectsIntersect(
+        { x: 0, y: 0, width: 10, height: 10 },
+        { x: 10, y: 0, width: 10, height: 10 },
+      ),
+    ).toBe(false);
+  });
+});
+
+describe("collectNodeIdsInRect", () => {
+  it("collects intersecting widgets including nested ones and skips the screen", () => {
+    const nested = makeLabel("lbl_nested", "In");
+    nested.frame = { x: 4, y: 4, width: 20, height: 8 };
+    const panel = makePanel("pan_1", [nested]);
+    panel.layout = { mode: "absolute", padding: 0, gap: 0, align: "start", justify: "start" };
+    panel.frame = { x: 0, y: 0, width: 80, height: 40 };
+    const hidden = makeLabel("lbl_hidden", "Hide");
+    hidden.visible = false;
+    hidden.frame = { x: 0, y: 80, width: 40, height: 10 };
+    const project = withChildren(makeFixtureProject(), [panel, hidden]);
+    const layout = layoutTree(project.screens[0], project.display.width, project.display.height);
+
+    const ids = collectNodeIdsInRect(
+      layout,
+      { x: 4, y: 4, width: 10, height: 6 },
+      "screen_main",
+    );
+    expect(ids).toEqual(["pan_1", "lbl_nested"]);
+    expect(ids).not.toContain("screen_main");
+    expect(ids).not.toContain("lbl_hidden");
+  });
+});
+
+describe("unionRect", () => {
+  it("returns the bounding box of all frames", () => {
+    expect(
+      unionRect([
+        { x: 8, y: 8, width: 40, height: 10 },
+        { x: 8, y: 40, width: 40, height: 10 },
+      ]),
+    ).toEqual({ x: 8, y: 8, width: 40, height: 42 });
+  });
+
+  it("returns null for an empty list", () => {
+    expect(unionRect([])).toBeNull();
   });
 });

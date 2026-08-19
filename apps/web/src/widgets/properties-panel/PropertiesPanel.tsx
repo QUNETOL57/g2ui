@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 
+import { draftFrameFor } from "@entities/ui-project";
 import { layoutTree } from "@entities/ui-project/lib/layoutEngine";
 import { useEditorStore } from "@entities/ui-project/model/store";
 import { findNode } from "@entities/ui-project/model/tree-ops";
@@ -18,13 +19,16 @@ import { SelectedGroup } from "./groups/SelectedGroup";
 import { StyleGroup } from "./groups/StyleGroup";
 import { EditorShortcutsList } from "./ui/EditorShortcutsList";
 
+import styles from "./PropertiesPanel.module.css";
+
 export function PropertiesPanel() {
   const project = useEditorStore((s) => s.project);
   const activeScreenId = useEditorStore((s) => s.activeScreenId);
   const activeTool = useEditorStore((s) => s.activeTool);
   const markerStyle = useEditorStore((s) => s.markerStyle);
   const selectedNodeId = useEditorStore((s) => s.selectedNodeId);
-  const draftFrame = useEditorStore((s) => s.draftFrame);
+  const selectedNodeIds = useEditorStore((s) => s.selectedNodeIds);
+  const draftFrames = useEditorStore((s) => s.draftFrames);
   const updateNode = useEditorStore((s) => s.updateNode);
   const renameNode = useEditorStore((s) => s.renameNode);
   const updateFrame = useEditorStore((s) => s.updateFrame);
@@ -32,26 +36,57 @@ export function PropertiesPanel() {
   const updateLayout = useEditorStore((s) => s.updateLayout);
   const updateStyle = useEditorStore((s) => s.updateStyle);
   const updateMarkerStyle = useEditorStore((s) => s.updateMarkerStyle);
+  const deleteNodes = useEditorStore((s) => s.deleteNodes);
+  const copySelectedNodes = useEditorStore((s) => s.copySelectedNodes);
+  const duplicateSelectedNodes = useEditorStore((s) => s.duplicateSelectedNodes);
+  const rotateSelectedNodes = useEditorStore((s) => s.rotateSelectedNodes);
 
   const node = useMemo(
     () => (selectedNodeId ? findNode(project, selectedNodeId) : null),
     [project, selectedNodeId],
   );
 
-  /** draftFrame is stored in absolute canvas space; Transform fields need parent-local. */
+  /** draftFrames are stored in absolute canvas space; Transform fields need parent-local. */
   const localDraftFrame = useMemo(() => {
-    if (!node || !draftFrame || draftFrame.nodeId !== node.id) return null;
+    if (!node) return null;
+    const absolute = draftFrameFor(draftFrames, node.id);
+    if (!absolute) return null;
     const screen = project.screens.find((entry) => entry.id === activeScreenId) ?? project.screens[0];
-    if (!screen) return draftFrame.frame;
+    if (!screen) return absolute;
     const layout = layoutTree(screen, project.display.width, project.display.height);
     const parentLayout = findParentLayoutNode(layout, node.id);
-    if (!parentLayout) return draftFrame.frame;
+    if (!parentLayout) return absolute;
     return {
-      ...draftFrame.frame,
-      x: draftFrame.frame.x - parentLayout.rect.x,
-      y: draftFrame.frame.y - parentLayout.rect.y,
+      ...absolute,
+      x: absolute.x - parentLayout.rect.x,
+      y: absolute.y - parentLayout.rect.y,
     };
-  }, [activeScreenId, draftFrame, node, project.display.height, project.display.width, project.screens]);
+  }, [activeScreenId, draftFrames, node, project.display.height, project.display.width, project.screens]);
+
+  if (selectedNodeIds.length > 1) {
+    return (
+      <>
+        <SectionTitle>Properties · selection</SectionTitle>
+        <div className={styles.multiSummary}>
+          <p className={styles.multiCount}>Выбрано {selectedNodeIds.length} элементов</p>
+          <div className={styles.multiActions}>
+            <button type="button" className={styles.multiAction} onClick={() => deleteNodes(selectedNodeIds)}>
+              Delete
+            </button>
+            <button type="button" className={styles.multiAction} onClick={() => copySelectedNodes()}>
+              Copy
+            </button>
+            <button type="button" className={styles.multiAction} onClick={() => duplicateSelectedNodes()}>
+              Duplicate
+            </button>
+            <button type="button" className={styles.multiAction} onClick={() => rotateSelectedNodes(1)}>
+              Rotate
+            </button>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   if (!selectedNodeId) {
     if (activeTool === "marker") {

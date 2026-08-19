@@ -43,6 +43,49 @@ describe("store: multi-selection", () => {
     expect(get().selectedNodeIds).toEqual(["lab_1", "lab_2", "lab_3"]);
     expect(get().selectedNodeId).toBe("lab_3");
   });
+
+  it("undo and redo restore the full multi-selection", () => {
+    get().setSelection(["lab_1", "lab_2", "lab_3"]);
+    get().updateNode("lab_1", { name: "moved" });
+    expect(get().selectedNodeIds).toEqual(["lab_1", "lab_2", "lab_3"]);
+
+    get().undo();
+    expect(get().selectedNodeIds).toEqual(["lab_1", "lab_2", "lab_3"]);
+    expect(get().selectedNodeId).toBe("lab_3");
+    expect(findNode(get().project, "lab_1")?.name).not.toBe("moved");
+
+    get().redo();
+    expect(get().selectedNodeIds).toEqual(["lab_1", "lab_2", "lab_3"]);
+    expect(get().selectedNodeId).toBe("lab_3");
+    expect(findNode(get().project, "lab_1")?.name).toBe("moved");
+  });
+});
+
+describe("store: updateFrames", () => {
+  it("updates multiple frames in one history step", () => {
+    const pastBefore = get().historyPast.length;
+    get().updateFrames([
+      { id: "lab_1", frame: { x: 11, y: 12 } },
+      { id: "lab_2", frame: { x: 21, y: 22 } },
+      { id: "lab_3", frame: { x: 31, y: 32 } },
+    ]);
+    expect(findNode(get().project, "lab_1")?.frame).toMatchObject({ x: 11, y: 12 });
+    expect(findNode(get().project, "lab_2")?.frame).toMatchObject({ x: 21, y: 22 });
+    expect(findNode(get().project, "lab_3")?.frame).toMatchObject({ x: 31, y: 32 });
+    expect(get().historyPast.length).toBe(pastBefore + 1);
+
+    get().undo();
+    expect(findNode(get().project, "lab_1")?.frame).toMatchObject({ x: 8, y: 8 });
+    expect(findNode(get().project, "lab_2")?.frame).toMatchObject({ x: 8, y: 8 });
+    expect(findNode(get().project, "lab_3")?.frame).toMatchObject({ x: 8, y: 8 });
+  });
+
+  it("is a no-op for an empty or fully missing update list", () => {
+    const pastBefore = get().historyPast.length;
+    get().updateFrames([]);
+    get().updateFrames([{ id: "missing", frame: { x: 1 } }]);
+    expect(get().historyPast.length).toBe(pastBefore);
+  });
 });
 
 describe("store: deleteNodes", () => {
@@ -83,3 +126,40 @@ describe("store: moveNodesToTarget", () => {
     expect(root).toEqual(["pan_1"]);
   });
 });
+
+describe("store: moveNodes", () => {
+  it("reorders a multi-selection as a block in one history step", () => {
+    get().setSelection(["lab_2", "lab_3"], "lab_3");
+    const historyBefore = get().historyPast.length;
+    get().moveNodes(["lab_2", "lab_3"], "up");
+    expect(get().project.screens[0].children?.map((child) => child.id)).toEqual([
+      "lab_2",
+      "lab_3",
+      "lab_1",
+      "pan_1",
+    ]);
+    expect(get().historyPast.length).toBe(historyBefore + 1);
+    get().undo();
+    expect(get().project.screens[0].children?.map((child) => child.id)).toEqual([
+      "lab_1",
+      "lab_2",
+      "lab_3",
+      "pan_1",
+    ]);
+  });
+});
+
+describe("store: paste into primary parent", () => {
+  it("pastes into the parent of the primary selection when multiple nodes are selected", () => {
+    const panel = makePanel("pan_dst", [makeLabel("lab_in")]);
+    resetEditorStore(withChildren(makeFixtureProject(), [makeLabel("lab_1"), panel]));
+    get().selectNode("lab_1");
+    expect(get().copySelectedNodes()).toBe(true);
+    get().setSelection(["lab_in", "lab_1"], "lab_in");
+    const pasted = get().pasteClipboard();
+    expect(pasted).toHaveLength(1);
+    expect(findNode(get().project, pasted![0])).toBeTruthy();
+    expect(get().project.screens[0].children?.find((child) => child.id === "pan_dst")?.children?.some((child) => child.id === pasted![0])).toBe(true);
+  });
+});
+

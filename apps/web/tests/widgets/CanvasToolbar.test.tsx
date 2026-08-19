@@ -144,6 +144,19 @@ describe("CanvasToolbar: arrange actions", () => {
     expect(get().project.screens[0].children?.map((c) => c.id)).toEqual(["b", "a"]);
   });
 
+  it("move-up reorders a multi-selection as a block", async () => {
+    const project = withChildren(makeFixtureProject(), [
+      makeLabel("a"),
+      makeLabel("b"),
+      makeLabel("c"),
+    ]);
+    get().setProject(project);
+    get().setSelection(["b", "c"], "c");
+    render(<CanvasToolbar />);
+    await userEvent.click(screen.getByRole("button", { name: "Move up" }));
+    expect(get().project.screens[0].children?.map((child) => child.id)).toEqual(["b", "c", "a"]);
+  });
+
   it("delete removes the selected node", async () => {
     const project = withChildren(makeFixtureProject(), [makeButton("bt_1")]);
     get().setProject(project);

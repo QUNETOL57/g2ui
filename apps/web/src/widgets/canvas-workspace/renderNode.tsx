@@ -44,11 +44,11 @@ interface RenderCtx {
   palette: PaletteEntry[] | undefined;
   stackIndices: ReadonlyMap<string, number>;
   selectedId: string | null;
-  movableId: string | null;
+  movableIds: readonly string[];
   lockedId: string | null;
   dragPreview: { nodeId: string; rect: Frame; lineProps?: Partial<LineProps> } | null;
-  draftFrame?: { nodeId: string; frame: Frame } | null;
-  onSelect: (id: string) => void;
+  draftFrames?: Record<string, Frame> | null;
+  onSelect: (id: string, mods?: { toggle?: boolean; range?: boolean }) => void;
   onNodeMouseDown?: (nodeId: string, event: React.MouseEvent<HTMLDivElement>) => void;
   onLabelEditStart?: (nodeId: string) => void;
   editingLabelId?: string | null;
@@ -68,7 +68,7 @@ function PreviewNodeImpl({
   const { node, rect, children } = layoutNode;
   if (node.visible === false) return null;
   const preview = ctx.dragPreview?.nodeId === node.id ? ctx.dragPreview : null;
-  const draftRect = ctx.draftFrame?.nodeId === node.id ? ctx.draftFrame.frame : null;
+  const draftRect = ctx.draftFrames?.[node.id] ?? null;
   const previewRect = preview?.rect ?? draftRect;
   const nextDragOffset = previewRect
     ? { x: previewRect.x - rect.x, y: previewRect.y - rect.y }
@@ -92,7 +92,7 @@ function PreviewNodeImpl({
     transform: rotation ? `rotate(${rotation}deg)` : undefined,
     transformOrigin: rotation ? "center center" : undefined,
     cursor:
-      node.id === ctx.movableId
+      ctx.movableIds.includes(node.id)
         ? "move"
         : node.id === ctx.lockedId
           ? "not-allowed"
@@ -101,9 +101,14 @@ function PreviewNodeImpl({
   };
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     e.stopPropagation();
-    ctx.onSelect(node.id);
-    ctx.onNodeMouseDown?.(node.id, e);
+    const toggle = e.metaKey || e.ctrlKey || e.shiftKey;
+    if (toggle) ctx.onSelect(node.id, { toggle: true });
+    else ctx.onSelect(node.id);
+    if (!toggle) {
+      ctx.onNodeMouseDown?.(node.id, e);
+    }
   };
+  const capturePointer = node.type !== "screen";
   const handleDoubleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     e.stopPropagation();
     if (node.locked === true) return;
@@ -125,7 +130,7 @@ function PreviewNodeImpl({
           data-widget-id={node.id}
           data-widget-type={node.type}
           style={style}
-          onMouseDown={handleMouseDown}
+          onMouseDown={capturePointer ? handleMouseDown : undefined}
         />
       ) : null}
       <div
@@ -137,8 +142,8 @@ function PreviewNodeImpl({
           ...style,
           pointerEvents: hasPanelChildren ? "none" : undefined,
         }}
-        onMouseDown={hasPanelChildren ? undefined : handleMouseDown}
-        onDoubleClick={hasPanelChildren ? undefined : handleDoubleClick}
+        onMouseDown={capturePointer && !hasPanelChildren ? handleMouseDown : undefined}
+        onDoubleClick={capturePointer && !hasPanelChildren ? handleDoubleClick : undefined}
       >
         <NodeVisual node={visualNode} ctx={ctx} rect={{ ...displayRect, height: visualHeight }} />
       </div>
@@ -171,7 +176,7 @@ const PreviewNode = memo(PreviewNodeImpl, (prev, next) => {
 
   if (pc.palette !== nc.palette) return false;
   if ((pc.selectedId === nid) !== (nc.selectedId === nid)) return false;
-  if ((pc.movableId === nid) !== (nc.movableId === nid)) return false;
+  if (pc.movableIds.includes(nid) !== nc.movableIds.includes(nid)) return false;
   if ((pc.lockedId === nid) !== (nc.lockedId === nid)) return false;
 
   const prevDragged = pc.dragPreview?.nodeId === nid;
@@ -179,10 +184,10 @@ const PreviewNode = memo(PreviewNodeImpl, (prev, next) => {
   if (prevDragged !== nextDragged) return false;
   if (prevDragged && nextDragged && pc.dragPreview?.rect !== nc.dragPreview?.rect) return false;
 
-  const prevDrafted = pc.draftFrame?.nodeId === nid;
-  const nextDrafted = nc.draftFrame?.nodeId === nid;
-  if (prevDrafted !== nextDrafted) return false;
-  if (prevDrafted && nextDrafted && pc.draftFrame?.frame !== nc.draftFrame?.frame) return false;
+  const prevDrafted = pc.draftFrames?.[nid];
+  const nextDrafted = nc.draftFrames?.[nid];
+  if (!!prevDrafted !== !!nextDrafted) return false;
+  if (prevDrafted && nextDrafted && prevDrafted !== nextDrafted) return false;
 
   const prevEditing = pc.editingLabelId === nid;
   const nextEditing = nc.editingLabelId === nid;

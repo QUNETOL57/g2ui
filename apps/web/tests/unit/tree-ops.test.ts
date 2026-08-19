@@ -12,6 +12,7 @@ import {
   findParent,
   findScreenOf,
   fitTextNodeFrame,
+  flattenSelectableIds,
   insertChild,
   insertChildAfter,
   isAncestor,
@@ -20,6 +21,7 @@ import {
   normalizeTextNodeFrame,
   offsetWidgetFrame,
   pruneCopySelection,
+  pruneMovableSelection,
   removeNode,
   renameNodeInProject,
   remapColorTokenRefs,
@@ -354,6 +356,47 @@ describe("pruneCopySelection", () => {
       "lbl_1",
       "pan_1",
     ]);
+  });
+});
+
+describe("pruneMovableSelection", () => {
+  it("drops nested descendants, locked nodes, and nodes without a frame", () => {
+    const nested = makeLabel("lbl_1");
+    const panel = makePanel("pan_1", [nested]);
+    const locked = makeButton("btn_1");
+    locked.locked = true;
+    const frameless = makeLabel("lbl_2");
+    delete frameless.frame;
+    const project = withChildren(makeFixtureProject(), [panel, locked, frameless, makeButton("btn_2")]);
+    expect(
+      pruneMovableSelection(
+        project,
+        ["screen_main", "pan_1", "lbl_1", "btn_1", "lbl_2", "btn_2"],
+        "screen_main",
+      ),
+    ).toEqual(["pan_1", "btn_2"]);
+  });
+});
+
+describe("flattenSelectableIds", () => {
+  it("returns DFS order including the screen", () => {
+    const project = withChildren(makeFixtureProject(), [
+      makePanel("pan_1", [makeLabel("lbl_1")]),
+      makeButton("btn_1"),
+    ]);
+    expect(flattenSelectableIds(project, "screen_main")).toEqual([
+      "screen_main",
+      "pan_1",
+      "lbl_1",
+      "btn_1",
+    ]);
+  });
+
+  it("is stable across calls", () => {
+    const project = withChildren(makeFixtureProject(), [makeLabel("a"), makeLabel("b")]);
+    expect(flattenSelectableIds(project, "screen_main")).toEqual(
+      flattenSelectableIds(project, "screen_main"),
+    );
   });
 });
 

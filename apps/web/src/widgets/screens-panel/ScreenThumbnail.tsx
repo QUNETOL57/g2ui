@@ -63,7 +63,7 @@ export function ScreenThumbnail({
                 palette: project.palette,
                 stackIndices,
                 selectedId: null,
-                movableId: null,
+                movableIds: [],
                 lockedId: null,
                 dragPreview: null,
                 onSelect: () => undefined,

@@ -340,4 +340,24 @@ describe("SelectionOverlay", () => {
     const handle = getByTestId("resize-handle-s");
     expect(handle.style.width).not.toBe("0px");
   });
+
+  it("uses selection-group-frame when frameTestId is overridden", () => {
+    const { getAllByTestId, queryAllByTestId } = render(
+      <SelectionOverlay
+        rect={rect}
+        renderZoom={2}
+        scaledW={200}
+        scaledH={200}
+        showGuides={false}
+        showMoveMask={false}
+        showResizeHandles={false}
+        frameTestId="selection-group-frame"
+        lineEndpoints={null}
+        onResizeHandleMouseDown={() => () => undefined}
+        onLineEndpointMouseDown={() => () => undefined}
+      />,
+    );
+    expect(getAllByTestId("selection-group-frame")).toHaveLength(4);
+    expect(queryAllByTestId("selection-frame")).toHaveLength(0);
+  });
 });

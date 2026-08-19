@@ -1,4 +1,5 @@
 import type { Frame, LineProps } from "@entities/ui-project";
+import type { LayoutNode } from "@entities/ui-project/lib/layoutEngine";
 import {
   frameCenter,
   rotatedFrameAabb,
@@ -14,6 +15,8 @@ export const ZOOM_STEP = 0.5;
 export const ZOOM_STEP_COARSE = 1;
 export const PIXEL_GRID_VISIBLE_ZOOM = 5;
 export const RULER_SIZE = 24;
+/** Screen-space movement (CSS pixels) before a press becomes a marquee drag. */
+export const MARQUEE_THRESHOLD_PX = 3;
 
 export type ResizeHandle = "n" | "e" | "s" | "w" | "nw" | "ne" | "sw" | "se";
 export type LineHandle = "start" | "end";
@@ -225,4 +228,56 @@ export function lineFrameFromEndpoints(
       y2: end.y - top,
     },
   };
+}
+
+export function rectFromDragPoints(a: Point, b: Point): Frame {
+  const x = Math.min(a.x, b.x);
+  const y = Math.min(a.y, b.y);
+  return {
+    x,
+    y,
+    width: Math.abs(b.x - a.x),
+    height: Math.abs(b.y - a.y),
+  };
+}
+
+export function rectsIntersect(a: Frame, b: Frame): boolean {
+  return (
+    a.x < b.x + b.width &&
+    a.x + a.width > b.x &&
+    a.y < b.y + b.height &&
+    a.y + a.height > b.y
+  );
+}
+
+export function unionRect(rects: readonly Frame[]): Frame | null {
+  if (rects.length === 0) return null;
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const rect of rects) {
+    minX = Math.min(minX, rect.x);
+    minY = Math.min(minY, rect.y);
+    maxX = Math.max(maxX, rect.x + rect.width);
+    maxY = Math.max(maxY, rect.y + rect.height);
+  }
+  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+}
+
+export function collectNodeIdsInRect(
+  layout: LayoutNode,
+  rect: Frame,
+  screenId: string,
+): string[] {
+  const ids: string[] = [];
+  const walk = (node: LayoutNode) => {
+    if (node.node.id !== screenId && node.node.visible !== false) {
+      const visual = selectionRectForNode(node.node, node.rect);
+      if (rectsIntersect(visual, rect)) ids.push(node.node.id);
+    }
+    node.children.forEach(walk);
+  };
+  walk(layout);
+  return ids;
 }

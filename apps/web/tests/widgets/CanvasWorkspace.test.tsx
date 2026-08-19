@@ -232,6 +232,264 @@ describe("CanvasWorkspace: selection", () => {
     expect(get().selectedNodeId).toBe("lbl_1");
   });
 
+  it("adds a second widget with Ctrl+click and does not start a drag", () => {
+    const first = makeLabel("lbl_a", "Alpha");
+    first.frame = { x: 8, y: 8, width: 40, height: 10 };
+    const second = makeLabel("lbl_b", "Beta");
+    second.frame = { x: 8, y: 40, width: 40, height: 10 };
+    get().setProject(withChildren(makeFixtureProject(), [first, second]));
+    render(<CanvasWorkspace />);
+
+    fireEvent.mouseDown(screen.getByLabelText("Alpha"), { button: 0 });
+    fireEvent.mouseUp(window);
+    fireEvent.mouseDown(screen.getByLabelText("Beta"), { button: 0, ctrlKey: true });
+    fireEvent.mouseMove(window, { clientX: 80, clientY: 80 });
+    fireEvent.mouseUp(window);
+
+    expect(get().selectedNodeIds).toEqual(["lbl_a", "lbl_b"]);
+    expect(get().selectedNodeId).toBe("lbl_b");
+    expect(get().draftFrames).toBeNull();
+  });
+
+  it("toggles a widget with Shift-click like Ctrl-click", () => {
+    const a = makeLabel("lbl_a", "Alpha");
+    a.frame = { x: 8, y: 8, width: 40, height: 10 };
+    const b = makeLabel("lbl_b", "Beta");
+    b.frame = { x: 8, y: 28, width: 40, height: 10 };
+    const c = makeLabel("lbl_c", "Gamma");
+    c.frame = { x: 8, y: 48, width: 40, height: 10 };
+    get().setProject(withChildren(makeFixtureProject(), [a, b, c]));
+    render(<CanvasWorkspace />);
+
+    fireEvent.mouseDown(screen.getByLabelText("Alpha"), { button: 0 });
+    fireEvent.mouseUp(window);
+    fireEvent.mouseDown(screen.getByLabelText("Gamma"), { button: 0, shiftKey: true });
+    fireEvent.mouseUp(window);
+
+    expect(get().selectedNodeIds).toEqual(["lbl_a", "lbl_c"]);
+    expect(get().selectedNodeId).toBe("lbl_c");
+  });
+
+  it("collapses a group to one widget on a plain click", () => {
+    const a = makeLabel("lbl_a", "Alpha");
+    a.frame = { x: 8, y: 8, width: 40, height: 10 };
+    const b = makeLabel("lbl_b", "Beta");
+    b.frame = { x: 8, y: 40, width: 40, height: 10 };
+    get().setProject(withChildren(makeFixtureProject(), [a, b]));
+    get().setSelection(["lbl_a", "lbl_b"], "lbl_b");
+    render(<CanvasWorkspace />);
+
+    fireEvent.mouseDown(screen.getByLabelText("Alpha"), { button: 0 });
+    fireEvent.mouseUp(window);
+
+    expect(get().selectedNodeIds).toEqual(["lbl_a"]);
+    expect(get().selectedNodeId).toBe("lbl_a");
+  });
+
+  it("moves every selected widget by the same delta in one history step", async () => {
+    const a = makeLabel("lbl_a", "Alpha");
+    a.frame = { x: 8, y: 8, width: 40, height: 10 };
+    const b = makeLabel("lbl_b", "Beta");
+    b.frame = { x: 8, y: 40, width: 40, height: 10 };
+    get().setProject(withChildren(makeFixtureProject(), [a, b]));
+    get().setSelection(["lbl_a", "lbl_b"], "lbl_b");
+    const historyBefore = get().historyPast.length;
+    render(<CanvasWorkspace />);
+
+    fireEvent.mouseDown(screen.getByLabelText("Alpha"), { button: 0, clientX: 100, clientY: 100 });
+    fireEvent.mouseMove(window, { clientX: 120, clientY: 100 });
+    await act(async () => {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    });
+    fireEvent.mouseUp(window);
+
+    expect(get().project.screens[0].children?.[0].frame?.x).toBe(18);
+    expect(get().project.screens[0].children?.[1].frame?.x).toBe(18);
+    expect(get().historyPast.length).toBe(historyBefore + 1);
+    get().undo();
+    expect(get().project.screens[0].children?.[0].frame?.x).toBe(8);
+    expect(get().project.screens[0].children?.[1].frame?.x).toBe(8);
+  });
+
+  it("clamps a group move to the intersection of member ranges", async () => {
+    const a = makeLabel("lbl_a", "Alpha");
+    a.frame = { x: 8, y: 8, width: 40, height: 10 };
+    const b = makeLabel("lbl_b", "Beta");
+    b.frame = { x: 130, y: 40, width: 20, height: 10 };
+    get().setProject(withChildren(makeFixtureProject(), [a, b]));
+    get().setSelection(["lbl_a", "lbl_b"], "lbl_b");
+    render(<CanvasWorkspace />);
+
+    fireEvent.mouseDown(screen.getByLabelText("Alpha"), { button: 0, clientX: 100, clientY: 100 });
+    fireEvent.mouseMove(window, { clientX: 300, clientY: 100 });
+    await act(async () => {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    });
+    fireEvent.mouseUp(window);
+
+    expect(get().project.screens[0].children?.[0].frame?.x).toBeGreaterThan(8);
+    expect(get().project.screens[0].children?.[0].frame?.x).toBeLessThan(108);
+    const deltaX =
+      (get().project.screens[0].children?.[0].frame?.x ?? 0) - 8;
+    expect(get().project.screens[0].children?.[1].frame?.x).toBe(130 + deltaX);
+  });
+
+  it("starts a group drag from the selection mask", async () => {
+    const a = makeLabel("lbl_a", "Alpha");
+    a.frame = { x: 8, y: 8, width: 40, height: 10 };
+    const b = makeLabel("lbl_b", "Beta");
+    b.frame = { x: 8, y: 40, width: 40, height: 10 };
+    get().setProject(withChildren(makeFixtureProject(), [a, b]));
+    get().setSelection(["lbl_a", "lbl_b"], "lbl_b");
+    render(<CanvasWorkspace />);
+
+    fireEvent.mouseDown(screen.getByTestId("selection-mask"), {
+      button: 0,
+      clientX: 100,
+      clientY: 100,
+    });
+    fireEvent.mouseMove(window, { clientX: 120, clientY: 100 });
+    await act(async () => {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    });
+    fireEvent.mouseUp(window);
+
+    expect(get().selectedNodeIds).toEqual(["lbl_a", "lbl_b"]);
+    expect(get().project.screens[0].children?.[0].frame?.x).toBe(18);
+    expect(get().project.screens[0].children?.[1].frame?.x).toBe(18);
+  });
+
+  it("draws a frame per selected widget plus one group bbox with shared guides", () => {
+    const a = makeLabel("lbl_a", "Alpha");
+    a.frame = { x: 11, y: 13, width: 17, height: 19 };
+    const b = makeLabel("lbl_b", "Beta");
+    b.frame = { x: 30, y: 40, width: 10, height: 5 };
+    const c = makeLabel("lbl_c", "Gamma");
+    c.frame = { x: 12, y: 60, width: 12, height: 8 };
+    get().setProject(withChildren(makeFixtureProject(), [a, b, c]));
+    get().setSelection(["lbl_a", "lbl_b", "lbl_c"], "lbl_c");
+    render(<CanvasWorkspace />);
+
+    expect(screen.getAllByTestId("selection-frame")).toHaveLength(12);
+    expect(screen.getAllByTestId("selection-group-frame")).toHaveLength(4);
+    expect(screen.getAllByTestId("selection-guide")).toHaveLength(8);
+    expect(screen.queryByTestId("resize-handle-nw")).not.toBeInTheDocument();
+
+    const rulers = screen.getByTestId("canvas-rulers");
+    expect(rulers).toHaveTextContent("11");
+    expect(rulers).toHaveTextContent("51");
+    expect(rulers).toHaveTextContent("13");
+    expect(rulers).toHaveTextContent("67");
+  });
+
+  it("offsets member frames from draftFrames during a group preview", () => {
+    const a = makeLabel("lbl_a", "Alpha");
+    a.frame = { x: 8, y: 8, width: 40, height: 10 };
+    const b = makeLabel("lbl_b", "Beta");
+    b.frame = { x: 8, y: 40, width: 40, height: 10 };
+    get().setProject(withChildren(makeFixtureProject(), [a, b]));
+    get().setSelection(["lbl_a", "lbl_b"], "lbl_b");
+    get().setDraftFrames({
+      lbl_a: { x: 18, y: 8, width: 40, height: 10 },
+      lbl_b: { x: 18, y: 40, width: 40, height: 10 },
+    });
+    render(<CanvasWorkspace />);
+
+    const frames = screen.getAllByTestId("selection-frame");
+    const vertical = frames.filter((frame) => frame.className.includes("guideVertical"));
+    expect(vertical.some((frame) => frame.style.left === "36px")).toBe(true);
+  });
+
+  describe("marquee", () => {
+  function mockDeviceFrame() {
+    const frame = screen.getByTestId("canvas-device-frame") as HTMLElement;
+    vi.spyOn(frame, "getBoundingClientRect").mockReturnValue({
+      x: 0,
+      y: 0,
+      top: 0,
+      left: 0,
+      bottom: 256,
+      right: 256,
+      width: 256,
+      height: 256,
+      toJSON: () => ({}),
+    } as DOMRect);
+    return frame;
+  }
+
+  it("selects widgets that intersect a drag and shows the overlay while dragging", () => {
+    const first = makeLabel("lbl_a", "Alpha");
+    first.frame = { x: 8, y: 8, width: 40, height: 10 };
+    const second = makeLabel("lbl_b", "Beta");
+    second.frame = { x: 8, y: 40, width: 40, height: 10 };
+    get().setProject(withChildren(makeFixtureProject(), [first, second]));
+    render(<CanvasWorkspace />);
+    const frame = mockDeviceFrame();
+
+    fireEvent.mouseDown(frame, { button: 0, clientX: 0, clientY: 0 });
+    fireEvent.mouseMove(window, { clientX: 200, clientY: 120 });
+    expect(screen.getByTestId("canvas-marquee")).toBeInTheDocument();
+    fireEvent.mouseUp(window, { clientX: 200, clientY: 120 });
+
+    expect(screen.queryByTestId("canvas-marquee")).not.toBeInTheDocument();
+    expect(get().selectedNodeIds).toEqual(["lbl_a", "lbl_b"]);
+  });
+
+  it("clears selection on a short empty click below the drag threshold", () => {
+    const first = makeLabel("lbl_a", "Alpha");
+    first.frame = { x: 8, y: 8, width: 40, height: 10 };
+    get().setProject(withChildren(makeFixtureProject(), [first]));
+    get().selectNode("lbl_a");
+    render(<CanvasWorkspace />);
+    const frame = mockDeviceFrame();
+
+    fireEvent.mouseDown(frame, { button: 0, clientX: 4, clientY: 4 });
+    fireEvent.mouseMove(window, { clientX: 5, clientY: 5 });
+    fireEvent.mouseUp(window, { clientX: 5, clientY: 5 });
+
+    expect(screen.queryByTestId("canvas-marquee")).not.toBeInTheDocument();
+    expect(get().selectedNodeId).toBeNull();
+    expect(get().selectedNodeIds).toEqual([]);
+  });
+
+  it("unions marquee hits with the current selection when Shift is held", () => {
+    const first = makeLabel("lbl_a", "Alpha");
+    first.frame = { x: 8, y: 8, width: 40, height: 10 };
+    const second = makeLabel("lbl_b", "Beta");
+    second.frame = { x: 8, y: 40, width: 40, height: 10 };
+    const third = makeLabel("lbl_c", "Gamma");
+    third.frame = { x: 100, y: 8, width: 40, height: 10 };
+    get().setProject(withChildren(makeFixtureProject(), [first, second, third]));
+    get().selectNode("lbl_c");
+    render(<CanvasWorkspace />);
+    const frame = mockDeviceFrame();
+
+    fireEvent.mouseDown(frame, { button: 0, clientX: 0, clientY: 0, shiftKey: true });
+    fireEvent.mouseMove(window, { clientX: 100, clientY: 120, shiftKey: true });
+    fireEvent.mouseUp(window, { clientX: 100, clientY: 120, shiftKey: true });
+
+    expect(get().selectedNodeIds).toEqual(["lbl_c", "lbl_a", "lbl_b"]);
+  });
+
+  it("starts a marquee from the stage outside the device frame", () => {
+    const first = makeLabel("lbl_a", "Alpha");
+    first.frame = { x: 8, y: 8, width: 40, height: 10 };
+    const second = makeLabel("lbl_b", "Beta");
+    second.frame = { x: 8, y: 40, width: 40, height: 10 };
+    get().setProject(withChildren(makeFixtureProject(), [first, second]));
+    render(<CanvasWorkspace />);
+    mockDeviceFrame();
+    const stage = screen.getByTestId("canvas-stage");
+
+    fireEvent.mouseDown(stage, { button: 0, clientX: -40, clientY: -40 });
+    fireEvent.mouseMove(window, { clientX: 200, clientY: 120 });
+    expect(screen.getByTestId("canvas-marquee")).toBeInTheDocument();
+    fireEvent.mouseUp(window, { clientX: 200, clientY: 120 });
+
+    expect(get().selectedNodeIds).toEqual(["lbl_a", "lbl_b"]);
+  });
+});
+
   it("edits selected label text inline on the canvas", async () => {
     const project = withChildren(makeFixtureProject(), [makeLabel("lbl_1", "Old")]);
     get().setProject(project);
@@ -265,14 +523,14 @@ describe("CanvasWorkspace: selection", () => {
     await act(async () => {
       await new Promise((resolve) => requestAnimationFrame(resolve));
     });
-    expect(get().draftFrame?.nodeId).toBe("lbl_1");
-    expect(get().draftFrame?.frame.width).toBeGreaterThan(
+    expect(get().draftFrames?.lbl_1).toBeTruthy();
+    expect(get().draftFrames?.lbl_1?.width).toBeGreaterThan(
       get().project.screens[0].children?.[0].frame?.width ?? 0,
     );
 
     fireEvent.blur(input);
     expect((get().project.screens[0].children?.[0].props as { text: string }).text).toBe("New label that grows");
-    expect(get().draftFrame).toBeNull();
+    expect(get().draftFrames).toBeNull();
   });
 
   it("edits selected button text inline on the canvas", async () => {
@@ -286,7 +544,7 @@ describe("CanvasWorkspace: selection", () => {
 
     expect(input).toHaveValue("Send");
     expect((get().project.screens[0].children?.[0].props as { text: string }).text).toBe("Save");
-    expect(get().draftFrame).toBeNull();
+    expect(get().draftFrames).toBeNull();
 
     fireEvent.blur(input);
     expect((get().project.screens[0].children?.[0].props as { text: string }).text).toBe("Send");
@@ -436,7 +694,7 @@ describe("CanvasWorkspace: move without jump", () => {
         '[data-testid="canvas-device-frame"] [data-testid="canvas-widget"][data-widget-id="lab_1"]',
       ) as HTMLElement | null;
       tops.push(Number.parseFloat(el?.style.top ?? "NaN"));
-      const draftY = get().draftFrame?.frame.y;
+      const draftY = get().draftFrames?.lab_1?.y;
       if (typeof draftY === "number") draftYs.push(draftY);
     };
 
@@ -470,7 +728,7 @@ describe("CanvasWorkspace: move without jump", () => {
     }
 
     expect(get().project.screens[0].children?.[0].children?.[0].frame?.y).toBeGreaterThan(12);
-    expect(get().draftFrame).toBeNull();
+    expect(get().draftFrames).toBeNull();
   });
 });
 

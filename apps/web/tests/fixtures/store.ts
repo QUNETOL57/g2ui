@@ -14,7 +14,7 @@ export function resetEditorStore(project?: UiProject) {
     selectedNodeId: null,
     selectedNodeIds: [],
     editingLabelId: null,
-    draftFrame: null,
+    draftFrames: null,
     historyBatchBase: null,
     lastError: null,
     historyPast: [],

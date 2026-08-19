@@ -3,6 +3,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { useEditorStore } from "@entities/ui-project/model/store";
+import { findNode } from "@entities/ui-project/model/tree-ops";
 import { PropertiesPanel } from "@widgets/properties-panel/PropertiesPanel";
 
 import {
@@ -69,6 +70,26 @@ describe("PropertiesPanel: empty state", () => {
     expect(screen.getByText(/Properties · triangle/)).toBeInTheDocument();
     expect(screen.queryByText(/Properties · marker/)).not.toBeInTheDocument();
     expect(screen.queryByText("Marker")).not.toBeInTheDocument();
+  });
+});
+
+describe("PropertiesPanel: multi-selection", () => {
+  it("shows a group summary instead of primary widget properties", async () => {
+    const project = withChildren(makeFixtureProject(), [makeLabel("lbl_a"), makeLabel("lbl_b")]);
+    get().setProject(project);
+    get().setSelection(["lbl_a", "lbl_b"], "lbl_b");
+    render(<PropertiesPanel />);
+
+    expect(screen.getByText("Выбрано 2 элементов")).toBeInTheDocument();
+    expect(screen.queryByText(/Properties · label/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Delete" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Copy" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Duplicate" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Rotate" })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    expect(findNode(get().project, "lbl_a")).toBeNull();
+    expect(findNode(get().project, "lbl_b")).toBeNull();
   });
 });
 

@@ -16,6 +16,7 @@ interface SelectionOverlayProps {
   showResizeHandles: boolean;
   transformsLocked?: boolean;
   lineEndpoints: { start: Point; end: Point } | null;
+  frameTestId?: string;
   onMoveMouseDown?: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onFrameDoubleClick?: (event: ReactMouseEvent<HTMLDivElement>) => void;
   allowContentInteraction?: boolean;
@@ -53,6 +54,7 @@ export function SelectionOverlay({
   showResizeHandles,
   transformsLocked = false,
   lineEndpoints,
+  frameTestId = "selection-frame",
   onMoveMouseDown,
   onFrameDoubleClick,
   allowContentInteraction = false,
@@ -161,22 +163,22 @@ export function SelectionOverlay({
       ) : null}
       <div
         className={cn(styles.guide, styles.guideVertical)}
-        data-testid="selection-frame"
+        data-testid={frameTestId}
         style={{ left, top, height: maskHeight }}
       />
       <div
         className={cn(styles.guide, styles.guideVertical)}
-        data-testid="selection-frame"
+        data-testid={frameTestId}
         style={{ left: right, top, height: maskHeight }}
       />
       <div
         className={cn(styles.guide, styles.guideHorizontal)}
-        data-testid="selection-frame"
+        data-testid={frameTestId}
         style={{ top, left, width: maskWidth }}
       />
       <div
         className={cn(styles.guide, styles.guideHorizontal)}
-        data-testid="selection-frame"
+        data-testid={frameTestId}
         style={{ top: bottom, left, width: maskWidth }}
       />
       {showBorderMove

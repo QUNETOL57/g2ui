@@ -1293,6 +1293,7 @@ export function CanvasWorkspace({
       <div
         className={styles.stage}
         ref={stageRef}
+        data-testid="canvas-stage"
         onMouseDown={(e) => {
           if (e.button !== 0) return;
           const target = e.target;
@@ -1301,6 +1302,7 @@ export function CanvasWorkspace({
           if (target instanceof Element && target.closest('[data-testid="canvas-selection-layer"]')) {
             return;
           }
+          if (startMarquee(e)) return;
           selectNode(null);
         }}
       >

@@ -251,7 +251,7 @@ describe("CanvasWorkspace: selection", () => {
     expect(get().draftFrames).toBeNull();
   });
 
-  it("selects a Shift-click range in tree order", () => {
+  it("toggles a widget with Shift-click like Ctrl-click", () => {
     const a = makeLabel("lbl_a", "Alpha");
     a.frame = { x: 8, y: 8, width: 40, height: 10 };
     const b = makeLabel("lbl_b", "Beta");
@@ -266,7 +266,7 @@ describe("CanvasWorkspace: selection", () => {
     fireEvent.mouseDown(screen.getByLabelText("Gamma"), { button: 0, shiftKey: true });
     fireEvent.mouseUp(window);
 
-    expect(get().selectedNodeIds).toEqual(["lbl_a", "lbl_b", "lbl_c"]);
+    expect(get().selectedNodeIds).toEqual(["lbl_a", "lbl_c"]);
     expect(get().selectedNodeId).toBe("lbl_c");
   });
 
@@ -469,6 +469,24 @@ describe("CanvasWorkspace: selection", () => {
     fireEvent.mouseUp(window, { clientX: 100, clientY: 120, shiftKey: true });
 
     expect(get().selectedNodeIds).toEqual(["lbl_c", "lbl_a", "lbl_b"]);
+  });
+
+  it("starts a marquee from the stage outside the device frame", () => {
+    const first = makeLabel("lbl_a", "Alpha");
+    first.frame = { x: 8, y: 8, width: 40, height: 10 };
+    const second = makeLabel("lbl_b", "Beta");
+    second.frame = { x: 8, y: 40, width: 40, height: 10 };
+    get().setProject(withChildren(makeFixtureProject(), [first, second]));
+    render(<CanvasWorkspace />);
+    mockDeviceFrame();
+    const stage = screen.getByTestId("canvas-stage");
+
+    fireEvent.mouseDown(stage, { button: 0, clientX: -40, clientY: -40 });
+    fireEvent.mouseMove(window, { clientX: 200, clientY: 120 });
+    expect(screen.getByTestId("canvas-marquee")).toBeInTheDocument();
+    fireEvent.mouseUp(window, { clientX: 200, clientY: 120 });
+
+    expect(get().selectedNodeIds).toEqual(["lbl_a", "lbl_b"]);
   });
 });
 

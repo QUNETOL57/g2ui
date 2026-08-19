@@ -49,13 +49,13 @@ describe("editorShortcuts", () => {
     vi.stubGlobal("navigator", { platform: "Win32" });
     const shortcuts = getEditorShortcuts();
     expect(shortcuts.find((shortcut) => shortcut.label === "Add to selection")?.keys).toBe(
-      "Ctrl+Click · tree or canvas",
+      "Ctrl+Click · tree or canvas · Shift+Click · canvas",
     );
     expect(shortcuts.find((shortcut) => shortcut.label === "Range selection")?.keys).toBe(
-      "Shift+Click · tree or canvas",
+      "Shift+Click · tree",
     );
     expect(shortcuts.find((shortcut) => shortcut.label === "Marquee selection")?.keys).toBe(
-      "Drag empty canvas",
+      "Drag empty canvas or around it",
     );
   });
 

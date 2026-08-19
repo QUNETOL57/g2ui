@@ -101,13 +101,10 @@ function PreviewNodeImpl({
   };
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     e.stopPropagation();
-    const mods = {
-      toggle: e.metaKey || e.ctrlKey,
-      range: e.shiftKey,
-    };
-    if (mods.toggle || mods.range) ctx.onSelect(node.id, mods);
+    const toggle = e.metaKey || e.ctrlKey || e.shiftKey;
+    if (toggle) ctx.onSelect(node.id, { toggle: true });
     else ctx.onSelect(node.id);
-    if (!mods.toggle && !mods.range) {
+    if (!toggle) {
       ctx.onNodeMouseDown?.(node.id, e);
     }
   };

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import {
@@ -12,7 +12,7 @@ import { ChangeHistorySheet } from "@widgets/change-history/ChangeHistorySheet";
 import { groupEntriesByDate } from "@widgets/change-history/lib/groupEntriesByDate";
 import { EditorStatusBar } from "@widgets/editor-status-bar/EditorStatusBar";
 
-import { makeFixtureProject } from "../fixtures/projects";
+import { makeFixtureProject, makeLabel, makeSecondScreen, withScreens } from "../fixtures/projects";
 import { resetEditorStore } from "../fixtures/store";
 
 describe("groupEntriesByDate", () => {
@@ -165,5 +165,95 @@ describe("ChangeHistorySheet", () => {
     expect(await screen.findByTestId("project-preview-surface")).toBeInTheDocument();
     expect(screen.queryByText(/No local history yet/)).not.toBeInTheDocument();
     expect(await store.list("proj-1")).toHaveLength(1);
+  });
+
+  it("lets the user switch screens like the editor screens panel", async () => {
+    const store = createMemoryChangeHistoryStore();
+    const main = {
+      ...makeFixtureProject().screens[0],
+      children: [makeLabel("lbl_main", "Main screen")],
+    };
+    const other = {
+      ...makeSecondScreen("screen_other", "Settings"),
+      children: [makeLabel("lbl_other", "Settings screen")],
+    };
+    const snapshot = withScreens(makeFixtureProject({ name: "Older" }), [main, other]);
+    await store.append(
+      buildLocalEntry({
+        projectId: "proj-1",
+        project: snapshot,
+        contentHash: "h1",
+        createdAt: new Date(2026, 7, 20, 10, 0, 0).toISOString(),
+      }),
+    );
+    render(
+      <ChangeHistorySheet
+        open
+        onClose={() => undefined}
+        projectId="proj-1"
+        canvasId="proj-1"
+        store={store}
+      />,
+    );
+    expect(await screen.findAllByTestId("history-screen-card")).toHaveLength(2);
+    expect(screen.getByRole("heading", { name: "History" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Screens" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Preview" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Main" })).toHaveAttribute("aria-current", "true");
+    expect(screen.getByTestId("history-preview-stage")).toHaveAttribute("data-screen-id", "screen_main");
+    expect(screen.getByTestId("project-preview-surface")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Settings" }));
+    expect(screen.getByRole("button", { name: "Settings" })).toHaveAttribute("aria-current", "true");
+    expect(screen.getByTestId("history-preview-stage")).toHaveAttribute("data-screen-id", "screen_other");
+  });
+
+  it("lets the user drag splitters to resize history and screens columns", async () => {
+    const store = createMemoryChangeHistoryStore();
+    await store.append(
+      buildLocalEntry({
+        projectId: "proj-1",
+        project: makeFixtureProject({ name: "Older" }),
+        contentHash: "h1",
+        createdAt: new Date(2026, 7, 20, 10, 0, 0).toISOString(),
+      }),
+    );
+    render(
+      <ChangeHistorySheet
+        open
+        onClose={() => undefined}
+        projectId="proj-1"
+        canvasId="proj-1"
+        store={store}
+      />,
+    );
+    const timeline = await screen.findByTestId("history-timeline-column");
+    const screens = screen.getByTestId("history-screens-column");
+    const content = screen.getByTestId("history-modal-content");
+
+    Object.defineProperty(content, "getBoundingClientRect", {
+      configurable: true,
+      value: () => ({
+        top: 0,
+        left: 0,
+        right: 900,
+        bottom: 500,
+        width: 900,
+        height: 500,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      }),
+    });
+
+    fireEvent.mouseDown(screen.getByTestId("history-timeline-resize-handle"));
+    fireEvent.mouseMove(window, { clientX: 360 });
+    fireEvent.mouseUp(window);
+    expect(timeline.style.flex).toBe("0 0 360px");
+
+    fireEvent.mouseDown(screen.getByTestId("history-screens-resize-handle"));
+    fireEvent.mouseMove(window, { clientX: 581 });
+    fireEvent.mouseUp(window);
+    expect(screens.style.flex).toBe("0 0 220px");
   });
 });

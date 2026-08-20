@@ -326,6 +326,9 @@ export function App() {
 
     if (suppressNextAutosaveRef.current) {
       suppressNextAutosaveRef.current = false;
+      const opened = projectToCard(project, activeProjectMeta);
+      opened.id = activeProjectMeta.id;
+      void recordLocalProjectChange(opened.id, opened.project, getChangeHistoryStore());
       return;
     }
 

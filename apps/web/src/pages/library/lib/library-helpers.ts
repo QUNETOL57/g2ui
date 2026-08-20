@@ -156,7 +156,7 @@ export function createProjectCardFromSelection(args: {
   createdAt?: Date;
 }): ProjectCard {
   const createdAt = args.createdAt ?? new Date();
-  const id = `project-${createdAt.getTime()}`;
+  const id = localProjectId(createdAt);
   const name = args.name.trim() || "Untitled";
   const customId = parseCustomTemplateId(args.selection);
   const source = customId ? args.projects.find((item) => item.id === customId) : undefined;
@@ -184,9 +184,13 @@ export function createProjectCardFromSelection(args: {
   };
 }
 
+function localProjectId(createdAt: Date): string {
+  return `project_${createdAt.getTime()}`;
+}
+
 export function copyProjectCard(source: ProjectCard): ProjectCard {
   const createdAt = new Date();
-  const newId = `project-${createdAt.getTime()}`;
+  const newId = localProjectId(createdAt);
   const copiedProject = cloneProject(source.project);
   copiedProject.id = newId;
   copiedProject.name = `${source.name} copy`;

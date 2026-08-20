@@ -67,6 +67,8 @@ describe("ChangeHistorySheet", () => {
     await userEvent.click(screen.getByRole("button", { name: "Change history" }));
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(screen.getByText("Change history")).toBeInTheDocument();
+    expect(screen.getByRole("dialog").className).toMatch(/sizeLg/);
+    expect(screen.getByRole("dialog").className).not.toMatch(/placementBottom/);
   });
 
   it("shows a preview for the selected version", async () => {
@@ -117,5 +119,51 @@ describe("ChangeHistorySheet", () => {
     expect(useEditorStore.getState().project.name).toBe("Current");
     await userEvent.click(screen.getByRole("button", { name: "Restore" }));
     expect(useEditorStore.getState().project.name).toBe("Older");
+  });
+
+  it("restores a snapshot whose stored project id contains a hyphen", async () => {
+    const store = createMemoryChangeHistoryStore();
+    const snapshot = makeFixtureProject({
+      name: "Older",
+      id: "project-1755680000000",
+    });
+    await store.append(
+      buildLocalEntry({
+        projectId: "proj-1",
+        project: snapshot,
+        contentHash: "h1",
+        createdAt: new Date(2026, 7, 20, 10, 0, 0).toISOString(),
+      }),
+    );
+    render(
+      <ChangeHistorySheet
+        open
+        onClose={() => undefined}
+        projectId="proj-1"
+        canvasId="proj-1"
+        store={store}
+      />,
+    );
+    await userEvent.click(await screen.findByRole("button", { name: "Restore this version" }));
+    await userEvent.click(screen.getByRole("button", { name: "Restore" }));
+    expect(screen.queryByText("This version is not a valid project.")).not.toBeInTheDocument();
+    expect(useEditorStore.getState().project.name).toBe("Older");
+    expect(useEditorStore.getState().project.id).toBe("project_1755680000000");
+  });
+
+  it("seeds the current editor project when history is empty", async () => {
+    const store = createMemoryChangeHistoryStore();
+    render(
+      <ChangeHistorySheet
+        open
+        onClose={() => undefined}
+        projectId="proj-1"
+        canvasId="proj-1"
+        store={store}
+      />,
+    );
+    expect(await screen.findByTestId("project-preview-surface")).toBeInTheDocument();
+    expect(screen.queryByText(/No local history yet/)).not.toBeInTheDocument();
+    expect(await store.list("proj-1")).toHaveLength(1);
   });
 });

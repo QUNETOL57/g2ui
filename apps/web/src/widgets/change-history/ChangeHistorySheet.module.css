@@ -1,6 +1,8 @@
 .sheet {
   display: grid;
   grid-template-rows: auto 1fr;
+  height: min(520px, calc(100vh - 96px));
+  overflow: hidden;
   padding: 0;
   color: var(--color-text);
 }

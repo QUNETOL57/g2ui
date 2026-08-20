@@ -101,3 +101,20 @@ def test_revision_cap_prunes_oldest(client, auth_headers, monkeypatch) -> None:
     assert hash_canvas_content({"n": 1}) not in hashes
     assert hash_canvas_content({"n": 2}) in hashes
     assert hash_canvas_content({"n": 3}) in hashes
+
+
+def test_list_backfills_revision_for_canvas_without_history(
+    client,
+    auth_headers,
+    delete_canvas_revisions,
+    count_canvas_revisions,
+) -> None:
+    canvas_id = _create_canvas(client, auth_headers)
+    delete_canvas_revisions(canvas_id)
+    assert count_canvas_revisions(canvas_id) == 0
+
+    listed = client.get(f"/api/v1/canvases/{canvas_id}/revisions", headers=auth_headers)
+    assert listed.status_code == 200
+    items = listed.json()
+    assert len(items) == 1
+    assert items[0]["content_hash"] == hash_canvas_content(CANVAS_PAYLOAD["content"])

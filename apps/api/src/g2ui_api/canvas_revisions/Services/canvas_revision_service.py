@@ -37,8 +37,11 @@ class CanvasRevisionService:
     async def list_for_owner(
         self, canvas_id: uuid.UUID, owner_id: uuid.UUID
     ) -> list[CanvasRevisionListItem]:
-        await self._require_canvas(canvas_id, owner_id)
+        canvas = await self._require_canvas(canvas_id, owner_id)
         revisions = await self._repository.list_for_canvas(canvas_id)
+        if not revisions:
+            await self.record_if_changed(canvas)
+            revisions = await self._repository.list_for_canvas(canvas_id)
         return [CanvasRevisionListItem.model_validate(item) for item in revisions]
 
     async def get_for_owner(

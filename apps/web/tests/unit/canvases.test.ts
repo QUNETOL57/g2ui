@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   canvasToProjectCard,
+  normalizeHistoryProject,
   normalizeTemplate,
   projectCardToPayload,
   type CanvasRecord,
@@ -97,5 +98,33 @@ describe("canvas settings mapping", () => {
     const restored = canvasToProjectCard(record);
     expect(restored?.template).toBe("custom");
     expect(restored?.sourceTemplateId).toBe("src_1");
+  });
+});
+
+describe("normalizeHistoryProject", () => {
+  it("rewrites a hyphenated library id so validateProject accepts it", () => {
+    const project = makeProjectFromTemplate({
+      id: "src",
+      name: "Dashboard",
+      width: 160,
+      height: 128,
+      template: "blank",
+    });
+    project.id = "project-1755680000000";
+    const restored = normalizeHistoryProject(project, "project-1755680000000");
+    expect(restored?.id).toBe("project_1755680000000");
+  });
+
+  it("maps a persisted canvas UUID to an IR project id", () => {
+    const project = makeProjectFromTemplate({
+      id: "src",
+      name: "Dashboard",
+      width: 160,
+      height: 128,
+      template: "blank",
+    });
+    project.id = "project-1755680000000";
+    const restored = normalizeHistoryProject(project, "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee");
+    expect(restored?.id).toBe("canvas_aaaaaaaa_bbbb_4ccc_8ddd_eeeeeeeeeeee");
   });
 });

@@ -5,12 +5,12 @@ import {
   cloneProject,
   getChangeHistoryStore,
   mergeChangeLogEntries,
-  validateProject,
+  recordLocalProjectChange,
   type ChangeHistoryStore,
   type ChangeLogEntry,
-  type UiProject,
 } from "@entities/ui-project";
 import { useEditorStore } from "@entities/ui-project/model/store";
+import { normalizeHistoryProject } from "@shared/api/canvases";
 import {
   getCanvasRevision,
   listCanvasRevisions,
@@ -58,7 +58,11 @@ export const ChangeHistorySheet = memo(function ChangeHistorySheet({
   const groups = useMemo(() => groupEntriesByDate(entries), [entries]);
 
   const loadEntries = useCallback(async () => {
-    const localEntries = await historyStore.list(projectId);
+    let localEntries = await historyStore.list(projectId);
+    if (localEntries.length === 0) {
+      await recordLocalProjectChange(projectId, useEditorStore.getState().project, historyStore);
+      localEntries = await historyStore.list(projectId);
+    }
     let remoteEntries: ChangeLogEntry[] = [];
     if (canLoadRemote) {
       setIsRemoteLoading(true);
@@ -97,21 +101,16 @@ export const ChangeHistorySheet = memo(function ChangeHistorySheet({
     void getCanvasRevision(canvasId, selected.id)
       .then((record) => {
         if (cancelled) return;
-        const validation = validateProject(record.content);
-        if (!validation.ok) {
-          console.warn("[change-history]", "restore rejected", {
-            id: selected.id,
-            issues: validation.issues,
-          });
+        const project = normalizeHistoryProject(record.content, canvasId);
+        if (!project) {
+          console.warn("[change-history]", "restore rejected", { id: selected.id });
           setPreviewError("This version is not a valid project.");
           return;
         }
         setPreviewError(null);
         setEntries((current) =>
           current.map((entry) =>
-            entry.id === selected.id
-              ? { ...entry, project: cloneProject(record.content as UiProject) }
-              : entry,
+            entry.id === selected.id ? { ...entry, project: cloneProject(project) } : entry,
           ),
         );
       })
@@ -127,16 +126,13 @@ export const ChangeHistorySheet = memo(function ChangeHistorySheet({
 
   const handleRestore = () => {
     if (!selected?.project) return;
-    const validation = validateProject(selected.project);
-    if (!validation.ok) {
-      console.warn("[change-history]", "restore rejected", {
-        id: selected.id,
-        issues: validation.issues,
-      });
+    const project = normalizeHistoryProject(selected.project, canvasId);
+    if (!project) {
+      console.warn("[change-history]", "restore rejected", { id: selected.id });
       setPreviewError("This version is not a valid project.");
       return;
     }
-    setProject(cloneProject(selected.project));
+    setProject(cloneProject(project));
     setIsConfirming(false);
     onClose();
   };
@@ -145,7 +141,7 @@ export const ChangeHistorySheet = memo(function ChangeHistorySheet({
     <Modal
       open={open}
       onClose={onClose}
-      placement="bottom"
+      size="lg"
       className={styles.sheet}
       closeOnBackdrop
     >
@@ -227,9 +223,12 @@ export const ChangeHistorySheet = memo(function ChangeHistorySheet({
               )}
             </>
           ) : (
-            <p className={styles.empty}>
-              {selected ? "Loading preview…" : "Select a version to preview it."}
-            </p>
+            <>
+              {previewError ? <p className={styles.statusError}>{previewError}</p> : null}
+              <p className={styles.empty}>
+                {selected ? "Loading preview…" : "Select a version to preview it."}
+              </p>
+            </>
           )}
         </section>
       </div>

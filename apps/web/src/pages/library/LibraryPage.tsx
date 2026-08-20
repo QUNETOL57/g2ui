@@ -384,7 +384,7 @@ export function LibraryPage({
             title="Close"
             onClick={closeCreateModal}
           >
-            ×
+            <CloseRoundedIcon />
           </IconButton>
           <CreateProjectPanel
             mode="create"

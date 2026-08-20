@@ -1,4 +1,4 @@
-import { memo, useState } from "react";
+import { memo, useState, type MouseEvent } from "react";
 import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
 import FileDownloadOutlinedIcon from "@mui/icons-material/FileDownloadOutlined";
 import FileUploadOutlinedIcon from "@mui/icons-material/FileUploadOutlined";
@@ -37,6 +37,10 @@ export const EditorStatusBar = memo(function EditorStatusBar({
   const [historyOpen, setHistoryOpen] = useState(false);
   const { label, Icon } = autosaveStatusPresentation(autosaveStatus, autosaveError);
 
+  const preventMouseFocus = (event: MouseEvent<HTMLButtonElement>) => {
+    if (event.button === 0) event.preventDefault();
+  };
+
   return (
     <>
       <footer className={styles.statusBar}>
@@ -56,6 +60,7 @@ export const EditorStatusBar = memo(function EditorStatusBar({
               className={styles.statusButton}
               aria-label="Change history"
               title="Change history"
+              onMouseDown={preventMouseFocus}
               onClick={() => setHistoryOpen(true)}
             >
               <HistoryOutlinedIcon fontSize="small" aria-hidden />
@@ -65,6 +70,7 @@ export const EditorStatusBar = memo(function EditorStatusBar({
           <button
             type="button"
             className={styles.statusButton}
+            onMouseDown={preventMouseFocus}
             onClick={() => setPaletteOpen(true)}
           >
             <PaletteOutlinedIcon fontSize="small" aria-hidden />
@@ -73,6 +79,7 @@ export const EditorStatusBar = memo(function EditorStatusBar({
           <button
             type="button"
             className={styles.statusButton}
+            onMouseDown={preventMouseFocus}
             onClick={() => setExportOpen(true)}
           >
             <FileDownloadOutlinedIcon fontSize="small" aria-hidden />
@@ -81,6 +88,7 @@ export const EditorStatusBar = memo(function EditorStatusBar({
           <button
             type="button"
             className={styles.statusButton}
+            onMouseDown={preventMouseFocus}
             onClick={() => setImportOpen(true)}
           >
             <FileUploadOutlinedIcon fontSize="small" aria-hidden />

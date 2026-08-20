@@ -12,7 +12,7 @@ import { IconButton } from "@shared/ui/IconButton";
 import styles from "./CreateProjectPanel.module.css";
 import type { Orientation } from "./lib/library-helpers";
 import { templateLabel } from "./lib/library-helpers";
-import { ProjectPreview } from "./ProjectPreview";
+import { ProjectPreview } from "@widgets/project-preview/ProjectPreview";
 
 interface CreateProjectPanelProps {
   mode: "create" | "edit";

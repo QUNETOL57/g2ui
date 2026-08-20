@@ -2,8 +2,10 @@ import { memo, useState } from "react";
 import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
 import FileDownloadOutlinedIcon from "@mui/icons-material/FileDownloadOutlined";
 import FileUploadOutlinedIcon from "@mui/icons-material/FileUploadOutlined";
+import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
 import PaletteOutlinedIcon from "@mui/icons-material/PaletteOutlined";
 
+import { ChangeHistorySheet } from "@widgets/change-history/ChangeHistorySheet";
 import { ExportProjectModal } from "@widgets/export-panel/ExportProjectModal";
 import { ImportProjectModal } from "@widgets/export-panel/ImportProjectModal";
 import { PaletteModal } from "@widgets/palette-panel/PaletteModal";
@@ -18,16 +20,21 @@ interface EditorStatusBarProps {
   autosaveStatus?: AutosaveStatus;
   autosaveError?: string | null;
   userEmail?: string | null;
+  canvasId?: string;
+  canLoadRemote?: boolean;
 }
 
 export const EditorStatusBar = memo(function EditorStatusBar({
   autosaveStatus = "local",
   autosaveError = null,
   userEmail = null,
+  canvasId,
+  canLoadRemote = false,
 }: EditorStatusBarProps) {
   const [exportOpen, setExportOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const { label, Icon } = autosaveStatusPresentation(autosaveStatus, autosaveError);
 
   return (
@@ -43,6 +50,18 @@ export const EditorStatusBar = memo(function EditorStatusBar({
           <span>{label}</span>
         </div>
         <div className={styles.statusActions}>
+          {canvasId ? (
+            <button
+              type="button"
+              className={styles.statusButton}
+              aria-label="Change history"
+              title="Change history"
+              onClick={() => setHistoryOpen(true)}
+            >
+              <HistoryOutlinedIcon fontSize="small" aria-hidden />
+              History
+            </button>
+          ) : null}
           <button
             type="button"
             className={styles.statusButton}
@@ -77,6 +96,15 @@ export const EditorStatusBar = memo(function EditorStatusBar({
       <PaletteModal open={paletteOpen} onClose={() => setPaletteOpen(false)} />
       <ExportProjectModal open={exportOpen} onClose={() => setExportOpen(false)} />
       <ImportProjectModal open={importOpen} onClose={() => setImportOpen(false)} />
+      {canvasId ? (
+        <ChangeHistorySheet
+          open={historyOpen}
+          onClose={() => setHistoryOpen(false)}
+          projectId={canvasId}
+          canvasId={canvasId}
+          canLoadRemote={canLoadRemote}
+        />
+      ) : null}
     </>
   );
 });

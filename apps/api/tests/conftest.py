@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from g2ui_api.db import Base, get_db
 from g2ui_api.main import create_app
-from g2ui_api.models import Canvas, User
+from g2ui_api.models import Canvas, CanvasRevision, User
 
 TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
@@ -33,6 +33,7 @@ def prepare_database() -> Generator[None]:
 def clean_tables() -> Generator[None]:
     async def clean() -> None:
         async with SessionLocal() as session:
+            await session.execute(delete(CanvasRevision))
             await session.execute(delete(Canvas))
             await session.execute(delete(User))
             await session.commit()

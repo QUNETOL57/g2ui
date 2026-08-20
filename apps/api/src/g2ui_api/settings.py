@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_ttl_min: int = 1440
     max_canvases_per_user: int = 30
+    max_revisions_per_canvas: int = 50
 
     @property
     def cors_origins_list(self) -> list[str]:

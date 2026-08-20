@@ -5,11 +5,13 @@ import { cn } from "@shared/lib/cn";
 import styles from "./Modal.module.css";
 
 export type ModalSize = "sm" | "md" | "lg";
+export type ModalPlacement = "center" | "bottom";
 
 interface ModalProps {
   open: boolean;
   onClose?: () => void;
   size?: ModalSize;
+  placement?: ModalPlacement;
   children: ReactNode;
   className?: string;
   backdropClassName?: string;
@@ -42,6 +44,7 @@ export function Modal({
   open,
   onClose,
   size = "md",
+  placement = "center",
   children,
   className,
   backdropClassName,
@@ -119,7 +122,11 @@ export function Modal({
 
   return (
     <div
-      className={cn(styles.backdrop, backdropClassName)}
+      className={cn(
+        styles.backdrop,
+        placement === "bottom" && styles.backdropBottom,
+        backdropClassName,
+      )}
       onClick={(event) => {
         if (!closeOnBackdrop || !onClose) return;
         if (event.target === event.currentTarget) onClose();
@@ -130,7 +137,12 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         tabIndex={-1}
-        className={cn(styles.dialog, sizeClass[size], className)}
+        className={cn(
+          styles.dialog,
+          placement === "center" && sizeClass[size],
+          placement === "bottom" && styles.placementBottom,
+          className,
+        )}
       >
         {children}
       </div>

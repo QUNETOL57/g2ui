@@ -43,6 +43,30 @@
   width: min(760px, calc(100vw - 48px));
 }
 
+.backdropBottom {
+  place-items: end stretch;
+  padding: 0;
+}
+
+.placementBottom {
+  width: 100%;
+  max-width: none;
+  height: 70vh;
+  max-height: 70vh;
+  overflow: hidden;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  animation: sheetUp 200ms ease-out;
+}
+
+@keyframes sheetUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
 .closeButton {
   position: absolute;
   z-index: 2;

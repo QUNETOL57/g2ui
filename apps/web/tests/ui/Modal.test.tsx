@@ -105,4 +105,15 @@ describe("Modal", () => {
     );
     expect(screen.getByText("y").parentElement!.className).toMatch(/sizeSm/);
   });
+
+  it("renders a bottom sheet against the viewport edge", () => {
+    render(
+      <Modal open placement="bottom">
+        <div>sheet</div>
+      </Modal>,
+    );
+    const dialog = screen.getByRole("dialog");
+    expect(dialog.className).toMatch(/placementBottom/);
+    expect(dialog.parentElement?.className).toMatch(/backdropBottom/);
+  });
 });

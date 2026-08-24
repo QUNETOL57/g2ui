@@ -11,6 +11,7 @@ import {
 } from "@shared/api/canvases";
 import { isApiConfigured } from "@shared/api/client";
 import { useSessionStore } from "@entities/session/model/store";
+import { getChangeHistoryStore, recordLocalProjectChange } from "@entities/ui-project";
 import { useEditorStore } from "@entities/ui-project/model/store";
 import { cloneProject } from "@entities/ui-project/model/tree-ops";
 import { AuthPage } from "@pages/auth/AuthPage";
@@ -55,6 +56,7 @@ export function App() {
   const [autosaveStatus, setAutosaveStatus] = useState<AutosaveStatus>("local");
   const [autosaveError, setAutosaveError] = useState<string | null>(null);
   const autosaveTimerRef = useRef<number | null>(null);
+  const localHistoryTimerRef = useRef<number | null>(null);
   const autosaveTokenRef = useRef(0);
   const lastAutosavedSnapshotRef = useRef<string | null>(null);
   const suppressNextAutosaveRef = useRef(false);
@@ -324,6 +326,9 @@ export function App() {
 
     if (suppressNextAutosaveRef.current) {
       suppressNextAutosaveRef.current = false;
+      const opened = projectToCard(project, activeProjectMeta);
+      opened.id = activeProjectMeta.id;
+      void recordLocalProjectChange(opened.id, opened.project, getChangeHistoryStore());
       return;
     }
 
@@ -341,6 +346,14 @@ export function App() {
 
     writeLocalDraft(nextCard, savedAt);
     setProjects((items) => upsertProjectCard(items, nextCard));
+
+    if (localHistoryTimerRef.current !== null) {
+      window.clearTimeout(localHistoryTimerRef.current);
+    }
+    localHistoryTimerRef.current = window.setTimeout(() => {
+      localHistoryTimerRef.current = null;
+      void recordLocalProjectChange(card.id, card.project, getChangeHistoryStore());
+    }, AUTOSAVE_DELAY_MS);
 
     if (snapshot === lastAutosavedSnapshotRef.current) return;
 
@@ -387,6 +400,10 @@ export function App() {
         window.clearTimeout(autosaveTimerRef.current);
         autosaveTimerRef.current = null;
       }
+      if (localHistoryTimerRef.current !== null) {
+        window.clearTimeout(localHistoryTimerRef.current);
+        localHistoryTimerRef.current = null;
+      }
     };
   }, [activeProjectMeta, canSyncRemote, project, setProject, view]);
 
@@ -432,6 +449,8 @@ export function App() {
         autosaveStatus={autosaveStatus}
         autosaveError={autosaveError}
         userEmail={sessionUser?.email ?? null}
+        canvasId={activeProjectMeta.id}
+        canLoadRemote={canSyncRemote}
         isTemplate={Boolean(activeProjectMeta.isTemplate)}
         allowCanvasOverflow={Boolean(activeProjectMeta.allowCanvasOverflow)}
         showFullWidgets={Boolean(activeProjectMeta.showFullWidgets)}

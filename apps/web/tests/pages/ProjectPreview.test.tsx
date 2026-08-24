@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { ProjectPreview } from "@pages/library/ProjectPreview";
+import { ProjectPreview } from "@widgets/project-preview/ProjectPreview";
 import { makeProjectFromTemplate } from "@entities/ui-project/lib/projectTemplates";
 
 import { makeFixtureProject, makeLabel, makeSecondScreen, withScreens } from "../fixtures/projects";

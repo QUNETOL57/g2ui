@@ -24,6 +24,8 @@ interface EditorPageProps {
   autosaveStatus?: AutosaveStatus;
   autosaveError?: string | null;
   userEmail?: string | null;
+  canvasId?: string;
+  canLoadRemote?: boolean;
   isTemplate?: boolean;
   allowCanvasOverflow?: boolean;
   showFullWidgets?: boolean;
@@ -41,6 +43,8 @@ export function EditorPage({
   autosaveStatus = "local",
   autosaveError = null,
   userEmail = null,
+  canvasId,
+  canLoadRemote = false,
   isTemplate = false,
   allowCanvasOverflow: initialAllowCanvasOverflow = false,
   showFullWidgets: initialShowFullWidgets = false,
@@ -280,6 +284,8 @@ export function EditorPage({
           autosaveStatus={autosaveStatus}
           autosaveError={autosaveError}
           userEmail={userEmail}
+          canvasId={canvasId}
+          canLoadRemote={canLoadRemote}
         />
       </div>
       <Modal

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { assertValidId, isValidId, nextId } from "@entities/ui-project/ids";
+import { assertValidId, isValidId, nextId, sanitizeId } from "@entities/ui-project/ids";
 
 describe("isValidId", () => {
   it("accepts simple lowercase identifiers", () => {
@@ -27,6 +27,20 @@ describe("isValidId", () => {
   it("rejects ids longer than 64 chars", () => {
     expect(isValidId("a".repeat(64))).toBe(true);
     expect(isValidId("a".repeat(65))).toBe(false);
+  });
+});
+
+describe("sanitizeId", () => {
+  it("keeps already valid ids", () => {
+    expect(sanitizeId("screen_main")).toBe("screen_main");
+  });
+
+  it("replaces hyphens in library project ids", () => {
+    expect(sanitizeId("project-1755680000000")).toBe("project_1755680000000");
+  });
+
+  it("prefixes ids that start with a digit", () => {
+    expect(sanitizeId("1abc")).toBe("id_1abc");
   });
 });
 

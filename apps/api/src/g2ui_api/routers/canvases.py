@@ -6,6 +6,8 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import CurrentUserDep
+from ..canvas_revisions.dependencies import get_canvas_revision_service
+from ..canvas_revisions.Services.canvas_revision_service import CanvasRevisionService
 from ..db import get_db
 from ..models import Canvas
 from ..schemas import CanvasCreate, CanvasRead, CanvasUpdate
@@ -13,6 +15,9 @@ from ..settings import settings
 
 router = APIRouter(prefix="/canvases", tags=["canvases"])
 DbDep = Annotated[AsyncSession, Depends(get_db)]
+CanvasRevisionServiceDep = Annotated[
+    CanvasRevisionService, Depends(get_canvas_revision_service)
+]
 
 
 @router.get("", response_model=list[CanvasRead])
@@ -33,6 +38,7 @@ async def create_canvas(
     body: CanvasCreate,
     db: DbDep,
     current_user: CurrentUserDep,
+    revisions: CanvasRevisionServiceDep,
 ) -> Canvas:
     existing_count = await db.scalar(
         select(func.count())
@@ -54,6 +60,7 @@ async def create_canvas(
     )
     db.add(canvas)
     await db.flush()
+    await revisions.record_if_changed(canvas)
     await db.refresh(canvas)
     return canvas
 
@@ -76,6 +83,7 @@ async def update_canvas(
     body: CanvasUpdate,
     db: DbDep,
     current_user: CurrentUserDep,
+    revisions: CanvasRevisionServiceDep,
 ) -> Canvas:
     canvas = await db.get(Canvas, canvas_id)
     if not canvas or canvas.owner_id != current_user.id:
@@ -90,6 +98,8 @@ async def update_canvas(
     if body.schema_version is not None:
         canvas.schema_version = body.schema_version
     await db.flush()
+    if body.content is not None:
+        await revisions.record_if_changed(canvas)
     await db.refresh(canvas)
     return canvas
 

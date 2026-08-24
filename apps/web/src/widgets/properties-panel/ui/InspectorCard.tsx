@@ -10,12 +10,14 @@ export function InspectorCard({
   checked,
   onToggle,
   children,
+  testId,
 }: {
   title: string;
   subtitle?: string;
   checked?: boolean;
   onToggle?: (checked: boolean) => void;
   children: ReactNode;
+  testId?: string;
 }) {
   const titleContent = (
     <span className={styles.inspectorCardTitleStack}>
@@ -25,7 +27,7 @@ export function InspectorCard({
   );
 
   return (
-    <div className={styles.inspectorCard}>
+    <div className={styles.inspectorCard} data-testid={testId}>
       {onToggle ? (
         <label className={cn(styles.inspectorCardHead, styles.inspectorCardToggle)}>
           {titleContent}

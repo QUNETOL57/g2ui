@@ -35,7 +35,7 @@ g2ui/
 │   │   └── tests/           # Vitest-тесты
 │   └── api/                 # FastAPI + SQLAlchemy async
 │       ├── alembic/         # Миграции БД
-│       ├── src/g2ui_api/    # main.py, routers, schemas, models, auth, db
+│       ├── src/g2ui_api/    # main.py, routers, schemas, models, canvas_revisions, auth, db
 │       └── tests/           # pytest-тесты
 ├── docker-compose.yml       # Локальный стек: PostgreSQL + API
 ├── docker-compose.prod.yml  # Продакшен API
@@ -59,6 +59,7 @@ g2ui/
 | `apps/api/src/g2ui_api/main.py` | Точка входа FastAPI-приложения |
 | `apps/api/src/g2ui_api/settings.py` | Конфигурация API (Pydantic Settings) |
 | `apps/api/src/g2ui_api/db.py` | Настройка SQLAlchemy async engine |
+| `apps/api/src/g2ui_api/canvas_revisions/` | Structured Module: серверные ревизии canvas |
 | `apps/api/alembic/` | Миграции базы данных |
 | `docker-compose.yml` | Локальный стек разработки |
 | `.env` | Переменные окружения |

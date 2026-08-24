@@ -64,6 +64,10 @@
   color: var(--color-text);
 }
 
+.statusButton:focus:not(:focus-visible) {
+  outline: none;
+}
+
 .statusButton:focus-visible {
   outline: 1px solid var(--color-accent);
   outline-offset: -1px;

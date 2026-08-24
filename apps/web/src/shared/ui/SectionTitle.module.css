@@ -5,6 +5,7 @@
   box-sizing: border-box;
   display: flex;
   align-items: center;
+  margin: 0;
   min-height: var(--workspace-subheader-height);
   height: var(--workspace-subheader-height);
   padding: 0 12px;

@@ -24,12 +24,16 @@ export function ProjectPreview({
   compact = false,
   size,
   showSizeLabels = true,
+  maxWidth,
+  maxHeight,
 }: {
   project: UiProject;
   screenId?: string;
   compact?: boolean;
   size?: PreviewSize;
   showSizeLabels?: boolean;
+  maxWidth?: number;
+  maxHeight?: number;
 }) {
   const resolvedScreenId = screenId ?? project.screens[0]?.id;
   const screen = project.screens.find((item) => item.id === resolvedScreenId) ?? project.screens[0];
@@ -37,14 +41,15 @@ export function ProjectPreview({
   const stackIndices = layout ? computeWidgetStackIndices(layout) : new Map<string, number>();
   const previewSize = size ?? (compact ? "compact" : "default");
   const bounds = PREVIEW_BOUNDS[previewSize];
-  const maxWidth = bounds.width;
-  const maxHeight = bounds.height;
-  const scale = Math.min(maxWidth / project.display.width, maxHeight / project.display.height);
+  const limitWidth = maxWidth && maxWidth > 0 ? maxWidth : bounds.width;
+  const limitHeight = maxHeight && maxHeight > 0 ? maxHeight : bounds.height;
+  const scale = Math.min(limitWidth / project.display.width, limitHeight / project.display.height);
   const previewWidth = Math.max(1, Math.round(project.display.width * scale));
   const previewHeight = Math.max(1, Math.round(project.display.height * scale));
-  const sizeLabelGap = bounds.labelGap;
-  const canvasWidth = previewSize === "sidebar" ? previewWidth : maxWidth;
-  const canvasHeight = previewSize === "sidebar" ? previewHeight : maxHeight;
+  const sizeLabelGap = maxWidth != null ? 0 : bounds.labelGap;
+  const isFitted = maxWidth != null || previewSize === "sidebar";
+  const canvasWidth = isFitted ? previewWidth : limitWidth;
+  const canvasHeight = isFitted ? previewHeight : limitHeight;
   const background = resolveScreenBackground(screen, project.palette);
 
   return (

@@ -6,12 +6,36 @@ import { LabelGroup } from "@widgets/properties-panel/groups/LabelGroup";
 import { makeLabel } from "../fixtures/projects";
 
 describe("LabelGroup", () => {
-  it("omits text input from the inspector", () => {
+  it("renders a text block and emits text changes", () => {
+    const handler = vi.fn();
+    const node = makeLabel("lbl_1", "Hi");
+    render(
+      <LabelGroup node={node} palette={[]} onChange={handler} onStyleChange={() => undefined} />,
+    );
+
+    const input = screen.getByLabelText("label text");
+    expect(input).toHaveValue("Hi");
+    expect(screen.getByTestId("typography-card")).toContainElement(input);
+    expect(screen.getByText("Text")).toBeInTheDocument();
+    expect(screen.getByText("Typography")).toBeInTheDocument();
+
+    fireEvent.change(input, { target: { value: "Hello" } });
+    expect(handler).toHaveBeenLastCalledWith({ text: "Hello" });
+  });
+
+  it("collapses and expands the Text section", () => {
     const node = makeLabel("lbl_1", "Hi");
     render(
       <LabelGroup node={node} palette={[]} onChange={() => undefined} onStyleChange={() => undefined} />,
     );
-    expect(screen.queryByLabelText("label text")).toBeNull();
+
+    expect(screen.getByLabelText("label text")).toBeInTheDocument();
+    expect(screen.getByText("Typography")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("typography-card-collapse"));
+    expect(screen.queryByLabelText("label text")).not.toBeInTheDocument();
+    expect(screen.queryByText("Typography")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("typography-card-collapse"));
+    expect(screen.getByLabelText("label text")).toBeInTheDocument();
     expect(screen.getByText("Typography")).toBeInTheDocument();
   });
 
@@ -37,10 +61,27 @@ describe("LabelGroup", () => {
 
     const typographyCard = screen.getByTestId("typography-card");
     expect(typographyCard).toHaveTextContent("Typography");
+    expect(typographyCard).toContainElement(screen.getByLabelText("label text"));
     expect(typographyCard).not.toHaveTextContent("Color");
     expect(typographyCard).not.toHaveTextContent("Background");
     expect(container.querySelector("[data-testid='typography-card'] [class*='typographyColorGrid']")).toBeNull();
 
+    expect(screen.getByText("Color")).toBeInTheDocument();
+    expect(screen.getByText("Background")).toBeInTheDocument();
+    expect(screen.getByText("Appearance")).toBeInTheDocument();
+  });
+
+  it("collapses and expands the Appearance section", async () => {
+    const node = makeLabel("lbl_1", "Hi");
+    render(
+      <LabelGroup node={node} palette={[]} onChange={() => undefined} onStyleChange={() => undefined} />,
+    );
+
+    expect(screen.getByText("Color")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("appearance-collapse"));
+    expect(screen.queryByText("Color")).not.toBeInTheDocument();
+    expect(screen.queryByText("Background")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("appearance-collapse"));
     expect(screen.getByText("Color")).toBeInTheDocument();
     expect(screen.getByText("Background")).toBeInTheDocument();
   });

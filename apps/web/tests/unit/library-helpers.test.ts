@@ -110,7 +110,7 @@ describe("copyProjectCard", () => {
     const source = makeCard("p1", "Original");
     const copied = copyProjectCard(source);
 
-    expect(copied.id).toBe(`project-${Date.now()}`);
+    expect(copied.id).toBe(`project_${Date.now()}`);
     expect(copied.name).toBe("Original copy");
     expect(copied.width).toBe(source.width);
     expect(copied.height).toBe(source.height);

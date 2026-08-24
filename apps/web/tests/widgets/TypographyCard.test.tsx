@@ -32,6 +32,7 @@ describe("TypographyCard: label mode (with align)", () => {
       />,
     );
     expect(screen.getByText("Typography")).toBeInTheDocument();
+    expect(screen.queryByTestId("typography-card-collapse")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "font family" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "font size" })).toBeInTheDocument();
   });

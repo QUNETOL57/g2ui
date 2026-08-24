@@ -3,45 +3,14 @@ import { isCornersEnabled } from "@entities/ui-project/lib/style";
 import { qrBoxSize, qrRenderedSize, normalizeQrProps } from "@entities/ui-project/lib/qrcode";
 import type { QrCodeProps } from "@entities/ui-project/types";
 import type { Frame } from "@entities/ui-project/types";
-import ExpandLessOutlinedIcon from "@mui/icons-material/ExpandLessOutlined";
-import ExpandMoreOutlinedIcon from "@mui/icons-material/ExpandMoreOutlined";
-import { useState, type ReactNode } from "react";
 import { cn } from "@shared/lib/cn";
-import { IconButton } from "@shared/ui/IconButton";
 import { RangeSlider } from "@shared/ui/RangeSlider";
-import { SectionTitle } from "@shared/ui/SectionTitle";
 
 import styles from "../PropertiesPanel.module.css";
+import { AppearanceSection } from "../ui/AppearanceSection";
 import { ColorField } from "../ui/ColorField";
 import { InspectorCard } from "../ui/InspectorCard";
 import { NumberField } from "../ui/NumberField";
-
-function AppearanceSection({ children }: { children: ReactNode }) {
-  const [collapsed, setCollapsed] = useState(false);
-
-  const collapseAction = (
-    <IconButton
-      className={styles.sectionCollapseButton}
-      onClick={() => setCollapsed((current) => !current)}
-      aria-label={collapsed ? "Expand appearance section" : "Collapse appearance section"}
-      title={collapsed ? "Expand appearance" : "Collapse appearance"}
-      data-testid="appearance-collapse"
-    >
-      {collapsed ? (
-        <ExpandLessOutlinedIcon fontSize="inherit" />
-      ) : (
-        <ExpandMoreOutlinedIcon fontSize="inherit" />
-      )}
-    </IconButton>
-  );
-
-  return (
-    <div className={cn(styles.group, styles.appearanceGroup, styles.appearanceGroupCollapsible)}>
-      <SectionTitle actions={collapseAction}>Appearance</SectionTitle>
-      {!collapsed ? <div className={styles.appearanceGroupBody}>{children}</div> : null}
-    </div>
-  );
-}
 
 export function StyleGroup({
   node,

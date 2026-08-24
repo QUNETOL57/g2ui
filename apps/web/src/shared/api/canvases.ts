@@ -1,5 +1,5 @@
 import type { UiProject } from "@entities/ui-project";
-import { validateProject } from "@entities/ui-project";
+import { sanitizeId, validateProject } from "@entities/ui-project";
 import type { TemplateId } from "@entities/ui-project/lib/projectTemplates";
 import { cloneProject } from "@entities/ui-project/model/tree-ops";
 import type { ProjectCard } from "@pages/library/lib/library-helpers";
@@ -66,13 +66,19 @@ export async function deleteCanvas(canvasId: string): Promise<void> {
   await fetchJson<void>(`/api/v1/canvases/${canvasId}`, { method: "DELETE" });
 }
 
-export function canvasToProjectCard(canvas: CanvasRecord): ProjectCard | null {
-  const project = cloneProject(canvas.content as UiProject);
-  project.id = canvasIdToProjectId(canvas.id);
-  project.name = canvas.title;
+export function normalizeHistoryProject(content: unknown, canvasId: string): UiProject | null {
+  if (!content || typeof content !== "object") return null;
+  const project = cloneProject(content as UiProject);
+  project.id = isPersistedCanvasId(canvasId)
+    ? canvasIdToProjectId(canvasId)
+    : sanitizeId(typeof project.id === "string" && project.id.length > 0 ? project.id : canvasId);
+  return validateProject(project).ok ? project : null;
+}
 
-  const validation = validateProject(project);
-  if (!validation.ok) return null;
+export function canvasToProjectCard(canvas: CanvasRecord): ProjectCard | null {
+  const project = normalizeHistoryProject(canvas.content, canvas.id);
+  if (!project) return null;
+  project.name = canvas.title;
 
   return {
     id: canvas.id,
@@ -96,9 +102,9 @@ export function canvasToProjectCard(canvas: CanvasRecord): ProjectCard | null {
 
 export function projectCardToPayload(card: ProjectCard): CanvasPayload {
   const content = cloneProject(card.project);
-  if (isPersistedCanvasId(card.id)) {
-    content.id = canvasIdToProjectId(card.id);
-  }
+  content.id = isPersistedCanvasId(card.id)
+    ? canvasIdToProjectId(card.id)
+    : sanitizeId(typeof content.id === "string" && content.id.length > 0 ? content.id : card.id);
   content.name = card.name;
 
   return {

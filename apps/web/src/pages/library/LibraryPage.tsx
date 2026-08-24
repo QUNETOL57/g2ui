@@ -37,7 +37,7 @@ import statusBarStyles from "@widgets/editor-status-bar/EditorStatusBar.module.c
 
 import { CreateProjectPanel } from "./CreateProjectPanel";
 import styles from "./LibraryPage.module.css";
-import { ProjectPreview } from "./ProjectPreview";
+import { ProjectPreview } from "@widgets/project-preview/ProjectPreview";
 import {
   DEFAULT_LIBRARY_SORT,
   DEFAULT_LIBRARY_SORT_DIRECTION,
@@ -384,7 +384,7 @@ export function LibraryPage({
             title="Close"
             onClick={closeCreateModal}
           >
-            ×
+            <CloseRoundedIcon />
           </IconButton>
           <CreateProjectPanel
             mode="create"

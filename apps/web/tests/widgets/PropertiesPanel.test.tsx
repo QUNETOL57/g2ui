@@ -100,11 +100,13 @@ describe("PropertiesPanel: per-type groups", () => {
     selectAndRender("lbl_1");
     expect(screen.getByText(/Properties · label/)).toBeInTheDocument();
     expect(screen.getByText("Transform")).toBeInTheDocument();
-    expect(screen.queryByLabelText("label text")).toBeNull();
+    expect(screen.getByLabelText("label text")).toHaveValue("Hello");
+    expect(screen.getByText("Text")).toBeInTheDocument();
     expect(screen.getByText("Typography")).toBeInTheDocument();
+    expect(screen.getByText("Appearance")).toBeInTheDocument();
   });
 
-  it("for button shows text controls without a separate text field", () => {
+  it("for button shows text controls with an inspector text field", () => {
     const project = withChildren(makeFixtureProject(), [makeButton("bt_1", "Save")]);
     get().setProject(project);
     selectAndRender("bt_1");
@@ -114,7 +116,7 @@ describe("PropertiesPanel: per-type groups", () => {
     expect(screen.getByText("Padding")).toBeInTheDocument();
     expect(screen.getByText("Color")).toBeInTheDocument();
     expect(screen.getByLabelText("Show text")).toBeChecked();
-    expect(screen.queryByLabelText("button text")).toBeNull();
+    expect(screen.getByLabelText("button text")).toHaveValue("Save");
   });
 
   it("for icon shows IconGroup search input", () => {

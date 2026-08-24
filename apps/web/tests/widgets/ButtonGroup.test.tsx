@@ -21,9 +21,21 @@ describe("ButtonGroup", () => {
     expect(textCard).toHaveTextContent("Typography");
     expect(textCard).toHaveTextContent("Padding");
     expect(textCard).toHaveTextContent("Color");
+    expect(textCard).toContainElement(screen.getByLabelText("button text"));
     expect(screen.queryByTestId("color-card")).toBeNull();
     expect(screen.getByLabelText("Show text")).toBeChecked();
-    expect(screen.queryByLabelText("button text")).toBeNull();
+    expect(screen.getByLabelText("button text")).toHaveValue("Save");
+  });
+
+  it("emits button text changes from the inspector field", () => {
+    const handler = vi.fn();
+    const node = makeButton("bt_1", "Save");
+    render(
+      <ButtonGroup node={node} palette={[]} onChange={handler} onStyleChange={() => undefined} />,
+    );
+
+    fireEvent.change(screen.getByLabelText("button text"), { target: { value: "OK" } });
+    expect(handler).toHaveBeenLastCalledWith({ text: "OK" });
   });
 
   it("collapses and expands the Content section", async () => {

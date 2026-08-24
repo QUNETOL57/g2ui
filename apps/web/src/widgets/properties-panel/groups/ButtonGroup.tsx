@@ -389,6 +389,8 @@ export function ButtonGroup({
         palette={palette}
         backgroundDefaultEnabled
         showBackground={false}
+        showTextField
+        textFieldAriaLabel="button text"
         onPropsChange={(patch) => onChange(patch as Partial<ButtonProps>)}
         onStyleChange={onStyleChange}
         paddingControls={{

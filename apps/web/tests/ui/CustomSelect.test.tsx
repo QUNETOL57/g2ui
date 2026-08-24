@@ -69,6 +69,17 @@ describe("CustomSelect", () => {
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
   });
 
+  it("renders the listbox on document.body so overflow parents cannot clip it", async () => {
+    render(
+      <div style={{ overflow: "hidden", height: 20 }}>
+        <CustomSelect value="a" options={OPTIONS} onChange={() => undefined} ariaLabel="pick" />
+      </div>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "pick" }));
+    const listbox = screen.getByRole("listbox");
+    expect(listbox.parentElement).toBe(document.body);
+  });
+
   it("renders color swatches when option.color is set", async () => {
     const options = [
       { value: "r", label: "Red", color: "#FF0000" },

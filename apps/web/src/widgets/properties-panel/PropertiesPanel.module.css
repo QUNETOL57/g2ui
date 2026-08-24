@@ -41,6 +41,15 @@
   max-height: 360px;
 }
 
+.labelTextInput.labelTextInput {
+  box-sizing: border-box;
+  min-height: 30px;
+  max-height: 240px;
+  line-height: 16px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
 .inputText {
   box-sizing: border-box;
   width: 100%;
@@ -372,7 +381,8 @@
   background: transparent;
 }
 
-.collapsiblePanelBody .inspectorCard + .inspectorCard {
+.collapsiblePanelBody .inspectorCard + .inspectorCard,
+.collapsiblePanelBody .labelTextInput + .inspectorCard {
   padding-top: 10px;
   border-top: 1px solid var(--color-border-soft);
 }
@@ -398,14 +408,23 @@
   display: grid;
   grid-template-columns: auto minmax(74px, 1fr);
   gap: 8px;
-  align-items: end;
+  align-items: stretch;
 }
 
 .fontStyleControl,
 .fontSizeControl {
   display: grid;
+  grid-template-columns: 1fr;
   gap: 6px;
+  align-items: stretch;
   min-width: 0;
+}
+
+.fontStyleControl label,
+.fontSizeControl label {
+  font-size: var(--font-size-md);
+  color: var(--color-text-muted);
+  line-height: 1.2;
 }
 
 .alignRowWide {

@@ -270,7 +270,7 @@ export function ButtonGroup({
   const hasText = p.text !== undefined;
   const [lastText, setLastText] = useState(p.text ?? "Button");
   const [lastIcons, setLastIcons] = useState<ButtonIconSlot[]>(icons);
-  const [showIcons, setShowIcons] = useState(true);
+  const [showIcons, setShowIcons] = useState(icons.length > 0);
   const [contentCollapsed, setContentCollapsed] = useState(false);
 
   useEffect(() => {
@@ -282,7 +282,9 @@ export function ButtonGroup({
     if (resolved.length > 0) {
       setLastIcons(resolved);
       setShowIcons(true);
+      return;
     }
+    setShowIcons(false);
   }, [node.id]);
 
   const writeIcons = (next: ButtonIconSlot[]) => {
@@ -329,11 +331,6 @@ export function ButtonGroup({
             writeIcons([]);
           },
         }}
-        disabledContent={
-          <p className={styles.fieldHint}>
-            Enable icons to add them before, after, above, or below the text.
-          </p>
-        }
       >
         {icons.map((slot, index) => (
           <ButtonIconSlotCard
@@ -383,7 +380,6 @@ export function ButtonGroup({
             onChange({ text: undefined });
           },
         }}
-        disabledHint="Enable text to edit typography and padding."
         props={p}
         style={node.style}
         palette={palette}

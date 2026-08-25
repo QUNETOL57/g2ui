@@ -14,8 +14,9 @@ describe("ButtonGroup", () => {
     );
     expect(screen.getByText("Content")).toBeInTheDocument();
     expect(screen.getByTestId("icons-card")).toHaveTextContent("Icons");
-    expect(screen.getByLabelText("Show icons")).toBeChecked();
-    expect(screen.getByRole("button", { name: "Add icon" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Show icons")).not.toBeChecked();
+    expect(screen.getByTestId("icons-card")).toHaveAttribute("data-collapsed", "true");
+    expect(screen.queryByRole("button", { name: "Add icon" })).not.toBeInTheDocument();
     const textCard = screen.getByTestId("typography-card");
     expect(textCard).toHaveTextContent("Text");
     expect(textCard).toHaveTextContent("Typography");
@@ -53,7 +54,14 @@ describe("ButtonGroup", () => {
   });
 
   it("collapses Icons and Text nested cards independently", async () => {
-    const node = makeButton("bt_1", "Save");
+    const button = makeButton("bt_1", "Save");
+    const node = {
+      ...button,
+      props: {
+        ...(button.props ?? {}),
+        icons: [{ iconId: "earth", position: "left" as const }],
+      },
+    };
     render(
       <ButtonGroup node={node} palette={[]} onChange={() => undefined} onStyleChange={() => undefined} />,
     );
@@ -103,7 +111,8 @@ describe("ButtonGroup", () => {
       iconPosition: undefined,
       iconGap: undefined,
     });
-    expect(screen.getByText(/Enable icons to add them/)).toBeInTheDocument();
+    expect(screen.getByTestId("icons-card")).toHaveAttribute("data-collapsed", "true");
+    expect(screen.queryByText(/Enable icons to add them/)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Add icon" })).toBeNull();
   });
 
@@ -146,7 +155,8 @@ describe("ButtonGroup", () => {
     );
 
     expect(screen.getByLabelText("Show text")).not.toBeChecked();
-    expect(screen.getByText(/Enable text to edit typography and padding/)).toBeInTheDocument();
+    expect(screen.getByTestId("typography-card")).toHaveAttribute("data-collapsed", "true");
+    expect(screen.queryByText(/Enable text to edit typography and padding/)).not.toBeInTheDocument();
     expect(screen.getByTestId("icons-card")).toBeInTheDocument();
     expect(screen.queryByTestId("color-card")).toBeNull();
 
@@ -216,6 +226,7 @@ describe("ButtonGroup", () => {
       />,
     );
 
+    await userEvent.click(screen.getByLabelText("Show icons"));
     await userEvent.click(screen.getByRole("button", { name: "Add icon" }));
     expect(handler).toHaveBeenLastCalledWith({
       icons: [{ iconId: "earth", position: "left", paddingRight: 2 }],
@@ -465,11 +476,12 @@ describe("ButtonGroup", () => {
     );
   });
 
-  it("keeps Add icon control styled as an add action", () => {
+  it("keeps Add icon control styled as an add action", async () => {
     const node = makeButton("bt_1", "Save");
     render(
       <ButtonGroup node={node} palette={[]} onChange={() => undefined} onStyleChange={() => undefined} />,
     );
+    await userEvent.click(screen.getByLabelText("Show icons"));
     const add = screen.getByRole("button", { name: "Add icon" });
     expect(add.className).toMatch(/addItemButton/);
   });

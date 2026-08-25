@@ -275,7 +275,6 @@ describe("TypographyCard: background toggle", () => {
       <TypographyCard
         title="Text"
         headerToggle={{ label: "Show text", checked: false, onChange: () => undefined }}
-        disabledHint="Enable text to edit typography and padding."
         props={defaultProps}
         style={{}}
         palette={palette}
@@ -296,7 +295,8 @@ describe("TypographyCard: background toggle", () => {
       />,
     );
 
-    expect(screen.getByText(/Enable text to edit typography and padding/)).toBeInTheDocument();
+    expect(screen.getByTestId("typography-card")).toHaveAttribute("data-collapsed", "true");
+    expect(screen.queryByText(/Enable text to edit typography and padding/)).not.toBeInTheDocument();
     expect(screen.getByTestId("color-card")).toBeInTheDocument();
   });
 });

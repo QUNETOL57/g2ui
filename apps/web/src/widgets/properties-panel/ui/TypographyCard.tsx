@@ -47,7 +47,6 @@ interface TypographyCardProps {
     checked: boolean;
     onChange: (checked: boolean) => void;
   };
-  disabledHint?: string;
   onPropsChange: (patch: Partial<LabelProps & ButtonProps>) => void;
   onStyleChange: (patch: Partial<NonNullable<WidgetNode["style"]>>) => void;
   align?: NonNullable<LabelProps["align"]>;
@@ -78,7 +77,6 @@ export function TypographyCard({
   textFieldAriaLabel = "text",
   title = "Typography",
   headerToggle,
-  disabledHint,
   onPropsChange,
   onStyleChange,
   align,
@@ -260,11 +258,6 @@ export function TypographyCard({
           title={title}
           testId="typography-card"
           headerToggle={headerToggle}
-          disabledContent={
-            <p className={styles.fieldHint}>
-              {disabledHint ?? "Enable text to edit typography and layout."}
-            </p>
-          }
         >
           {body}
         </CollapsiblePanelCard>

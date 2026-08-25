@@ -1,6 +1,6 @@
 import ExpandLessOutlinedIcon from "@mui/icons-material/ExpandLessOutlined";
 import ExpandMoreOutlinedIcon from "@mui/icons-material/ExpandMoreOutlined";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { cn } from "@shared/lib/cn";
 import { IconButton } from "@shared/ui/IconButton";
@@ -16,7 +16,6 @@ interface CollapsiblePanelCardProps {
     checked: boolean;
     onChange: (checked: boolean) => void;
   };
-  disabledContent?: ReactNode;
   children: ReactNode;
   className?: string;
 }
@@ -26,21 +25,25 @@ export function CollapsiblePanelCard({
   testId,
   defaultCollapsed = false,
   headerToggle,
-  disabledContent,
   children,
   className,
 }: CollapsiblePanelCardProps) {
-  const [collapsed, setCollapsed] = useState(defaultCollapsed);
   const enabled = headerToggle ? headerToggle.checked : true;
-  const collapseLabel = collapsed ? `Expand ${title} section` : `Collapse ${title} section`;
+  const [collapsed, setCollapsed] = useState(defaultCollapsed || !enabled);
+  const isOpen = enabled && !collapsed;
+  const collapseLabel = isOpen ? `Collapse ${title} section` : `Expand ${title} section`;
+
+  useEffect(() => {
+    setCollapsed(!enabled);
+  }, [enabled]);
 
   return (
     <div
       className={cn(styles.typographyCard, styles.collapsiblePanelCard, className)}
       data-testid={testId}
-      data-collapsed={collapsed ? "true" : undefined}
+      data-collapsed={isOpen ? undefined : "true"}
     >
-      <div className={cn(styles.collapsiblePanelHead, !collapsed && styles.collapsiblePanelHeadOpen)}>
+      <div className={cn(styles.collapsiblePanelHead, isOpen && styles.collapsiblePanelHeadOpen)}>
         <div className={styles.typographyCardTitle}>{title}</div>
         <div className={styles.collapsiblePanelActions}>
           {headerToggle ? (
@@ -56,24 +59,23 @@ export function CollapsiblePanelCard({
           ) : null}
           <IconButton
             className={styles.sectionCollapseButton}
-            onClick={() => setCollapsed((current) => !current)}
+            onClick={() => {
+              if (!enabled) return;
+              setCollapsed((current) => !current);
+            }}
             aria-label={collapseLabel}
-            title={collapsed ? `Expand ${title}` : `Collapse ${title}`}
+            title={isOpen ? `Collapse ${title}` : `Expand ${title}`}
             data-testid={testId ? `${testId}-collapse` : undefined}
           >
-            {collapsed ? (
-              <ExpandLessOutlinedIcon fontSize="inherit" />
-            ) : (
+            {isOpen ? (
               <ExpandMoreOutlinedIcon fontSize="inherit" />
+            ) : (
+              <ExpandLessOutlinedIcon fontSize="inherit" />
             )}
           </IconButton>
         </div>
       </div>
-      {!collapsed ? (
-        <div className={styles.collapsiblePanelBody}>
-          {enabled ? children : disabledContent}
-        </div>
-      ) : null}
+      {isOpen ? <div className={styles.collapsiblePanelBody}>{children}</div> : null}
     </div>
   );
 }

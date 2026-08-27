@@ -21,6 +21,9 @@ describe("LabelGroup", () => {
 
     fireEvent.change(input, { target: { value: "Hello" } });
     expect(handler).toHaveBeenLastCalledWith({ text: "Hello" });
+
+    fireEvent.change(input, { target: { value: "Hello\r\nWorld" } });
+    expect(handler).toHaveBeenLastCalledWith({ text: "Hello\nWorld" });
   });
 
   it("collapses and expands the Text section", () => {

@@ -41,4 +41,21 @@ describe("BitmapText vertical align", () => {
     const tops = [...runs].map((run) => Number.parseInt(run.style.top, 10));
     expect(Math.min(...tops)).toBe(Math.floor((boxHeight - face.lineHeight) / 2));
   });
+
+  it("renders a second line below the first", () => {
+    render(
+      <BitmapText
+        face={face}
+        text={"Hi\nThere"}
+        color="#fff"
+        boxWidth={80}
+        boxHeight={face.lineHeight * 2}
+      />,
+    );
+
+    const runs = screen.getByLabelText((value) => value.includes("There")).querySelectorAll("span");
+    const tops = [...runs].map((run) => Number.parseInt(run.style.top, 10));
+    expect(Math.min(...tops)).toBe(0);
+    expect(Math.max(...tops)).toBeGreaterThanOrEqual(face.lineHeight);
+  });
 });

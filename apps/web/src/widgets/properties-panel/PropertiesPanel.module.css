@@ -45,9 +45,13 @@
   box-sizing: border-box;
   min-height: 30px;
   max-height: 240px;
+  height: auto;
   line-height: 16px;
   padding-top: 6px;
   padding-bottom: 6px;
+  resize: none;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .inputText {

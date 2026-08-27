@@ -1,5 +1,11 @@
 import type { BitmapFontFace } from "./fontTypes";
-import { findGlyph, glyphPixelOn, measureTextWidth } from "./fontLibrary";
+import {
+  findGlyph,
+  glyphPixelOn,
+  measureTextHeight,
+  measureTextWidth,
+  splitTextLines,
+} from "./fontLibrary";
 
 export type BitmapTextAlign = "left" | "center" | "right";
 export type BitmapTextVerticalAlign = "top" | "center" | "bottom";
@@ -30,21 +36,26 @@ export function BitmapText({
   boxWidth,
   boxHeight,
 }: BitmapTextProps) {
-  const textWidth = measureTextWidth(face, text);
-  const textHeight = face.lineHeight;
-  let originX = 0;
-  if (align === "center") {
-    originX = Math.floor((boxWidth - textWidth) / 2);
-  } else if (align === "right") {
-    originX = boxWidth - textWidth;
-  }
+  const lines = splitTextLines(text);
+  const textHeight = measureTextHeight(face, text);
   let originY = 0;
   if (verticalAlign === "center") {
     originY = Math.floor((boxHeight - textHeight) / 2);
   } else if (verticalAlign === "bottom") {
     originY = boxHeight - textHeight;
   }
-  const runs = buildTextRuns(face, text, originX, originY);
+
+  const runs: RectRun[] = [];
+  lines.forEach((line, lineIndex) => {
+    const lineWidth = measureTextWidth(face, line);
+    let originX = 0;
+    if (align === "center") {
+      originX = Math.floor((boxWidth - lineWidth) / 2);
+    } else if (align === "right") {
+      originX = boxWidth - lineWidth;
+    }
+    runs.push(...buildTextRuns(face, line, originX, originY + lineIndex * face.lineHeight));
+  });
 
   return (
     <div

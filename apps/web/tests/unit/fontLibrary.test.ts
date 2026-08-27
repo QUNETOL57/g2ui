@@ -10,8 +10,11 @@ import {
   getFontFamilyOptions,
   getFontSizes,
   glyphPixelOn,
+  lineAtCaret,
+  measureTextHeight,
   measureTextWidth,
   normalizeFontStyle,
+  normalizeTextNewlines,
 } from "@entities/font/fontLibrary";
 
 describe("font library defaults", () => {
@@ -134,5 +137,13 @@ describe("measureTextWidth & glyph lookups", () => {
     const digits = [..."0123456789"].map((ch) => findGlyph(face, ch.codePointAt(0)!)!);
     expect(new Set(digits.map((glyph) => glyph.advance)).size).toBe(1);
     expect(measureTextWidth(face, "00011")).toBe(measureTextWidth(face, "00000"));
+  });
+
+  it("measures multiline text by the longest line and stacked line height", () => {
+    const face = findFontFace({ fontFamily: "BDF" });
+    expect(normalizeTextNewlines("Hi\r\nThere")).toBe("Hi\nThere");
+    expect(measureTextWidth(face, "Hi\nThere")).toBe(measureTextWidth(face, "There"));
+    expect(measureTextHeight(face, "Hi\nThere")).toBe(face.lineHeight * 2);
+    expect(lineAtCaret("Hi\nThere", 4)).toEqual({ line: "There", lineIndex: 1, offset: 1 });
   });
 });

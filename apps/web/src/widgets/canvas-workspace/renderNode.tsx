@@ -29,7 +29,14 @@ import {
 import { effectiveBorderRadius } from "@entities/ui-project/lib/style";
 import { BitmapText, type BitmapTextAlign } from "@entities/font/BitmapText";
 import type { BitmapFontFace } from "@entities/font/fontTypes";
-import { findFontFace, measureTextWidth } from "@entities/font/fontLibrary";
+import {
+  findFontFace,
+  lineAtCaret,
+  measureTextHeight,
+  measureTextWidth,
+  normalizeTextNewlines,
+  splitTextLines,
+} from "@entities/font/fontLibrary";
 import { IconGlyph } from "@entities/icon/iconLibrary";
 import { DEFAULT_ICON_ID, getIconScaleForFrame, getResolvedIconDefinition } from "@entities/icon/iconSizing";
 
@@ -911,7 +918,7 @@ function labelTextOrigin(
   verticalAlign: "top" | "center" | "bottom" = "top",
 ) {
   const textWidth = measureTextWidth(face, text);
-  const textHeight = face.lineHeight;
+  const textHeight = measureTextHeight(face, text);
   let originX = 0;
   if (align === "center") {
     originX = Math.floor((boxWidth - textWidth) / 2);
@@ -934,37 +941,49 @@ function expandedLabelFrameForText(
   rect: Frame,
 ): Frame {
   const textWidth = measureTextWidth(face, text);
-  const caretWidth = measureTextWidth(face, text.slice(0, caretIndex));
+  const { line } = lineAtCaret(text, caretIndex);
+  const caretWidth = measureTextWidth(face, line);
   return {
     ...rect,
     width: Math.max(rect.width, textWidth + 1, caretWidth + 1),
-    height: Math.max(rect.height, face.lineHeight),
+    height: Math.max(rect.height, measureTextHeight(face, text)),
   };
 }
 
-function caretIndexForClientX(
+function caretIndexForClientPoint(
   face: BitmapFontFace,
   text: string,
   align: BitmapTextAlign,
   boxWidth: number,
+  boxHeight: number,
+  verticalAlign: "top" | "center" | "bottom",
   localX: number,
+  localY: number,
 ): number {
-  const { originX } = labelTextOrigin(face, text, align, boxWidth, face.lineHeight, "top");
-  const textX = localX - originX;
-  const chars = Array.from(text);
-  let width = 0;
-  let codeUnitIndex = 0;
-
-  for (const char of chars) {
-    const nextWidth = width + measureTextWidth(face, char);
-    if (textX < width + (nextWidth - width) / 2) {
-      return codeUnitIndex;
-    }
-    width = nextWidth;
-    codeUnitIndex += char.length;
+  const lines = splitTextLines(text);
+  const { originY } = labelTextOrigin(face, text, align, boxWidth, boxHeight, verticalAlign);
+  const rawLine = Math.floor((localY - originY) / Math.max(1, face.lineHeight));
+  const lineIndex = Math.min(Math.max(rawLine, 0), Math.max(0, lines.length - 1));
+  const line = lines[lineIndex] ?? "";
+  const lineWidth = measureTextWidth(face, line);
+  let originX = 0;
+  if (align === "center") {
+    originX = Math.floor((boxWidth - lineWidth) / 2);
+  } else if (align === "right") {
+    originX = boxWidth - lineWidth;
   }
-
-  return text.length;
+  const textX = localX - originX;
+  let width = 0;
+  let offset = 0;
+  for (const char of Array.from(line)) {
+    const nextWidth = width + measureTextWidth(face, char);
+    if (textX < width + (nextWidth - width) / 2) break;
+    width = nextWidth;
+    offset += char.length;
+  }
+  let start = 0;
+  for (let i = 0; i < lineIndex; i++) start += (lines[i]?.length ?? 0) + 1;
+  return start + offset;
 }
 
 function LabelInlineEditor({
@@ -995,7 +1014,7 @@ function LabelInlineEditor({
   onSelect: (id: string) => void;
 }) {
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const textRef = useRef(initialText);
   const frameRef = useRef(nodeFrame);
   const visualRectRef = useRef(rect);
@@ -1024,8 +1043,8 @@ function LabelInlineEditor({
     setCaretIndex((current) => (current === nextIndex ? current : nextIndex));
   }, [text.length]);
 
-  const placeCaretAtClientX = useCallback(
-    (clientX: number) => {
+  const placeCaretAtClientPoint = useCallback(
+    (clientX: number, clientY: number) => {
       const input = inputRef.current;
       const root = rootRef.current;
       if (!input || !root) return;
@@ -1034,20 +1053,27 @@ function LabelInlineEditor({
       const scaleX = bounds.width > 0 && visualRect.width > 0
         ? bounds.width / visualRect.width
         : 1;
+      const scaleY = bounds.height > 0 && visualRect.height > 0
+        ? bounds.height / visualRect.height
+        : 1;
       const localX = (clientX - bounds.left) / scaleX;
-      const nextIndex = caretIndexForClientX(
+      const localY = (clientY - bounds.top) / scaleY;
+      const nextIndex = caretIndexForClientPoint(
         face,
         textRef.current,
         align,
         visualRect.width,
+        visualRect.height,
+        verticalAlign,
         localX,
+        localY,
       );
       input.focus({ preventScroll: true });
       input.setSelectionRange(nextIndex, nextIndex);
       setCaretIndex(nextIndex);
       expandForText(textRef.current, nextIndex);
     },
-    [align, expandForText, face],
+    [align, expandForText, face, verticalAlign],
   );
 
   useEffect(() => {
@@ -1077,9 +1103,18 @@ function LabelInlineEditor({
     return () => window.removeEventListener("mousedown", handleMouseDown, { capture: true });
   }, [nodeId, onCommit]);
 
-  const { originX, originY } = labelTextOrigin(face, text, align, rect.width, rect.height, verticalAlign);
-  const rawCaretLeft = originX + measureTextWidth(face, text.slice(0, caretIndex));
+  const { originY } = labelTextOrigin(face, text, align, rect.width, rect.height, verticalAlign);
+  const caretLine = lineAtCaret(text, caretIndex);
+  const caretLineWidth = measureTextWidth(face, caretLine.line);
+  let caretOriginX = 0;
+  if (align === "center") {
+    caretOriginX = Math.floor((rect.width - caretLineWidth) / 2);
+  } else if (align === "right") {
+    caretOriginX = rect.width - caretLineWidth;
+  }
+  const rawCaretLeft = caretOriginX + measureTextWidth(face, caretLine.line.slice(0, caretLine.offset));
   const caretLeft = Math.max(0, Math.min(rawCaretLeft, Math.max(0, rect.width - 1)));
+  const caretTop = originY + caretLine.lineIndex * face.lineHeight;
 
   return (
     <div
@@ -1107,39 +1142,40 @@ function LabelInlineEditor({
         aria-hidden
         style={{
           left: caretLeft,
-          top: originY,
+          top: caretTop,
           height: face.lineHeight,
           backgroundColor: color,
         }}
       />
-      <input
+      <textarea
         ref={inputRef}
         aria-label="edit label text"
         className={styles.inlineTextInput}
         value={text}
         spellCheck={false}
+        rows={Math.max(1, splitTextLines(text).length)}
         style={{
           lineHeight: `${face.lineHeight}px`,
           textAlign: align,
         }}
         onChange={(event) => {
-          const nextText = event.target.value;
+          const nextText = normalizeTextNewlines(event.target.value);
           const nextCaretIndex = event.target.selectionStart ?? nextText.length;
           setText(nextText);
           setCaretIndex(nextCaretIndex);
           expandForText(nextText, nextCaretIndex);
         }}
         onFocus={() => onSelect(nodeId)}
-        onBlur={(event) => onCommit(nodeId, event.target.value, frameRef.current)}
+        onBlur={(event) => onCommit(nodeId, normalizeTextNewlines(event.target.value), frameRef.current)}
         onMouseDown={(event) => {
           event.stopPropagation();
           event.preventDefault();
           onSelect(nodeId);
-          placeCaretAtClientX(event.clientX);
+          placeCaretAtClientPoint(event.clientX, event.clientY);
         }}
         onClick={(event) => {
           event.preventDefault();
-          placeCaretAtClientX(event.clientX);
+          placeCaretAtClientPoint(event.clientX, event.clientY);
         }}
         onKeyUp={() => {
           syncCaret();
@@ -1152,7 +1188,7 @@ function LabelInlineEditor({
           expandForText(text, input?.selectionStart ?? text.length);
         }}
         onKeyDown={(event) => {
-          if (event.key === "Enter") {
+          if (event.key === "Escape") {
             event.currentTarget.blur();
           }
           event.stopPropagation();
@@ -1334,7 +1370,7 @@ function ButtonVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; r
     bySide[slot.position ?? "left"].push(buttonIconMetrics(slot));
   }
   const textWidth = text ? measureTextWidth(face, text) : 0;
-  const textHeight = text ? face.lineHeight : 0;
+  const textHeight = text ? measureTextHeight(face, text) : 0;
   const hasIcons = iconSlots.length > 0;
 
   const leftW = sumOuter(bySide.left, "w");
@@ -1488,7 +1524,7 @@ function ButtonVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; r
                   left: textLeft,
                   top: textTop,
                   width: textBoxWidth,
-                  height: Math.max(textBoxHeight, face.lineHeight),
+                  height: Math.max(textBoxHeight, textHeight || face.lineHeight),
                   overflow: "hidden",
                 }}
               >
@@ -1504,14 +1540,14 @@ function ButtonVisual({ node, ctx, rect }: { node: WidgetNode; ctx: RenderCtx; r
                     x: 0,
                     y: 0,
                     width: textBoxWidth,
-                    height: Math.max(textBoxHeight, face.lineHeight),
+                    height: Math.max(textBoxHeight, textHeight || face.lineHeight),
                   }}
                   nodeFrame={
                     node.frame ?? {
                       x: 0,
                       y: 0,
                       width: textBoxWidth,
-                      height: Math.max(textBoxHeight, face.lineHeight),
+                      height: Math.max(textBoxHeight, textHeight || face.lineHeight),
                     }
                   }
                   onCommit={ctx.onLabelTextCommit}

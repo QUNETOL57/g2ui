@@ -271,6 +271,14 @@ describe("fitTextNodeFrame", () => {
     expect(fitted.height).toBeLessThan(80);
     expect(fitted.height).toBe(normalizeTextNodeFrame(node, fitted).height);
   });
+
+  it("grows a label frame for a line break", () => {
+    const single = makeLabel("l_a", "Hi");
+    const multi = makeLabel("l_b", "Hi\nThere");
+    const singleFit = fitTextNodeFrame(single, { x: 0, y: 0, width: 8, height: 8 });
+    const multiFit = fitTextNodeFrame(multi, { x: 0, y: 0, width: 8, height: 8 });
+    expect(multiFit.height).toBeGreaterThan(singleFit.height);
+  });
 });
 
 describe("normalizeTextNodeFrame", () => {

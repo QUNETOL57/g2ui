@@ -91,11 +91,50 @@ export function glyphPixelOn(face: BitmapFontFace, glyph: NonNullable<ReturnType
   return (face.bitmap[byteIndex] & (0x80 >> (x % 8))) !== 0;
 }
 
-export function measureTextWidth(face: BitmapFontFace, text: string): number {
+export function normalizeTextNewlines(text: string): string {
+  return text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+}
+
+export function splitTextLines(text: string): string[] {
+  return normalizeTextNewlines(text).split("\n");
+}
+
+function measureLineWidth(face: BitmapFontFace, line: string): number {
   let width = 0;
-  for (const char of text) {
+  for (const char of line) {
     const glyph = findGlyph(face, char.codePointAt(0) ?? 0);
     width += glyph ? glyph.advance : Math.floor(face.lineHeight / 2);
   }
   return width;
+}
+
+export function measureTextWidth(face: BitmapFontFace, text: string): number {
+  let max = 0;
+  for (const line of splitTextLines(text)) {
+    max = Math.max(max, measureLineWidth(face, line));
+  }
+  return max;
+}
+
+export function measureTextHeight(face: BitmapFontFace, text: string): number {
+  return Math.max(1, splitTextLines(text).length) * face.lineHeight;
+}
+
+export function lineAtCaret(
+  text: string,
+  caretIndex: number,
+): { line: string; lineIndex: number; offset: number } {
+  const normalized = normalizeTextNewlines(text);
+  const index = Math.max(0, Math.min(caretIndex, normalized.length));
+  const lines = splitTextLines(normalized);
+  let start = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const end = start + lines[i].length;
+    if (index <= end) {
+      return { line: lines[i], lineIndex: i, offset: index - start };
+    }
+    start = end + 1;
+  }
+  const last = lines[lines.length - 1] ?? "";
+  return { line: last, lineIndex: Math.max(0, lines.length - 1), offset: last.length };
 }

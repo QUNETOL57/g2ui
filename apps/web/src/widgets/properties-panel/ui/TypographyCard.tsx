@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from "react";
+import { useLayoutEffect, useMemo, useRef, type ReactNode } from "react";
 import FormatAlignCenterIcon from "@mui/icons-material/FormatAlignCenter";
 import FormatAlignLeftIcon from "@mui/icons-material/FormatAlignLeft";
 import FormatAlignRightIcon from "@mui/icons-material/FormatAlignRight";
@@ -14,7 +14,12 @@ import type {
   LabelProps,
   WidgetNode,
 } from "@entities/ui-project";
-import { findFontFace, getFontFamilyOptions, getFontSizes } from "@entities/font/fontLibrary";
+import {
+  findFontFace,
+  getFontFamilyOptions,
+  getFontSizes,
+  normalizeTextNewlines,
+} from "@entities/font/fontLibrary";
 import type { BitmapFontStyle } from "@entities/font/fontTypes";
 import { cn } from "@shared/lib/cn";
 import { CustomSelect } from "@shared/ui/CustomSelect";
@@ -89,6 +94,15 @@ export function TypographyCard({
   const fillColor = s.background ?? { kind: "hex", value: "#FFFFFF" } satisfies ColorRef;
   const fillEnabled = backgroundDefaultEnabled ? s.drawBackground !== false : Boolean(s.drawBackground);
   const contentEnabled = headerToggle ? headerToggle.checked : true;
+  const textFieldRef = useRef<HTMLTextAreaElement>(null);
+
+  useLayoutEffect(() => {
+    const field = textFieldRef.current;
+    if (!field) return;
+    field.style.height = "0px";
+    const nextHeight = field.scrollHeight;
+    field.style.height = nextHeight > 0 ? `${nextHeight}px` : "";
+  }, [props.text, showTextField, contentEnabled]);
 
   const paddingAlignFields = paddingControls ? (
     <>
@@ -187,11 +201,12 @@ export function TypographyCard({
 
   const textField = showTextField ? (
     <Textarea
+      ref={textFieldRef}
       aria-label={textFieldAriaLabel}
       className={styles.labelTextInput}
       rows={1}
       value={props.text ?? ""}
-      onChange={(event) => onPropsChange({ text: event.target.value })}
+      onChange={(event) => onPropsChange({ text: normalizeTextNewlines(event.target.value) })}
     />
   ) : null;
 
